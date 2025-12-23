@@ -1,0 +1,232 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+             x:Class="InventoryManagementSystem.UI.Views.POSView"
+             x:DataType="vm:POSViewModel"
+             x:Name="Root">
+
+    <Grid ColumnDefinitions="*, 420" Background="#F3F4F6">
+        
+        <!-- LEFT: Product Selection -->
+        <Grid Grid.Column="0" RowDefinitions="Auto, *" Margin="24">
+            
+            <!-- Header & Search -->
+            <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,24">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Point of Sale" FontSize="28" FontWeight="Bold" Foreground="#111827"/>
+                    <TextBlock Text="Select products to add to cart" FontSize="14" Foreground="#6B7280"/>
+                </StackPanel>
+                
+                <Border Grid.Column="1" Width="300" Background="White" CornerRadius="8" Padding="12,0" 
+                        BoxShadow="0 1 2 0 #0F000000" VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="Auto, *">
+                        <TextBlock Text="🔍" VerticalAlignment="Center" Margin="0,0,8,0" Opacity="0.5"/>
+                        <TextBox Grid.Column="1" Text="{Binding SearchText}" Watermark="Search by Name or SKU..." 
+                                 FontSize="14" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Product Grid -->
+            <ScrollViewer Grid.Row="1" Padding="0,0,16,0">
+                <ItemsControl ItemsSource="{Binding AvailableProducts}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Command="{Binding #Root.((vm:POSViewModel)DataContext).AddToCartCommand}" CommandParameter="{Binding .}"
+                                    Width="180" Height="220" Margin="0,0,16,16" 
+                                    Background="Transparent" BorderThickness="0" Padding="0"
+                                    CornerRadius="12">
+                                <Border Background="White" CornerRadius="12" BoxShadow="0 4 6 -1 #1A000000" ClipToBounds="True">
+                                    <Grid RowDefinitions="*, Auto">
+                                        <!-- Placeholder Image Area -->
+                                        <Panel Grid.Row="0" Background="#F9FAFB">
+                                            <TextBlock Text="{Binding Name, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" 
+                                                       FontSize="48" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.1" Foreground="#4B5563"/>
+                                            
+                                            <!-- Stock Badge -->
+                                            <Border Background="{Binding StockQuantity, Converter={x:Static ObjectConverters.IsNull}}" 
+                                                    CornerRadius="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Padding="6,2">
+                                                <!-- Simple Stock binding for color logic via classes would be better, but keeping simple -->
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <TextBlock Text="📦" FontSize="10"/>
+                                                    <TextBlock Text="{Binding StockQuantity}" FontSize="12" FontWeight="SemiBold" Foreground="#4B5563"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Panel>
+                                        
+                                        <!-- Content -->
+                                        <StackPanel Grid.Row="1" Margin="12">
+                                            <TextBlock Text="{Binding Category}" FontSize="10" Foreground="#9CA3AF" LetterSpacing="1"/>
+                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Margin="0,2,0,4" 
+                                                       TextTrimming="CharacterEllipsis" Foreground="#1F2937"/>
+                                            <TextBlock Text="{Binding SKU}" FontSize="11" Foreground="#9CA3AF" Margin="0,0,0,8"/>
+                                            
+                                            <Separator Background="#F3F4F6" Height="1" Margin="0,0,0,8"/>
+                                            
+                                            <Grid ColumnDefinitions="*, Auto">
+                                                <TextBlock Text="{Binding Price, StringFormat='{}{0:C}'}" 
+                                                           FontSize="16" FontWeight="Bold" Foreground="#059669"/>
+                                                <Border Background="#EEF2FF" CornerRadius="12" Padding="8,2" VerticalAlignment="Center">
+                                                    <TextBlock Text="Add" FontSize="11" FontWeight="SemiBold" Foreground="#4F46E5"/>
+                                                </Border>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- RIGHT: Cart & Checkout -->
+        <Border Grid.Column="1" Background="White" BoxShadow="-4 0 15 0 #0F000000">
+            <Grid RowDefinitions="Auto, *, Auto">
+                
+                <!-- Cart Header -->
+                <Grid RowDefinitions="Auto, Auto" Margin="24,32,24,16">
+                    <TextBlock Text="Current Order" FontSize="20" FontWeight="Bold" Foreground="#111827"/>
+                    <TextBlock Grid.Row="1" Text="{Binding CartItems.Count, StringFormat='{}{0} Items'}" 
+                               FontSize="13" Foreground="#6B7280" Margin="0,4,0,0"/>
+                </Grid>
+                
+                <Separator Height="1" Background="#F3F4F6" VerticalAlignment="Bottom"/>
+
+                <!-- Cart List -->
+                <DataGrid Grid.Row="1" ItemsSource="{Binding CartItems}" AutoGenerateColumns="False" 
+                          IsReadOnly="True" GridLinesVisibility="None" BorderThickness="0" Background="White" RowHeight="72"
+                          HeadersVisibility="None" Margin="0,8">
+                    <DataGrid.Columns>
+                        <!-- Product Info -->
+                        <DataGridTemplateColumn Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid RowDefinitions="Auto, Auto" VerticalAlignment="Center" Margin="24,0,8,0">
+                                        <TextBlock Text="{Binding Product.Name}" FontWeight="SemiBold" FontSize="14" Foreground="#374151"/>
+                                        <TextBlock Grid.Row="1" Text="{Binding Product.Price, StringFormat='{}{0:C}'}" 
+                                                   FontSize="12" Foreground="#9CA3AF"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Qty & Controls -->
+                        <DataGridTemplateColumn Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="#F9FAFB" CornerRadius="8" Padding="4,4" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="0">
+                                            <Button Content="-" Command="{Binding Decrement}" 
+                                                    Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0"
+                                                    Foreground="#6B7280" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding Quantity}" VerticalAlignment="Center" Width="24" TextAlignment="Center" FontWeight="SemiBold"/>
+                                            <Button Content="+" Command="{Binding Increment}" 
+                                                    Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0"
+                                                    Foreground="#6B7280" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Total & Remove -->
+                        <DataGridTemplateColumn Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,24,0" Spacing="12">
+                                        <TextBlock Text="{Binding Subtotal, StringFormat='{}{0:C}'}" 
+                                                   FontWeight="Bold" FontSize="14" Foreground="#111827" 
+                                                   VerticalAlignment="Center" Width="70" TextAlignment="Right"/>
+                                        
+                                        <Button Content="×" Command="{Binding #Root.((vm:POSViewModel)DataContext).RemoveFromCartCommand}" CommandParameter="{Binding .}" 
+                                                Foreground="#EF4444" Background="#FEF2F2" BorderThickness="0" 
+                                                Width="24" Height="24" Padding="0,0,0,2" CornerRadius="12"
+                                                HorizontalContentAlignment="Center" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- Footer area -->
+                <StackPanel Grid.Row="2" Background="#FAFAFA">
+                    <Separator Height="1" Background="#E5E7EB"/>
+                    
+                    <StackPanel Margin="24,24,24,12" Spacing="12">
+                        <!-- Subtotal / Taxes could go here -->
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBlock Text="Total Amount" FontSize="14" Foreground="#6B7280" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="{Binding TotalAmount, StringFormat={}{0:C}}" FontSize="24" FontWeight="Bold" Foreground="#111827"/>
+                        </Grid>
+
+                        <!-- Payment Input -->
+                        <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="12">
+                            <Grid ColumnDefinitions="Auto, *, Auto">
+                                <TextBlock Text="💵" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBox Grid.Column="1" Text="{Binding AmountPaid}" Watermark="Enter Amount Paid. E.g. 50.00" 
+                                         BorderThickness="0" Background="Transparent" FontSize="16" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Change -->
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBlock Text="Change Due" FontSize="14" Foreground="#6B7280" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ChangeDue, StringFormat={}{0:C}}" FontSize="18" FontWeight="SemiBold" Foreground="#059669"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Checkout Button -->
+                    <Button Content="COMPLETE CHECKOUT" Command="{Binding CheckoutCommand}" 
+                            HorizontalAlignment="Stretch" Height="56" Margin="24,0,24,24"
+                            Background="#4F46E5" Foreground="White" FontSize="16" FontWeight="Bold"
+                            CornerRadius="8" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                            Classes="accent"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- RECEIPT MODAL -->
+        <Border Grid.ColumnSpan="2" Background="#80000000" IsVisible="{Binding IsReceiptModalOpen}">
+            <Border Background="White" CornerRadius="16" Width="420" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                    Padding="0" BoxShadow="0 20 25 -5 #1A000000" ClipToBounds="True">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <!-- Header -->
+                    <Border Background="#10B981" Padding="20">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="✓" FontSize="32" Foreground="White" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Payment Successful!" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Content -->
+                    <ScrollViewer Grid.Row="1" MaxHeight="400" Padding="24">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="Receipt Details" FontWeight="SemiBold" Foreground="#374151"/>
+                            <Border Background="#F9FAFB" CornerRadius="8" Padding="16" BorderBrush="#E5E7EB" BorderThickness="1">
+                                <TextBlock Text="{Binding LastReceiptText}" FontFamily="Monospace" FontSize="12" Foreground="#4B5563" TextWrapping="Wrap"/>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Actions -->
+                    <Grid Grid.Row="2" ColumnDefinitions="*, 16, *" Margin="24" Background="#FAFAFA">
+                        <Button Grid.Column="0" Content="Close" Command="{Binding CloseReceiptCommand}" 
+                                HorizontalAlignment="Stretch" Foreground="#4B5563" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="6"/>
+                        <Button Grid.Column="2" Content="Print Receipt" Command="{Binding PrintReceiptCommand}" 
+                                HorizontalAlignment="Stretch" Background="#10B981" Foreground="White" CornerRadius="6" FontWeight="SemiBold"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

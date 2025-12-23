@@ -1,0 +1,246 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
+             x:Class="InventoryManagementSystem.UI.Views.DashboardView"
+             x:DataType="vm:DashboardViewModel">
+
+    <Grid>
+        <ScrollViewer>
+            <StackPanel Spacing="25" Margin="30">
+                <!-- Header -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding WelcomeMessage}" FontSize="28" FontWeight="SemiBold" Foreground="#333"/>
+                        <TextBlock Text="Here's what's happening in your inventory today." Foreground="#666" Margin="0,5,0,0"/>
+                    </StackPanel>
+                    
+                    <Button Grid.Column="1" Command="{Binding LoadDashboardDataCommand}" Content="Refresh" Background="Transparent" Foreground="#007ACC" BorderThickness="0"/>
+                </Grid>
+
+                <!-- Financial Cards -->
+                <Grid ColumnDefinitions="*,15,*,15,*" RowDefinitions="Auto">
+                    <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="20" BoxShadow="0 4 10 0 #10000000">
+                        <StackPanel>
+                            <TextBlock Text="Total Revenue" Foreground="#888" FontSize="14"/>
+                            <TextBlock Text="{Binding TotalRevenue, StringFormat={}{0:C}}" FontSize="28" FontWeight="Bold" Foreground="#2E7D32" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Background="White" CornerRadius="8" Padding="20" BoxShadow="0 4 10 0 #10000000">
+                        <StackPanel>
+                            <TextBlock Text="Total Profit" Foreground="#888" FontSize="14"/>
+                            <Panel>
+                                <TextBlock Text="{Binding TotalProfit, StringFormat={}{0:C}}" FontSize="28" FontWeight="Bold" Foreground="#007ACC" Margin="0,5,0,0" IsVisible="{Binding ShowFinancials}"/>
+                                <TextBlock Text="LOCKED" FontSize="24" FontWeight="Bold" Foreground="#CCC" Margin="0,5,0,0" IsVisible="{Binding HideFinancials}"/>
+                            </Panel>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="4" Background="White" CornerRadius="8" Padding="20" BoxShadow="0 4 10 0 #10000000">
+                        <StackPanel>
+                            <TextBlock Text="Inventory Value" Foreground="#888" FontSize="14"/>
+                            <TextBlock Text="{Binding TotalInventoryValue, StringFormat={}{0:C}}" FontSize="28" FontWeight="Bold" Foreground="#F57C00" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Operational Cards -->
+                <Grid ColumnDefinitions="*,15,*,15,*" RowDefinitions="Auto">
+                    <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="20" BoxShadow="0 4 10 0 #10000000">
+                        <StackPanel>
+                            <TextBlock Text="Total Products" Foreground="#888" FontSize="14"/>
+                            <TextBlock Text="{Binding TotalProducts}" FontSize="28" FontWeight="Bold" Foreground="#555" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Background="White" CornerRadius="8" Padding="20" BoxShadow="0 4 10 0 #10000000">
+                        <StackPanel>
+                            <TextBlock Text="Low Stock Alerts" Foreground="#888" FontSize="14"/>
+                            <TextBlock Text="{Binding LowStockCount}" FontSize="28" FontWeight="Bold" Foreground="#FF5252" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="4" Background="White" CornerRadius="8" Padding="20" BoxShadow="0 4 10 0 #10000000">
+                        <StackPanel>
+                            <TextBlock Text="License Tier" Foreground="#888" FontSize="14"/>
+                            <TextBlock Text="{Binding LicenseTypeDisplay}" FontSize="24" FontWeight="Bold" Foreground="#333" Margin="0,5,0,0"/>
+                            <TextBlock Text="{Binding LicenseStatusDisplay}" Foreground="#4CAF50" FontSize="12" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Quick Actions -->
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Quick Actions" FontSize="18" FontWeight="SemiBold" Foreground="#333"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Command="{Binding OpenAddProductModalCommand}" IsEnabled="{Binding CanAddProduct}" Width="140" Height="90" Margin="0,0,15,15" Background="White" CornerRadius="6">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="5">
+                                 <TextBlock Text="+" FontSize="24" HorizontalAlignment="Center" Foreground="#007ACC"/>
+                                 <TextBlock Text="Add Product" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding OpenStockModalCommand}" CommandParameter="IN" IsEnabled="{Binding CanStockMove}" Width="140" Height="90" Margin="0,0,15,15" Background="White" CornerRadius="6">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="5">
+                                 <TextBlock Text="⬇" FontSize="20" HorizontalAlignment="Center" Foreground="#4CAF50"/>
+                                 <TextBlock Text="Stock IN" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding OpenStockModalCommand}" CommandParameter="OUT" IsEnabled="{Binding CanStockMove}" Width="140" Height="90" Margin="0,0,15,15" Background="White" CornerRadius="6">
+                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="5">
+                                 <TextBlock Text="⬆" FontSize="20" HorizontalAlignment="Center" Foreground="#FF5252"/>
+                                 <TextBlock Text="Stock OUT" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding RunBulkImportCommand}" IsEnabled="{Binding CanBulkImport}" Width="140" Height="90" Margin="0,0,15,15" Background="White" CornerRadius="6">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="5">
+                                 <TextBlock Text="📂" FontSize="20" HorizontalAlignment="Center" Foreground="#FF9800"/>
+                                 <TextBlock Text="Bulk Import" FontWeight="Medium"/>
+                            </StackPanel>
+                            <ToolTip.Tip>Import Products from CSV (Premium)</ToolTip.Tip>
+                        </Button>
+
+                        <Button Command="{Binding GoToReportsCommand}" IsEnabled="{Binding CanViewReports}" Width="140" Height="90" Margin="0,0,15,15" Background="White" CornerRadius="6">
+                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="5">
+                                 <TextBlock Text="📊" FontSize="20" HorizontalAlignment="Center" Foreground="#9C27B0"/>
+                                 <TextBlock Text="Reports" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding GoToPOSCommand}" IsEnabled="{Binding CanStockMove}" Width="140" Height="90" Margin="0,0,15,15" Background="White" CornerRadius="6">
+                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="5">
+                                 <TextBlock Text="🛒" FontSize="20" HorizontalAlignment="Center" Foreground="#4CAF50"/>
+                                 <TextBlock Text="Cashier / POS" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+                </StackPanel>
+
+                <!-- Recent Activity Table -->
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Recent Stock Movements" FontSize="18" FontWeight="SemiBold" Foreground="#333"/>
+                    <Border Background="White" CornerRadius="8" BoxShadow="0 2 8 0 #08000000" ClipToBounds="True">
+                        <StackPanel>
+                            <Grid ColumnDefinitions="50,*,*,*,*,*" Background="#F5F5F5" Height="40">
+                                <TextBlock Text="#" FontWeight="SemiBold" VerticalAlignment="Center" Margin="15,0"/>
+                                <TextBlock Text="Product ID" Grid.Column="1" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Text="Type" Grid.Column="2" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Text="Qty" Grid.Column="3" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Text="User" Grid.Column="4" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Text="Date" Grid.Column="5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding RecentMovements}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="#EEEEEE" BorderThickness="0,0,0,1">
+                                            <Grid ColumnDefinitions="50,*,*,*,*,*" Height="45" Background="Transparent">
+                                                <TextBlock Text="{Binding Id}" VerticalAlignment="Center" Margin="15,0" Foreground="#888"/>
+                                                <TextBlock Text="{Binding ProductId}" Grid.Column="1" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding MovementType}" Grid.Column="2" VerticalAlignment="Center" FontWeight="Medium"/>
+                                                <TextBlock Text="{Binding QuantityChanged}" Grid.Column="3" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Username}" Grid.Column="4" VerticalAlignment="Center" Foreground="#555"/>
+                                                <TextBlock Text="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Grid.Column="5" VerticalAlignment="Center" Foreground="#888" FontSize="12"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="No recent movements found." IsVisible="{Binding !HasMovements}" HorizontalAlignment="Center" Margin="20" Foreground="#999"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- MODAL OVERLAY (Quick Actions) -->
+        <Border Background="#44000000" IsVisible="{Binding IsModalOpen}">
+            <Border Background="White" CornerRadius="12" VerticalAlignment="Center" HorizontalAlignment="Center" Width="450" Padding="30" BoxShadow="0 10 40 0 #44000000">
+                <StackPanel Spacing="20">
+                    <TextBlock Text="{Binding ModalTitle}" FontSize="22" FontWeight="Bold" Foreground="#333"/>
+                    <Separator Height="1" Background="#EEE"/>
+
+                    <StackPanel Spacing="15" IsVisible="{Binding ShowProductForm}">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Product Name" FontSize="12" Foreground="#888"/>
+                            <TextBox Text="{Binding FormProduct.Name}" Watermark="Enter product name"/>
+                        </StackPanel>
+                        <Grid ColumnDefinitions="*, 15, *">
+                            <StackPanel Grid.Column="0" Spacing="5">
+                                <TextBlock Text="SKU" FontSize="12" Foreground="#888"/>
+                                <TextBox Text="{Binding FormProduct.SKU}" Watermark="Optional SKU"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="5">
+                                <TextBlock Text="Category" FontSize="12" Foreground="#888"/>
+                                <TextBox Text="{Binding FormProduct.Category}" Watermark="General"/>
+                            </StackPanel>
+                        </Grid>
+                        <Grid ColumnDefinitions="*, 15, *">
+                            <StackPanel Grid.Column="0" Spacing="5">
+                                <TextBlock Text="Price" FontSize="12" Foreground="#888"/>
+                                <TextBox Text="{Binding FormProduct.Price}" Watermark="0.00"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="5">
+                                <TextBlock Text="Cost" FontSize="12" Foreground="#888"/>
+                                <TextBox Text="{Binding FormProduct.Cost}" Watermark="0.00"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Spacing="15" IsVisible="{Binding ShowStockForm}">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Select Product" FontSize="12" Foreground="#888"/>
+                            <ComboBox ItemsSource="{Binding AllProducts}" SelectedItem="{Binding SelectedTargetProduct}" HorizontalAlignment="Stretch" PlaceholderText="Choose product...">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Quantity" FontSize="12" Foreground="#888"/>
+                            <TextBox Text="{Binding AdjQuantity}" Watermark="Enter quantity"/>
+                        </StackPanel>
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Reason" FontSize="12" Foreground="#888"/>
+                            <TextBox Text="{Binding AdjReason}" Watermark="Optional reason..."/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding ModalError}" Foreground="#FF5252" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding ModalError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <Grid ColumnDefinitions="*, 10, *">
+                        <Button Grid.Column="0" Content="Cancel" Command="{Binding CloseModalCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#F5F5F5"/>
+                        <Button Grid.Column="2" Content="Save Action" Command="{Binding SaveModalCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#007ACC" Foreground="White" FontWeight="Bold"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- IMPORT PROGRESS OVERLAY -->
+        <Border Background="#AA000000" IsVisible="{Binding IsImporting}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15">
+                <TextBlock Text="Importing Products..." Foreground="White" FontSize="18" HorizontalAlignment="Center"/>
+                <ProgressBar Value="{Binding ImportProgress}" Minimum="0" Maximum="100" Width="300" Height="20" ShowProgressText="True"/>
+                <TextBlock Text="Please wait while we process your file." Foreground="#CCC" FontSize="12" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- IMPORT SUMMARY MODAL -->
+        <Border Background="#44000000" IsVisible="{Binding ShowImportSummary}">
+            <Border Background="White" CornerRadius="12" VerticalAlignment="Center" HorizontalAlignment="Center" Width="400" Padding="30" BoxShadow="0 10 40 0 #44000000">
+                <StackPanel Spacing="20">
+                    <TextBlock Text="Import Summary" FontSize="20" FontWeight="Bold" Foreground="#333"/>
+                    <Separator Height="1" Background="#EEE"/>
+                    
+                    <ScrollViewer MaxHeight="300">
+                         <TextBlock Text="{Binding ImportSummaryText}" TextWrapping="Wrap" LineHeight="20" Foreground="#555"/>
+                    </ScrollViewer>
+
+                    <Button Content="Dismiss" Command="{Binding CloseImportSummaryCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="#007ACC" Foreground="White" FontWeight="Bold" Height="40"/>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

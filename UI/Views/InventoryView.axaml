@@ -1,0 +1,115 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="InventoryManagementSystem.UI.Views.InventoryView"
+             x:DataType="vm:InventoryViewModel">
+    
+    <SplitView IsPaneOpen="{Binding IsPaneOpen}"
+               DisplayMode="Overlay"
+               OpenPaneLength="400"
+               PaneBackground="White">
+        
+        <SplitView.Pane>
+            <Border Padding="20">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="{Binding PaneTitle}" FontSize="20" FontWeight="Bold"/>
+                    
+                    <!-- Product Form -->
+                    <StackPanel Spacing="15" IsVisible="{Binding !IsStockMode}">
+                        <TextBox Watermark="Product Name" Text="{Binding CurrentProduct.Name}" />
+                        <TextBox Watermark="SKU" Text="{Binding CurrentProduct.SKU}" />
+                        <TextBox Watermark="Category" Text="{Binding CurrentProduct.Category}" />
+                        <TextBox Watermark="Unit (e.g., Pcs, Kg)" Text="{Binding CurrentProduct.Unit}" />
+                        
+                        <!-- Price and Cost are now set only during Stock Actions -->
+                        
+                        <TextBox Watermark="Initial Stock" Text="{Binding CurrentProduct.StockQuantity}" IsEnabled="{Binding CurrentProduct.Id, Converter={x:Static ObjectConverters.IsNull}}"/>
+                    </StackPanel>
+
+                    <!-- Stock Adjustment Form -->
+                    <StackPanel Spacing="15" IsVisible="{Binding IsStockMode}">
+                        <TextBlock Text="Movement Type" FontSize="12"/>
+                        <ComboBox ItemsSource="{Binding MovementTypes}" SelectedItem="{Binding SelectedMovementType}" HorizontalAlignment="Stretch"/>
+                        
+                        <TextBlock Text="Quantity" FontSize="12"/>
+                        <TextBox Watermark="Quantity" Text="{Binding AdjustmentQuantity}" />
+
+                        <!-- Batch Financials -->
+                        <StackPanel IsVisible="{Binding IsMovementIn}" Spacing="5">
+                            <TextBlock Text="Cost per Unit" FontSize="12"/>
+                            <TextBox Watermark="Purchase Cost" Text="{Binding AdjustmentCostPerUnit}" />
+                        </StackPanel>
+
+                        <StackPanel IsVisible="{Binding IsMovementOut}" Spacing="5">
+                            <TextBlock Text="Selling Price (per unit)" FontSize="12"/>
+                            <TextBox Watermark="Selling Price" Text="{Binding AdjustmentUnitPrice}" />
+                        </StackPanel>
+                        
+                        <TextBlock Text="Reason" FontSize="12"/>
+                        <TextBox Watermark="Reason (e.g., Damaged, Restock)" Text="{Binding AdjustmentReason}" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF5252" TextWrapping="Wrap" IsVisible="{Binding HasError}"/>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,20,0,0">
+                        <Button Content="Cancel" Command="{Binding CancelPaneCommand}" />
+                        <Button Content="Save" Classes="accent" Command="{Binding SaveProductCommand}" Background="#007ACC" Foreground="White" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </SplitView.Pane>
+
+        <SplitView.Content>
+            <Grid RowDefinitions="Auto, *">
+                <!-- Header / Toolbar -->
+                <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,0,10,10">
+                    <TextBox Text="{Binding SearchText}" Watermark="Search products..." Width="300" HorizontalAlignment="Left"/>
+                    
+                    <Button Grid.Column="1" Margin="0,0,10,0" 
+                            Content="Import (CSV)" 
+                            Command="{Binding ImportProductsCommand}" 
+                            IsEnabled="{Binding CanBulkImport}"
+                            ToolTip.Tip="{Binding BulkImportTooltip}"
+                            Background="#F5F5F5" />
+                            
+                    <Button Grid.Column="2" Content="+ New Product" Command="{Binding OpenAddProductPaneCommand}" Background="#2E7D32" Foreground="White"/>
+                </Grid>
+
+                <!-- Product List -->
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Products}" 
+                          SelectedItem="{Binding SelectedProduct}"
+                          AutoGenerateColumns="False" 
+                          IsReadOnly="True" 
+                          CanUserSortColumns="True"
+                          GridLinesVisibility="All"
+                          BorderThickness="1" BorderBrush="#EEE" Background="White">
+                    <DataGrid.Columns>
+                        <!-- Removed ID Column -->
+                        <DataGridTextColumn Header="SKU" Binding="{Binding SKU}" Width="100"/>
+                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                        <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="100"/>
+                        <DataGridTextColumn Header="Stock" Binding="{Binding StockQuantity}" Width="80"/>
+                        <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="60"/>
+                        <!-- Price is roughly displayed here, but actual sale price is set per transaction -->
+                        <DataGridTextColumn Header="Est. Price" Binding="{Binding Price, StringFormat={}{0:C}}" Width="80"/>
+                        
+                        <DataGridTemplateColumn Header="Actions" Width="190">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <Button Content="Stock" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).OpenStockPaneCommand}" CommandParameter="{Binding .}" Background="#F57C00" Foreground="White" FontSize="10" Padding="5,2"/>
+                                        <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).OpenEditProductPaneCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="5,2"/>
+                                        <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).DeleteProductCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="10" Padding="5,2"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </SplitView.Content>
+    </SplitView>
+</UserControl>

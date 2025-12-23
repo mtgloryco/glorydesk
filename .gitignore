@@ -1,0 +1,74 @@
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+*.userprefs
+
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww]in32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+.vs/
+Generated\ Files/
+.vscode/
+.settings/
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ASP.NET Core
+**/appsettings.Development.json
+**/appsettings.Production.json
+
+# StyleCop
+StyleCop.Cache
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# MPF
+*.ignore
+*_mpfproject.txt
+
+# General
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Environment Variables
+.env
+
+# Publish
+*.pubxml
+# Binaries and Installers
+*.exe
+*.dll
+*.so
+*.dylib
+*.tar.gz
+*.zip
+*.msi
+
+# Build Output
+publish/
+[Pp]ublish/
+
+# Web Downloads
+license-manager-web/public/downloads/

@@ -1,0 +1,144 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+             x:Class="InventoryManagementSystem.UI.Views.ReportsView"
+             x:DataType="vm:ReportsViewModel">
+    <Grid RowDefinitions="Auto, *" Margin="30">
+        <!-- Header & Actions -->
+        <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,25">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Reports &amp; Analytics" FontSize="28" FontWeight="SemiBold" Foreground="#333" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="All Products" Command="{Binding LoadStockReportCommand}" Background="White" BorderBrush="#DDD" BorderThickness="1"/>
+                    <Button Content="Low Stock" Command="{Binding LoadLowStockReportCommand}" Background="White" BorderBrush="#DDD" BorderThickness="1"/>
+                    <Button Content="Stock Audit" Command="{Binding LoadStockHistoryReportCommand}" Background="White" BorderBrush="#DDD" BorderThickness="1"/>
+                    <Button Content="Monthly Profit" Command="{Binding LoadMonthlyProfitReportCommand}" Background="White" BorderBrush="#DDD" BorderThickness="1"/>
+                </StackPanel>
+            </StackPanel>
+            
+            <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="1" VerticalAlignment="Top">
+                 <Button Content="View Details" Command="{Binding OpenDetailsCommand}" 
+                         IsEnabled="{Binding SelectedStockMovement, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" 
+                         Background="White" BorderBrush="#DDD" BorderThickness="1" Padding="15,8" CornerRadius="6"
+                         IsVisible="{Binding IsHistoryReport}"/>
+                 
+                 <Button Content="Export to CSV" Command="{Binding ExportToCsvCommand}" Background="#007ACC" Foreground="White" Padding="15,8" CornerRadius="6"/>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Background="White" CornerRadius="8" BoxShadow="0 4 15 0 #10000000" BorderThickness="0" ClipToBounds="True">
+             <Grid RowDefinitions="Auto, *">
+                 <Border Background="#F9F9F9" Padding="15" BorderBrush="#EEE" BorderThickness="0,0,0,1">
+                     <TextBlock Text="{Binding ReportTitle}" FontWeight="SemiBold" Foreground="#555" FontSize="16"/>
+                 </Border>
+                 
+                 <Panel Grid.Row="1">
+                     <!-- Stock Reports -->
+                     <DataGrid ItemsSource="{Binding ReportData}" 
+                               IsVisible="{Binding IsStockReport}"
+                               AutoGenerateColumns="False" 
+                               IsReadOnly="True" 
+                               GridLinesVisibility="Horizontal"
+                               BorderThickness="0" 
+                               Background="White"
+                               RowHeight="45">
+                          <DataGrid.Columns>
+                             <DataGridTextColumn Header="SKU" Binding="{Binding SKU}" Width="120"/>
+                             <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                             <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120"/>
+                             <DataGridTextColumn Header="Qty" Binding="{Binding StockQuantity}" Width="80"/>
+                             <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="80"/>
+                             <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat={}{0:C}}" Width="100"/>
+                          </DataGrid.Columns>
+                      </DataGrid>
+
+                     <!-- Audit Reports -->
+                     <DataGrid ItemsSource="{Binding StockHistoryData}" 
+                               SelectedItem="{Binding SelectedStockMovement}"
+                               IsVisible="{Binding IsHistoryReport}"
+                               AutoGenerateColumns="False" 
+                               IsReadOnly="True" 
+                               GridLinesVisibility="Horizontal"
+                               BorderThickness="0" 
+                               Background="White"
+                               RowHeight="45">
+                          <DataGrid.Columns>
+                             <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="160"/>
+                             <DataGridTextColumn Header="SKU" Binding="{Binding ProductId}" Width="100"/>
+                             <DataGridTextColumn Header="Type" Binding="{Binding MovementType}" Width="80"/>
+                             <DataGridTextColumn Header="Qty" Binding="{Binding QuantityChanged}" Width="80"/>
+                             <DataGridTextColumn Header="Batch Details" Binding="{Binding BatchTraceInfo}" Width="200"/>
+                             <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*"/>
+                             <DataGridTextColumn Header="Operator" Binding="{Binding Username}" Width="120"/>
+                          </DataGrid.Columns>
+                      </DataGrid>
+
+                      <!-- Monthly Profit Reports -->
+                      <DataGrid ItemsSource="{Binding MonthlyProfitData}" 
+                                IsVisible="{Binding IsProfitReport}"
+                                AutoGenerateColumns="False" 
+                                IsReadOnly="True" 
+                                GridLinesVisibility="Horizontal"
+                                BorderThickness="0" 
+                                Background="White"
+                                RowHeight="45">
+                          <DataGrid.Columns>
+                             <DataGridTextColumn Header="Month" Binding="{Binding Month}" Width="*"/>
+                             <DataGridTextColumn Header="Revenue" Binding="{Binding Revenue, StringFormat={}{0:C}}" Width="150"/>
+                             <DataGridTextColumn Header="COGS (Cost)" Binding="{Binding COGS, StringFormat={}{0:C}}" Width="150"/>
+                             <DataGridTextColumn Header="Gross Profit" Binding="{Binding Profit, StringFormat={}{0:C}}" Width="150"/>
+                          </DataGrid.Columns>
+                      </DataGrid>
+                 </Panel>
+             </Grid>
+        </Border>
+
+        <!-- DETAILS MODAL -->
+        <Border Background="#44000000" Grid.RowSpan="2" IsVisible="{Binding IsDetailsModalOpen}">
+             <Border Background="White" CornerRadius="12" Width="600" Height="450" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="30" BoxShadow="0 10 40 0 #44000000">
+                 <Grid RowDefinitions="Auto, *, Auto">
+                     <StackPanel Spacing="10">
+                         <TextBlock Text="Transaction Details" FontSize="22" FontWeight="Bold" Foreground="#333"/>
+                         <StackPanel Orientation="Horizontal" Spacing="20">
+                              <TextBlock Text="{Binding SelectedStockMovement.Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Foreground="#666"/>
+                              <TextBlock Text="{Binding SelectedStockMovement.MovementType}" FontWeight="Bold" Foreground="#007ACC"/>
+                         </StackPanel>
+                         <Separator Height="1" Background="#EEE" Margin="0,10"/>
+                     </StackPanel>
+
+                     <ScrollViewer Grid.Row="1" Margin="0,15">
+                         <StackPanel Spacing="15">
+                             <StackPanel>
+                                 <TextBlock Text="Performed By" FontSize="12" Foreground="#888"/>
+                                 <TextBlock Text="{Binding SelectedStockMovement.Username}" FontSize="16"/>
+                             </StackPanel>
+                             <StackPanel>
+                                 <TextBlock Text="Product ID (SKU)" FontSize="12" Foreground="#888"/>
+                                 <TextBlock Text="{Binding SelectedStockMovement.ProductId}" FontSize="16"/>
+                             </StackPanel>
+                             <StackPanel>
+                                 <TextBlock Text="Reason" FontSize="12" Foreground="#888"/>
+                                 <TextBlock Text="{Binding SelectedStockMovement.Reason}" FontSize="16" TextWrapping="Wrap"/>
+                             </StackPanel>
+                             <Border Background="#F5F5F5" Padding="15" CornerRadius="6">
+                                 <Grid ColumnDefinitions="*, Auto">
+                                     <StackPanel Spacing="5">
+                                        <TextBlock Text="Batch Trace / Cost Details" FontSize="12" FontWeight="Bold" Foreground="#555"/>
+                                        <TextBlock Text="{Binding SelectedStockMovement.BatchTraceInfo}" TextWrapping="Wrap" LineHeight="22"/>
+                                     </StackPanel>
+                                     <Button Grid.Column="1" Command="{Binding CopyToClipboardCommand}" CommandParameter="{Binding SelectedStockMovement.BatchTraceInfo}" 
+                                             Content="Copy" Background="White" BorderBrush="#DDD" BorderThickness="1" VerticalAlignment="Top"/>
+                                 </Grid>
+                             </Border>
+                         </StackPanel>
+                     </ScrollViewer>
+
+                     <Button Grid.Row="2" Content="Close" Command="{Binding CloseDetailsCommand}" HorizontalAlignment="Right" Width="100" Background="#EEE"/>
+                 </Grid>
+             </Border>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:InventoryManagementSystem.UI.ViewModels"
+             x:Class="InventoryManagementSystem.UI.Views.LicenseView"
+             x:DataType="vm:LicenseViewModel"
+             Background="White">
+    
+    <ScrollViewer>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30" Width="500" Margin="40">
+            <StackPanel Spacing="5" HorizontalAlignment="Center">
+                <TextBlock Text="License Management" FontSize="32" FontWeight="Bold" Foreground="#333" HorizontalAlignment="Center"/>
+                <TextBlock Text="Manage your subscription and premium features" Foreground="#666" HorizontalAlignment="Center"/>
+            </StackPanel>
+            
+            <Border Background="White" CornerRadius="12" Padding="30" BoxShadow="0 8 30 0 #15000000">
+                <StackPanel Spacing="20">
+                    <TextBlock Text="Current License Information" FontWeight="SemiBold" FontSize="18" Foreground="#333"/>
+                    <Separator Height="1" Background="#EEE"/>
+                    
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto, Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="License Tier:" Foreground="#777" Margin="0,0,20,15" VerticalAlignment="Center"/>
+                        <Border Grid.Row="0" Grid.Column="1" Background="#E3F2FD" CornerRadius="4" Padding="10,4" HorizontalAlignment="Left" Margin="0,0,0,15">
+                             <TextBlock Text="{Binding LicenseType}" FontWeight="Bold" Foreground="#1976D2"/>
+                        </Border>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Current Status:" Foreground="#777" Margin="0,0,20,15" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LicenseStatus}" Foreground="#4CAF50" FontWeight="Medium" Margin="0,0,0,15"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Expiry Date:" Foreground="#777" Margin="0,0,20,15" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ExpirationDate}" Foreground="#333" Margin="0,0,0,15"/>
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Hardware ID:" Foreground="#777" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding HardwareId}" IsReadOnly="True" Background="#F9F9F9" BorderThickness="1" BorderBrush="#EEE" Foreground="#888" FontSize="11" Padding="8,4"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Background="White" CornerRadius="12" Padding="30" BoxShadow="0 8 30 0 #15000000">
+                 <StackPanel Spacing="15">
+                     <TextBlock Text="Activation" FontWeight="SemiBold" FontSize="18" Foreground="#333"/>
+                     <TextBlock Text="Unlock all features by entering your premium token below." Foreground="#666" FontSize="13" TextWrapping="Wrap"/>
+                     
+                     <TextBox Text="{Binding InputToken}" 
+                              Watermark="PREMIUM-XXXX-XXXX" 
+                              Height="45" 
+                              VerticalContentAlignment="Center"
+                              BorderBrush="#DDD"
+                              IsVisible="{Binding !IsActivatedSuccessfully}"/>
+                              
+                     <TextBlock Text="{Binding ActivationMessage}" Foreground="#1976D2" FontSize="13" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                     
+                     <Button Content="Activate Professional Software" 
+                             Command="{Binding ActivateCommand}" 
+                             IsVisible="{Binding !IsActivatedSuccessfully}"
+                             HorizontalAlignment="Stretch" 
+                             HorizontalContentAlignment="Center"
+                             Height="45"
+                             Background="#007ACC" 
+                             Foreground="White"
+                             FontWeight="Bold"
+                             CornerRadius="6"/>
+
+                     <Button Content="Continue to System Dashboard" 
+                             Command="{Binding ContinueToLoginCommand}" 
+                             IsVisible="{Binding IsActivatedSuccessfully}"
+                             HorizontalAlignment="Stretch" 
+                             HorizontalContentAlignment="Center"
+                             Height="45"
+                             Background="#4CAF50" 
+                             Foreground="White"
+                             FontWeight="Bold"
+                             CornerRadius="6"/>
+                 </StackPanel>
+            </Border>
+            
+            <TextBlock Text="Need help? Contact support@inventorysystem.local" Foreground="#999" FontSize="12" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
