@@ -148,7 +148,7 @@ export default function LandingPage() {
                         <a href="#downloads" onClick={toggleMenu}>Downloads</a>
                         <a href="#pricing" onClick={toggleMenu}>Pricing</a>
                         <Link href="/about" onClick={toggleMenu}>About Us</Link>
-                        <button onClick={openLogin}>Login</button>
+                        <button onClick={openLogin} className="btn btn-secondary">Login</button>
                         <button onClick={openRegister} className="btn btn-primary">Get Started</button>
                     </div>
                 )}
@@ -208,18 +208,7 @@ export default function LandingPage() {
                         />
                     </div>
 
-                    {/* V2 Section */}
-                    <div className="v2-preview">
-                        <div className="v2-content">
-                            <span className="v2-tag">UPCOMING IN V2.0</span>
-                            <h3>IMS Cloud Integration</h3>
-                            <div className="v2-grid">
-                                <div className="v2-item"><RefreshCw size={24} className="v2-icon" /><span>Universal Sync</span></div>
-                                <div className="v2-item"><Database size={24} className="v2-icon" /><span>Encrypted Backup</span></div>
-                                <div className="v2-item"><Smartphone size={24} className="v2-icon" /><span>Mobile Reports</span></div>
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
             </section>
 
@@ -262,6 +251,8 @@ export default function LandingPage() {
                         )}
                     </div>
 
+
+
                     {downloads.length > 0 && (
                         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
                             <button onClick={() => setShowHistory(true)} className="btn btn-outline" style={{ fontSize: '0.9rem' }}>
@@ -269,6 +260,19 @@ export default function LandingPage() {
                             </button>
                         </div>
                     )}
+
+                    {/* V2 Section - Moved Here */}
+                    <div className="v2-preview" style={{ marginTop: '4rem', background: '#0f172a' }}>
+                        <div className="v2-content">
+                            <span className="v2-tag">UPCOMING IN V2.0</span>
+                            <h3>IMS Cloud Integration</h3>
+                            <div className="v2-grid">
+                                <div className="v2-item"><RefreshCw size={24} className="v2-icon" /><span>Universal Sync</span></div>
+                                <div className="v2-item"><Database size={24} className="v2-icon" /><span>Encrypted Backup</span></div>
+                                <div className="v2-item"><Smartphone size={24} className="v2-icon" /><span>Mobile Reports</span></div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="install-guide">
                         <h3 className="guide-title">Installation & Activation Guide</h3>
@@ -772,7 +776,23 @@ export default function LandingPage() {
                         z-index: 999;
                         border-top: 1px solid #eee;
                     }
-                    .mobile-menu a, .mobile-menu button { font-size: 1.2rem; font-weight: 700; text-align: center; }
+                    .mobile-menu a { 
+                        font-size: 1.2rem; 
+                        font-weight: 700; 
+                        text-align: center;
+                        text-decoration: none;
+                        color: #333;
+                        padding: 0.5rem;
+                        transition: color 0.2s;
+                    }
+                    .mobile-menu a:hover { color: var(--primary); }
+                    
+                    .mobile-menu .btn {
+                        width: 100%;
+                        padding: 1rem;
+                        font-size: 1.1rem;
+                        justify-content: center;
+                    }
                     .hero { padding: 10rem 0 6rem; }
                     .hero-title { font-size: 3.2rem; }
                     .hero-desc { font-size: 1.1rem; }

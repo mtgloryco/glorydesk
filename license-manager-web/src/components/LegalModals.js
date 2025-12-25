@@ -1,9 +1,12 @@
 'use client';
 
 import { X, Shield, FileText } from 'lucide-react';
+import { LEGAL_CONTENT } from '@/lib/legalContent';
 
 export function PrivacyModal({ isOpen, onClose }) {
     if (!isOpen) return null;
+
+    const { title, lastUpdated, sections } = LEGAL_CONTENT.privacy;
 
     return (
         <div className="legal-modal-overlay">
@@ -11,53 +14,17 @@ export function PrivacyModal({ isOpen, onClose }) {
                 <button onClick={onClose} className="close-btn"><X size={24} /></button>
                 <div className="legal-header">
                     <Shield size={32} className="icon" />
-                    <h2>Data Privacy Policy</h2>
-                    <p>Last updated: December 25, 2025</p>
+                    <h2>{title}</h2>
+                    <p>Last updated: {lastUpdated}</p>
                 </div>
 
                 <div className="legal-body">
-                    <section>
-                        <h3>1. Introduction</h3>
-                        <p>IMS Manager ("We", "Us", "Our") is committed to your privacy and the security of your data. This Privacy Policy describes our policies on the collection, use, and disclosure of your information when you use the IMS Platform.</p>
-                        <p>By using the Platform, you agree to the collection and use of information in accordance with this Privacy Policy.</p>
-                    </section>
-
-                    <section>
-                        <h3>2. Data Collection & Usage</h3>
-                        <p><strong>Types of Data Collected:</strong> We collect personal data necessary for license activation and support, including:</p>
-                        <ul>
-                            <li>Email address (for account management)</li>
-                            <li>Full Name / Business Name</li>
-                            <li>Hardware ID (for license binding)</li>
-                            <li>Usage Data (login timestamps, license validation status)</li>
-                        </ul>
-                        <p><strong>Purpose:</strong> We use this data to provide the Service, manage your Account, perform contract obligations (License issuance), and contact you regarding updates or support.</p>
-                    </section>
-
-                    <section>
-                        <h3>3. Data Protection Rights (Rwanda Law No 058/21021)</h3>
-                        <p>In compliance with the <strong>Law No 058/21021 of 13/10/2021</strong> relating to the protection of personal data and privacy, you are entitled to the following rights:</p>
-                        <ul>
-                            <li><strong>Right to personal data:</strong> The data belongs to You.</li>
-                            <li><strong>Right to object:</strong> You have the right to request us to stop processing your personal data.</li>
-                            <li><strong>Right to rectification:</strong> You have the right to correct inaccurate or incomplete information.</li>
-                            <li><strong>Right to erasure:</strong> You have the right to request deletion of your data (subject to legal retention requirements).</li>
-                            <li><strong>Right to data portability:</strong> You can request your data be transferred to you or another organization.</li>
-                            <li><strong>Right to restriction:</strong> You can restrict processing under certain conditions.</li>
-                        </ul>
-                    </section>
-
-                    <section>
-                        <h3>4. Security</h3>
-                        <p>The security of your Personal Data is important to us. We use commercially acceptable means (encryption, secure access controls) to protect your Personal Data, but remember that no method of transmission over the Internet is 100% secure.</p>
-                    </section>
-
-                    <section>
-                        <h3>5. Contact Us</h3>
-                        <p>If you have questions about this Privacy Policy or wish to exercise your rights, please contact our Data Protection Officer:</p>
-                        <p><strong>Email:</strong> mwimulebienvenu05@gmail.com</p>
-                        <p><strong>Location:</strong> Kigali, Rwanda</p>
-                    </section>
+                    {sections.map((section, index) => (
+                        <section key={index}>
+                            <h3>{section.title}</h3>
+                            {section.content}
+                        </section>
+                    ))}
                 </div>
             </div>
             <style jsx>{`
@@ -84,48 +51,25 @@ export function PrivacyModal({ isOpen, onClose }) {
 export function TermsModal({ isOpen, onClose }) {
     if (!isOpen) return null;
 
+    const { title, effectiveDate, sections } = LEGAL_CONTENT.terms;
+
     return (
         <div className="legal-modal-overlay">
             <div className="legal-modal-content">
                 <button onClick={onClose} className="close-btn"><X size={24} /></button>
                 <div className="legal-header">
                     <FileText size={32} className="icon" style={{ color: '#8b5cf6' }} />
-                    <h2>Terms of Service</h2>
-                    <p>Effective Date: December 25, 2025</p>
+                    <h2>{title}</h2>
+                    <p>Effective Date: {effectiveDate}</p>
                 </div>
 
                 <div className="legal-body">
-                    <section>
-                        <h3>1. Agreement to Terms</h3>
-                        <p>These Terms of Use constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("You") and IMS Manager ("Company"), concerning your access to and use of the IMS desktop application and website.</p>
-                    </section>
-
-                    <section>
-                        <h3>2. License Grant</h3>
-                        <p>The Company grants you a revocable, non-exclusive, non-transferable, limited license to download, install, and use the Application strictly in accordance with the terms of this Agreement.</p>
-                        <p><strong>License Restrictions:</strong> You shall not: (1) decompile, reverse engineer, disassemble, or derive the source code of the App; (2) use the App for any revenue generating endeavor other than the agreed internal business inventory management; (3) viololate any applicable laws, including Rwanda laws regarding data security.</p>
-                    </section>
-
-                    <section>
-                        <h3>3. User Representations</h3>
-                        <p>By using the Application, you represent and warrant that: (1) all registration information you submit will be true, accurate, current, and complete; (2) you will maintain the accuracy of such information; (3) you have the legal capacity and you agree to comply with these Terms of Use.</p>
-                    </section>
-
-                    <section>
-                        <h3>4. Disclaimer</h3>
-                        <p>The Application is provided on an AS-IS and AS-AVAILABLE basis. You agree that your use of the Application and our services will be at your sole risk. To the fullest extent permitted by law, we disclaim all warranties, express or implied, in connection with the Application and your use thereof.</p>
-                    </section>
-
-                    <section>
-                        <h3>5. Governing Law</h3>
-                        <p>These Terms shall be governed by and defined following the laws of <strong>Rwanda</strong>. IMS Manager and yourself irrevocably consent that the courts of Rwanda shall have exclusive jurisdiction to resolve any dispute which may arise in connection with these terms.</p>
-                    </section>
-
-                    <section>
-                        <h3>6. Contact</h3>
-                        <p>For any questions regarding these Terms, please contact us at:</p>
-                        <p><strong>Email:</strong> mwimulebienvenu05@gmail.com</p>
-                    </section>
+                    {sections.map((section, index) => (
+                        <section key={index}>
+                            <h3>{section.title}</h3>
+                            {section.content}
+                        </section>
+                    ))}
                 </div>
             </div>
             <style jsx>{`
