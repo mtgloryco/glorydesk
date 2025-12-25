@@ -6,6 +6,9 @@
 
 *.userprefs
 
+Release/
+Release/
+
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
