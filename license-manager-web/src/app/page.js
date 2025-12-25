@@ -95,6 +95,29 @@ export default function LandingPage() {
         finally { setSending(false); }
     };
 
+    const handleDownload = async (download) => {
+        // 1. Track download
+        try {
+            await fetch('/api/downloads/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: download._id })
+            });
+        } catch (e) {
+            console.error('Tracking failed', e);
+        }
+
+        // 2. Open link
+        window.open(download.link, '_blank');
+
+        // 3. Optimistically update UI (optional, but nice)
+        setDownloads(prev => prev.map(d =>
+            d._id === download._id
+                ? { ...d, downloadCount: (d.downloadCount || 0) + 1 }
+                : d
+        ));
+    };
+
     return (
         <div className="landing-wrap">
             {/* Header */}
@@ -217,15 +240,19 @@ export default function LandingPage() {
                                     </div>
                                     <h3>{d.type} for {d.os}</h3>
                                     <p>{d.description || `Latest version for ${d.os}`}</p>
-                                    <a
-                                        href={d.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <button
+                                        onClick={() => handleDownload(d)}
                                         className={`btn ${d.os === 'Windows' ? 'btn-primary' : 'btn-secondary'} btn-block`}
+                                        style={{ cursor: 'pointer', border: 'none' }}
                                     >
                                         <Download size={18} /> Download v{d.version}
-                                    </a>
-                                    <span className="file-info">Released: {new Date(d.releaseDate).toLocaleDateString()}</span>
+                                    </button>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', fontSize: '0.8rem', color: '#999' }}>
+                                        <span className="file-info">{new Date(d.releaseDate).toLocaleDateString()}</span>
+                                        <span title="Total Downloads" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Download size={12} /> {d.downloadCount ? d.downloadCount.toLocaleString() : 0}
+                                        </span>
+                                    </div>
                                 </div>
                             ))
                         ) : (
@@ -386,6 +413,7 @@ export default function LandingPage() {
                                     <tr>
                                         <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.9rem' }}>Version</th>
                                         <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.9rem' }}>OS</th>
+                                        <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.9rem' }}>Downloads</th>
                                         <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.9rem' }}>Date</th>
                                         <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.9rem' }}>Action</th>
                                     </tr>
@@ -395,11 +423,12 @@ export default function LandingPage() {
                                         <tr key={d._id} style={{ borderBottom: '1px solid #eee' }}>
                                             <td style={{ padding: '12px 10px', fontWeight: 600 }}>{d.version} {d.isFeatured && <span style={{ fontSize: '0.7rem', background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>Latest</span>}</td>
                                             <td style={{ padding: '12px 10px' }}>{d.os}</td>
+                                            <td style={{ padding: '12px 10px', color: '#64748b' }}>{d.downloadCount || 0}</td>
                                             <td style={{ padding: '12px 10px', color: '#666', fontSize: '0.9rem' }}>{new Date(d.releaseDate).toLocaleDateString()}</td>
                                             <td style={{ padding: '12px 10px', textAlign: 'right' }}>
-                                                <a href={d.link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', fontSize: '0.9rem' }}>
+                                                <button onClick={() => handleDownload(d)} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}>
                                                     Download
-                                                </a>
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

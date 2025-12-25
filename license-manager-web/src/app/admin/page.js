@@ -350,6 +350,7 @@ export default function AdminDashboard() {
                                         <th>Version</th>
                                         <th>Platform</th>
                                         <th>Type</th>
+                                        <th>Downloads</th>
                                         <th>Release Date</th>
                                         <th>Featured</th>
                                         <th>Actions</th>
@@ -366,6 +367,7 @@ export default function AdminDashboard() {
                                                 </div>
                                             </td>
                                             <td><span style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px' }}>{d.type}</span></td>
+                                            <td style={{ textAlign: 'center' }}><span style={{ fontWeight: 700, color: '#334155' }}>{d.downloadCount || 0}</span></td>
                                             <td>{new Date(d.releaseDate).toLocaleDateString()}</td>
                                             <td>
                                                 {d.isFeatured ?
