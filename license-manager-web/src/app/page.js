@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
     Shield, Smartphone, Zap, CloudOff, Package, Check,
     ArrowRight, Menu, X, Laptop, Database, RefreshCw,
-    Mail, Send, Box
+    Mail, Send, Box, Calendar, Clock, Download
 } from 'lucide-react';
 import { LICENSE_CONFIG } from '@/lib/config';
 import LoginModal from '@/components/LoginModal';
@@ -25,6 +25,10 @@ export default function LandingPage() {
     const [sending, setSending] = useState(false);
     const [sent, setSent] = useState(false);
 
+    // Downloads State
+    const [downloads, setDownloads] = useState([]);
+    const [showHistory, setShowHistory] = useState(false);
+
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 50);
         window.addEventListener('scroll', handleScroll);
@@ -40,6 +44,14 @@ export default function LandingPage() {
                 if (Array.isArray(data)) setPlans(data);
             })
             .catch(err => console.error('Failed to load plans:', err));
+
+        // Fetch downloads
+        fetch('/api/downloads')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setDownloads(data);
+            })
+            .catch(err => console.error('Failed to load downloads:', err));
 
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
@@ -62,6 +74,8 @@ export default function LandingPage() {
     }));
 
     const displayPlans = plans.length > 0 ? plans : staticPlans;
+    const featuredDownloads = downloads.filter(d => d.isFeatured);
+    const hasDownloads = downloads.length > 0;
 
     const handleContact = async (e) => {
         e.preventDefault();
@@ -195,40 +209,39 @@ export default function LandingPage() {
                     </div>
 
                     <div className="download-grid">
-                        <div className="download-card">
-                            <div className="os-icon win">
-                                <Box size={40} />
+                        {featuredDownloads.length > 0 ? (
+                            featuredDownloads.map(d => (
+                                <div key={d._id} className="download-card">
+                                    <div className={`os-icon ${d.os === 'Windows' ? 'win' : 'lin'}`}>
+                                        <Box size={40} />
+                                    </div>
+                                    <h3>{d.type} for {d.os}</h3>
+                                    <p>{d.description || `Latest version for ${d.os}`}</p>
+                                    <a
+                                        href={d.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`btn ${d.os === 'Windows' ? 'btn-primary' : 'btn-secondary'} btn-block`}
+                                    >
+                                        <Download size={18} /> Download v{d.version}
+                                    </a>
+                                    <span className="file-info">Released: {new Date(d.releaseDate).toLocaleDateString()}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '2rem', color: '#666', background: '#fff', borderRadius: '12px' }}>
+                                <p>No downloads currently available. Please check back later.</p>
                             </div>
-                            <h3>Windows</h3>
-                            <p>For Windows 10, 11 (64-bit)</p>
-                            <a
-                                href={process.env.NEXT_PUBLIC_DOWNLOAD_URL_WINDOWS || '#'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-primary btn-block"
-                            >
-                                <ArrowRight size={18} /> Download .EXE
-                            </a>
-                            <span className="file-info">Version 1.2.0 • Installer</span>
-                        </div>
-
-                        <div className="download-card">
-                            <div className="os-icon lin">
-                                <Box size={40} />
-                            </div>
-                            <h3>Linux</h3>
-                            <p>Ubuntu, Debian, Fedora (64-bit)</p>
-                            <a
-                                href={process.env.NEXT_PUBLIC_DOWNLOAD_URL_LINUX || '#'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-secondary btn-block"
-                            >
-                                <ArrowRight size={18} /> Download .TAR.GZ
-                            </a>
-                            <span className="file-info">Version 1.2.0 • Archive</span>
-                        </div>
+                        )}
                     </div>
+
+                    {downloads.length > 0 && (
+                        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                            <button onClick={() => setShowHistory(true)} className="btn btn-outline" style={{ fontSize: '0.9rem' }}>
+                                <Clock size={16} /> See Previous Versions
+                            </button>
+                        </div>
+                    )}
 
                     <div className="install-guide">
                         <h3 className="guide-title">Installation & Activation Guide</h3>
@@ -358,6 +371,44 @@ export default function LandingPage() {
 
             <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} onSwitchToRegister={openRegister} />
             <RegisterModal isOpen={showRegister} onClose={() => setShowRegister(false)} onSwitchToLogin={openLogin} />
+
+            {/* History Modal */}
+            {showHistory && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '700px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Version History</h3>
+                            <button onClick={() => setShowHistory(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+                        </div>
+                        <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead style={{ background: '#f8fafc' }}>
+                                    <tr>
+                                        <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.9rem' }}>Version</th>
+                                        <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.9rem' }}>OS</th>
+                                        <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.9rem' }}>Date</th>
+                                        <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.9rem' }}>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {downloads.map(d => (
+                                        <tr key={d._id} style={{ borderBottom: '1px solid #eee' }}>
+                                            <td style={{ padding: '12px 10px', fontWeight: 600 }}>{d.version} {d.isFeatured && <span style={{ fontSize: '0.7rem', background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>Latest</span>}</td>
+                                            <td style={{ padding: '12px 10px' }}>{d.os}</td>
+                                            <td style={{ padding: '12px 10px', color: '#666', fontSize: '0.9rem' }}>{new Date(d.releaseDate).toLocaleDateString()}</td>
+                                            <td style={{ padding: '12px 10px', textAlign: 'right' }}>
+                                                <a href={d.link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', fontSize: '0.9rem' }}>
+                                                    Download
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style jsx global>{`
                 .landing-wrap {
@@ -642,6 +693,10 @@ export default function LandingPage() {
                 .footer-links { display: flex; flex-direction: column; gap: 1.2rem; }
                 .footer-links a { color: #666; text-decoration: none; font-size: 1rem; transition: color 0.2s; }
                 .footer-links a:hover { color: var(--primary); }
+                .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+                .modal-content { background: #fff; width: 100%; max-width: 420px; animation: slideUp 0.3s ease-out; padding: 2rem; border-radius: 20px; }
+                @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
                 .copyright { margin-top: 5rem; padding-top: 3rem; border-top: 1px solid #f5f5f5; text-align: center; font-size: 0.9rem; color: #aaa; }
 
                 .input-label { font-size: 0.9rem; font-weight: 700; color: #333; margin-bottom: 0.6rem; display: block; }

@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import {
     ShieldAlert, Activity, CreditCard, RefreshCw,
     Calendar, Trash2, CheckCircle, Mail, MessageSquare, Clock,
-    Eye, XCircle, Search, Edit, Plus, Save, RotateCcw, CheckCircle2
+    Eye, XCircle, Search, Edit, Plus, Save, RotateCcw, CheckCircle2,
+    Download, Monitor, Server
 } from 'lucide-react';
 
 export default function AdminDashboard() {
     const [licenses, setLicenses] = useState([]);
     const [contacts, setContacts] = useState([]);
     const [plans, setPlans] = useState([]);
+    const [downloads, setDownloads] = useState([]);
     const [activeTab, setActiveTab] = useState('licenses');
     const [loading, setLoading] = useState(true);
     const [selectedProof, setSelectedProof] = useState(null);
@@ -20,6 +22,7 @@ export default function AdminDashboard() {
     // UI States
     const [replyModal, setReplyModal] = useState(null); // { id, name, replyMessage: '' }
     const [planModal, setPlanModal] = useState(null);   // { mode: 'edit'|'add', plan: {} }
+    const [downloadModal, setDownloadModal] = useState(null); // { mode: 'add'|'edit', item: {} }
 
     const router = useRouter();
 
@@ -33,6 +36,7 @@ export default function AdminDashboard() {
         fetchAdminData();
         fetchContacts();
         fetchPlans();
+        fetchDownloads();
     }, []);
 
     const fetchAdminData = async () => {
@@ -55,6 +59,13 @@ export default function AdminDashboard() {
         try {
             const res = await fetch('/api/plans');
             setPlans(await res.json());
+        } catch (e) { console.error(e); }
+    };
+
+    const fetchDownloads = async () => {
+        try {
+            const res = await fetch('/api/downloads');
+            setDownloads(await res.json());
         } catch (e) { console.error(e); }
     };
 
@@ -123,6 +134,32 @@ export default function AdminDashboard() {
         } catch (e) { alert('Failed to delete'); }
     };
 
+    const saveDownload = async () => {
+        const url = '/api/downloads';
+        const method = downloadModal.mode === 'add' ? 'POST' : 'PUT';
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(downloadModal.item)
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed');
+            }
+            setDownloadModal(null);
+            fetchDownloads();
+        } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    const deleteDownload = async (id) => {
+        if (!confirm('Delete this version?')) return;
+        try {
+            await fetch(`/api/downloads?id=${id}`, { method: 'DELETE' });
+            fetchDownloads();
+        } catch (e) { alert('Failed to delete'); }
+    };
+
     // --- FILTERING ---
     const filteredLicenses = licenses.filter(l =>
         l.userDetails?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -154,6 +191,7 @@ export default function AdminDashboard() {
 
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <TabBtn active={activeTab === 'licenses'} onClick={() => setActiveTab('licenses')}>Activations</TabBtn>
+                        <TabBtn active={activeTab === 'downloads'} onClick={() => setActiveTab('downloads')}>Downloads</TabBtn>
                         <TabBtn active={activeTab === 'plans'} onClick={() => setActiveTab('plans')}>Plans</TabBtn>
                         <TabBtn active={activeTab === 'contacts'} onClick={() => setActiveTab('contacts')}>Messages</TabBtn>
                         <button onClick={() => { localStorage.clear(); router.push('/login'); }} className="btn" style={{ background: '#ef4444', color: '#fff', fontSize: '0.8rem' }}>Logout</button>
@@ -296,6 +334,63 @@ export default function AdminDashboard() {
                         ))}
                     </section>
                 )}
+
+                {activeTab === 'downloads' && (
+                    <section className="glass-card" style={{ background: '#fff' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                            <h3>Software Versions</h3>
+                            <button className="btn btn-primary" onClick={() => setDownloadModal({ mode: 'add', item: { os: 'Windows', type: 'Installer', isFeatured: false } })}>
+                                <Plus size={16} /> Add Version
+                            </button>
+                        </div>
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Version</th>
+                                        <th>Platform</th>
+                                        <th>Type</th>
+                                        <th>Release Date</th>
+                                        <th>Featured</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {downloads.map(d => (
+                                        <tr key={d._id}>
+                                            <td><span style={{ fontWeight: 700 }}>{d.version}</span></td>
+                                            <td>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    {d.os === 'Windows' ? <Monitor size={16} color="#0078d4" /> : <Server size={16} color="#e95420" />}
+                                                    {d.os}
+                                                </div>
+                                            </td>
+                                            <td><span style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px' }}>{d.type}</span></td>
+                                            <td>{new Date(d.releaseDate).toLocaleDateString()}</td>
+                                            <td>
+                                                {d.isFeatured ?
+                                                    <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>Featured</span>
+                                                    : <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button onClick={() => setDownloadModal({ mode: 'edit', item: { ...d, id: d._id } })} className="btn" style={{ padding: '6px' }}><Edit size={16} /></button>
+                                                    <button onClick={() => deleteDownload(d._id)} className="btn" style={{ padding: '6px', color: '#ef4444' }}><Trash2 size={16} /></button>
+                                                    {d.link && (
+                                                        <a href={d.link} target="_blank" rel="noopener noreferrer" className="btn" style={{ padding: '6px', color: '#3b82f6' }} title="Test Link">
+                                                            <Download size={16} />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                )}
             </div>
 
             {/* MODALS */}
@@ -363,6 +458,45 @@ export default function AdminDashboard() {
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
                             <button onClick={() => setPlanModal(null)} className="btn">Cancel</button>
                             <button onClick={savePlan} className="btn btn-primary">Save Plan</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Download Modal */}
+            {downloadModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <h3>{downloadModal.mode === 'add' ? 'Add Version' : 'Edit Version'}</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <input type="text" placeholder="Version (e.g. 1.0.0)" value={downloadModal.item.version || ''} onChange={e => setDownloadModal({ ...downloadModal, item: { ...downloadModal.item, version: e.target.value } })} className="input-field" />
+                                <select value={downloadModal.item.os || 'Windows'} onChange={e => setDownloadModal({ ...downloadModal, item: { ...downloadModal.item, os: e.target.value } })} className="input-field">
+                                    <option value="Windows">Windows</option>
+                                    <option value="Linux">Linux</option>
+                                </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <select value={downloadModal.item.type || 'Installer'} onChange={e => setDownloadModal({ ...downloadModal, item: { ...downloadModal.item, type: e.target.value } })} className="input-field">
+                                    <option value="Installer">Installer (.exe/.msi)</option>
+                                    <option value="Archive">Archive (.zip/.tar.gz)</option>
+                                </select>
+                                <div style={{ display: 'flex', items: 'center', gap: '10px', padding: '10px', border: '1px solid #ddd', borderRadius: '8px', flex: 1 }}>
+                                    <input
+                                        type="checkbox"
+                                        id="isFeatured"
+                                        checked={downloadModal.item.isFeatured || false}
+                                        onChange={e => setDownloadModal({ ...downloadModal, item: { ...downloadModal.item, isFeatured: e.target.checked } })}
+                                    />
+                                    <label htmlFor="isFeatured" style={{ cursor: 'pointer', fontSize: '0.9rem' }}>Featured Download</label>
+                                </div>
+                            </div>
+                            <input type="text" placeholder="Download Link (URL)" value={downloadModal.item.link || ''} onChange={e => setDownloadModal({ ...downloadModal, item: { ...downloadModal.item, link: e.target.value } })} className="input-field" />
+                            <textarea placeholder="Release Notes / Description" value={downloadModal.item.description || ''} onChange={e => setDownloadModal({ ...downloadModal, item: { ...downloadModal.item, description: e.target.value } })} className="input-field" style={{ height: '100px' }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                            <button onClick={() => setDownloadModal(null)} className="btn">Cancel</button>
+                            <button onClick={saveDownload} className="btn btn-primary">Save Version</button>
                         </div>
                     </div>
                 </div>
