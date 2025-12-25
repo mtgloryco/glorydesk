@@ -117,7 +117,7 @@
                                  <TextBlock Text="{Binding Language.Resources[Reports]}" FontSize="12"/>
                              </StackPanel>
                          </Button>
-                         <Button Classes="action-btn" Command="{Binding GoToPOSCommand}">
+                         <Button Classes="action-btn" Command="{Binding GoToPOSCommand}" IsEnabled="{Binding CanAccessPOS}">
                              <StackPanel>
                                  <TextBlock Text="🛒" FontSize="24" HorizontalAlignment="Center" Foreground="#607D8B"/>
                                  <TextBlock Text="{Binding Language.Resources[POS]}" FontSize="12"/>

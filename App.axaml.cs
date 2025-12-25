@@ -24,12 +24,13 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Initialize Database
+            // Initialize Database
             var dbService = new DatabaseService();
-            var inventoryService = new InventoryService(dbService);
             var userService = new UserService(dbService);
             var hardwareService = new HardwareIdService();
             var cryptoService = new LicenseCryptoService();
             var licenseService = new LicenseService(dbService, hardwareService, cryptoService);
+            var inventoryService = new InventoryService(dbService, licenseService);
             var analyticsService = new AnalyticsService(dbService);
             var receiptService = new ReceiptService();
             var languageService = new LanguageService(); // NEW // NEW

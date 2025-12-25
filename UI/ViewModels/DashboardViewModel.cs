@@ -103,7 +103,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             IsLicenseValid = license != null && (license.Status == "Active" || license.Status == "Valid" || license.Status == "GracePeriod");
 
             // Premium includes Monthly and Yearly
-            IsPremium = license?.Type == "Enterprise Yearly" || license?.Type == "Professional Monthly";
+            IsPremium = _licenseService.CanAccessAnalytics(); // Reuse the Analytics permission for "Premium" dashboard features
 
             LicenseTypeDisplay = license?.Type ?? "None";
             if (license != null)
@@ -121,9 +121,21 @@ namespace InventoryManagementSystem.UI.ViewModels
             // Enforce Capabilities based on Service
             CanAddProduct = IsLicenseValid;
             CanStockMove = IsLicenseValid;
-            CanBulkImport = _licenseService.IsFeatureAllowed("BulkImport");
-            CanViewReports = _licenseService.IsFeatureAllowed("ViewReports");
+            
+            // New Tier Gating Logic
+            CanBulkImport = _licenseService.CanBulkImport();
+            CanViewReports = _licenseService.CanAccessAdvancedReports();
+            
+            // Note: POS button is typically gated in the UI by binding to CanAccessPOS or checking it here
+            // But currently the VM doesn't expose CanAccessPOS directly as a boolean property, 
+            // instead we rely on the specific command actions if we want to block them, 
+            // OR we can add a new property for it. 
+            // Let's add specific properties below or just trust the new props if we add them. 
+            // Actually, let's just expose a getter since the View binds to 'IsEnabled'.
+            OnPropertyChanged(nameof(CanAccessPOS));
         }
+        
+        public bool CanAccessPOS => _licenseService.CanAccessPOS();
 
         [ObservableProperty] private bool _hasMovements;
         

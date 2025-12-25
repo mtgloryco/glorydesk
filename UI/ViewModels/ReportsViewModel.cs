@@ -59,7 +59,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         [RelayCommand]
         private async Task LoadStockHistoryReport()
         {
-            if (!_licenseService.IsFeatureAllowed("AdvancedReports"))
+            if (!_licenseService.CanAccessAdvancedReports())
             {
                 ReportTitle = "History is a Premium Feature. Please Upgrade.";
                 return;
@@ -77,7 +77,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         [RelayCommand]
         private async Task LoadMonthlyProfitReport()
         {
-            if (!_licenseService.IsFeatureAllowed("AdvancedReports"))
+            if (!_licenseService.CanAccessProfitAndLoss())
             {
                 ReportTitle = "Profit Reports are a Premium Feature. Please Upgrade.";
                 return;
@@ -95,7 +95,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         [RelayCommand]
         private async Task ExportToCsv()
         {
-            if (!_licenseService.IsFeatureAllowed("ExportReports"))
+            if (!_licenseService.CanAccessExport())
             {
                 ReportTitle = "Export is a Premium Feature. Please Upgrade.";
                 return;

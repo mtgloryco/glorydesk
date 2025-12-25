@@ -1,25 +1,32 @@
 export const LICENSE_CONFIG = {
     plans: {
-        'hobby': {
-            name: 'Hobby Starter',
-            durationDays: 30,
-            price: 3.99,
-            tier: 'Hobby',
+        'basic': {
+            name: 'Basic Starter',
+            durationDays: 30, // Monthly
+            price: 1.99,
+            tier: 'Basic',
             description: 'Digital Inventory Notebook (No POS)'
         },
-        '1-month': {
-            name: 'Professional Monthly',
-            durationDays: 30,
-            price: 5.99,
-            tier: 'Professional',
-            description: 'Full POS & Profit Analytics'
+        'medium': {
+            name: 'Medium Plan',
+            durationDays: 30, // Monthly
+            price: 3.68,
+            tier: 'Medium',
+            description: 'Smart Cashier (POS + Receipts)'
         },
-        '1-year': {
-            name: 'Enterprise Yearly',
+        'pro': {
+            name: 'Pro Intelligence',
+            durationDays: 30, // Monthly
+            price: 4.99,
+            tier: 'Pro',
+            description: 'Complete Suite + Business Analytics'
+        },
+        'enterprise': {
+            name: 'Enterprise',
             durationDays: 365,
-            price: 60,
+            price: 0, // Contact Us
             tier: 'Enterprise',
-            description: 'Best Value + Priority Support'
+            description: 'Unlimited Access + Priority Support'
         }
     },
     limits: {

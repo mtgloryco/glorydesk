@@ -162,52 +162,87 @@ namespace InventoryManagementSystem.Services
             catch { return null; }
         }
 
-        public bool IsPremiumActive()
-        {
-            // Must be a valid active license to count as premium (enterprise or monthly)
-            if (CurrentLicense.Status != "Valid" && CurrentLicense.Status != "Active") return false;
+        public bool IsBasic => CheckTier("Basic");
+        public bool IsMedium => CheckTier("Medium");
+        public bool IsPro => CheckTier("Pro");
+        public bool IsEnterprise => CheckTier("Enterprise");
 
-            // Check against full plan names OR tier codes
-            return CurrentLicense.Type == "Enterprise Yearly" 
-                || CurrentLicense.Type == "Professional Monthly"
-                || CurrentLicense.Type == "Enterprise"
-                || CurrentLicense.Type == "Professional";
+        private bool CheckTier(string tier)
+        {
+            if (CurrentLicense.Status != "Valid" && CurrentLicense.Status != "Active") return false;
+            // Allow string contains for flexibility (e.g. "Basic Starter" contains "Basic")
+            return (CurrentLicense.Type?.Contains(tier, StringComparison.OrdinalIgnoreCase) ?? false);
         }
 
+        // --- Permission Helpers ---
+
+        public int GetMaxProductCount()
+        {
+            if (IsEnterprise || IsPro) return int.MaxValue;
+            if (IsMedium) return 500;
+            if (IsBasic) return 50;
+            
+            // Default/Locked/Free
+            return 0; // Or minimal if we want to allow something for free
+        }
+
+        // --- Permission Helpers ---
+
+        public bool CanAccessPOS()
+        {
+            // Medium, Pro, Enterprise
+            return IsMedium || IsPro || IsEnterprise;
+        }
+
+        public bool CanAccessReceipts()
+        {
+            // Medium, Pro, Enterprise
+            return IsMedium || IsPro || IsEnterprise;
+        }
+
+        public bool CanAccessAnalytics()
+        {
+            // Pro, Enterprise (Business Analytics)
+            return IsPro || IsEnterprise;
+        }
+        
+        public bool CanAccessAdvancedReports()
+        {
+             // Pro, Enterprise
+            return IsPro || IsEnterprise;
+        }
+
+        public bool CanAccessStockForecasting()
+        {
+            // Pro, Enterprise (Stock Forecasting)
+            return IsPro || IsEnterprise;
+        }
+
+        public bool CanAccessProfitAndLoss()
+        {
+             // Pro, Enterprise (Profit & Loss Reports)
+            return IsPro || IsEnterprise;
+        }
+
+        public bool CanAccessExport()
+        {
+             // Pro, Enterprise
+            return IsPro || IsEnterprise;
+        }
+
+        public bool CanBulkImport()
+        {
+            // Enterprise only (or Pro if generous) - limiting to Enterprise for now based on request
+            return IsEnterprise;
+        }
+
+        [Obsolete("Use specific permission methods instead.")]
         public bool IsFeatureAllowed(string featureName)
         {
-            // If license is not valid/active, nothing is allowed (App should show activation screen)
-            if (CurrentLicense.Status != "Valid" && CurrentLicense.Status != "Active") return false;
-
-            // Enterprise has everything
-            if (CurrentLicense.Type == "Enterprise Yearly") return true;
-
-            // Professional Monthly restrictions
-            if (CurrentLicense.Type == "Professional Monthly")
-            {
-                var proRestricted = new[] { "CloudBackup", "MultiPCSync" }; // Only top-tier gets these
-                foreach (var f in proRestricted) if (featureName == f) return false;
-                return true;
-            }
-
-            // Hobby Starter restrictions
-            if (CurrentLicense.Type == "Hobby Starter" || CurrentLicense.Type == "Hobby")
-            {
-                var hobbyRestricted = new[]
-                {
-                    "ExportReports",
-                    "BulkImport",
-                    "CloudBackup",
-                    "MultiPCSync",
-                    "AdvancedReports",
-                    "POS",         // Explicitly blocked for Hobby
-                    "Reports"      // Explicitly blocked for Hobby
-                };
-                foreach (var f in hobbyRestricted) if (featureName == f) return false;
-                return true;
-            }
-
-            return false;
+             if (featureName == "POS") return CanAccessPOS();
+             if (featureName == "Reports") return CanAccessAdvancedReports();
+             if (featureName == "ExportReports") return CanAccessExport();
+             return false;
         }
     }
 }

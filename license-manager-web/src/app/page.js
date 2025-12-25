@@ -17,6 +17,8 @@ export default function LandingPage() {
     const [showRegister, setShowRegister] = useState(false);
     const [scrolled, setScrolled] = useState(false);
 
+    const [plans, setPlans] = useState([]);
+
     const [contactName, setContactName] = useState('');
     const [contactEmail, setContactEmail] = useState('');
     const [contactMsg, setContactMsg] = useState('');
@@ -31,6 +33,14 @@ export default function LandingPage() {
         if (params.get('auth') === 'login') setShowLogin(true);
         if (params.get('auth') === 'register') setShowRegister(true);
 
+        // Fetch dynamic plans
+        fetch('/api/plans')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setPlans(data);
+            })
+            .catch(err => console.error('Failed to load plans:', err));
+
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -38,15 +48,20 @@ export default function LandingPage() {
     const openLogin = () => { setShowLogin(true); setShowRegister(false); setIsMenuOpen(false); };
     const openRegister = () => { setShowRegister(true); setShowLogin(false); setIsMenuOpen(false); };
 
-    const plans = Object.entries(LICENSE_CONFIG.plans).map(([key, plan]) => ({
+    // Fallback static plans if API fails or while loading (optional, but good for UX)
+    const staticPlans = Object.entries(LICENSE_CONFIG.plans).map(([key, plan]) => ({
         id: key,
         ...plan,
-        features: plan.id === '1-year'
-            ? ['Everything in Pro', 'Multi-device Sync (Beta)', 'Priority Support', 'Cloud Backups', 'Excel Exports']
-            : plan.id === '1-month'
-                ? ['Full POS System', 'Profit & Loss Charts', 'Advanced Reports', 'Thermal Printing', 'Barcode Scanning']
-                : ['Inventory Tracking', 'Unlimited Products', 'Basic Dashboard', 'NO POS Access', 'NO Reports']
+        features: plan.tier === 'Enterprise'
+            ? ['Unlimited Everything', 'Priority Support', 'Custom Integrations', 'Dedicated Account Manager']
+            : plan.tier === 'Pro'
+                ? ['POS System & Receipts', 'Business Analytics', 'Stock Forecasting', 'Profit & Loss Reports', 'Unlimited Products']
+                : plan.tier === 'Medium'
+                    ? ['POS System', 'Digital Receipts', 'Basic Reports', 'Up to 500 Products', 'Stock IN/OUT']
+                    : ['Digital Notebook', 'Stock Tracking', 'No POS Access', 'Max 50 Products', 'Local Backup']
     }));
+
+    const displayPlans = plans.length > 0 ? plans : staticPlans;
 
     const handleContact = async (e) => {
         e.preventDefault();
@@ -253,13 +268,14 @@ export default function LandingPage() {
                     </div>
 
                     <div className="pricing-grid">
-                        {plans.map((plan) => (
-                            <div key={plan.id} className={`pricing-card ${plan.id === '1-month' ? 'pricing-highlight' : ''}`}>
-                                {plan.id === '1-year' && <div className="save-badge">SAVE $12</div>}
+
+                        {displayPlans.map((plan) => (
+                            <div key={plan.id} className={`pricing-card ${plan.id === 'pro' ? 'pricing-highlight' : ''}`}>
+                                {plan.id === 'pro' && <div className="save-badge">RECOMMENDED</div>}
                                 <h3 className="plan-name">{plan.name}</h3>
                                 <div className="plan-price">
-                                    ${plan.price}
-                                    <span className="period">{plan.id === '1-year' ? '/yr' : '/mo'}</span>
+                                    {plan.price === 0 ? 'Custom' : `$${plan.price}`}
+                                    <span className="period">{plan.price === 0 ? '' : '/mo'}</span>
                                 </div>
                                 <p className="plan-desc">{plan.description}</p>
                                 <ul className="plan-features">
@@ -267,17 +283,25 @@ export default function LandingPage() {
                                         <li key={i}><Check size={16} color="#10b981" /> {feat}</li>
                                     ))}
                                 </ul>
-                                <button onClick={openRegister} className={`btn btn-block ${plan.id === '1-month' ? 'btn-primary' : 'btn-outline'}`}>
-                                    Activate IMS
-                                </button>
+
+                                {plan.id === 'enterprise' ? (
+                                    <a href="#contact" className="btn btn-outline btn-block">
+                                        Contact Sales
+                                    </a>
+                                ) : (
+                                    <button onClick={openRegister} className={`btn btn-block ${plan.id === 'pro' ? 'btn-primary' : 'btn-outline'}`}>
+                                        Activate IMS
+                                    </button>
+                                )}
                             </div>
                         ))}
+
                     </div>
                 </div>
-            </section>
+            </section >
 
             {/* Contact Form */}
-            <section id="contact" className="section bg-white">
+            < section id="contact" className="section bg-white" >
                 <div className="container" style={{ maxWidth: '600px' }}>
                     <div className="section-header">
                         <h2 className="section-title">Support Desk</h2>
@@ -303,10 +327,10 @@ export default function LandingPage() {
                         </button>
                     </form>
                 </div>
-            </section>
+            </section >
 
             {/* Footer */}
-            <footer className="footer">
+            < footer className="footer" >
                 <div className="container footer-grid">
                     <div className="footer-info">
                         <div className="logo footer-logo">
@@ -330,7 +354,7 @@ export default function LandingPage() {
                 <div className="copyright">
                     &copy; {new Date().getFullYear()} IMS. All rights reserved.
                 </div>
-            </footer>
+            </footer >
 
             <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} onSwitchToRegister={openRegister} />
             <RegisterModal isOpen={showRegister} onClose={() => setShowRegister(false)} onSwitchToLogin={openLogin} />
@@ -341,7 +365,7 @@ export default function LandingPage() {
                     overflow-x: hidden;
                 }
                 .container {
-                    max-width: 1200px;
+                    max-width: 1400px;
                     margin: 0 auto;
                     padding: 0 1.5rem;
                 }
@@ -556,23 +580,26 @@ export default function LandingPage() {
 
                 .pricing-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-                    gap: 2.5rem;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 1.5rem;
                     padding: 1rem 0;
                 }
                 .pricing-card {
                     background: #fff;
-                    padding: 4rem 2.55rem;
+                    padding: 4rem 2rem;
                     border-radius: 24px;
                     border: 1px solid #eee;
                     position: relative;
                     text-align: center;
                     transition: all 0.4s ease;
+                    display: flex;
+                    flex-direction: column;
                 }
                 .pricing-highlight {
                     border: 2px solid var(--primary);
                     box-shadow: 0 30px 60px rgba(0, 112, 243, 0.12);
                     transform: translateY(-10px);
+                    z-index: 1;
                 }
                 .save-badge {
                     position: absolute;
@@ -581,18 +608,32 @@ export default function LandingPage() {
                     transform: translateX(-50%);
                     background: #10b981;
                     color: #fff;
-                    padding: 0.6rem 1.5rem;
+                    padding: 0.4rem 1rem;
                     border-radius: 50px;
-                    font-size: 0.85rem;
+                    font-size: 0.75rem;
                     font-weight: 800;
                     box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+                    white-space: nowrap;
                 }
-                .plan-name { font-size: 1.4rem; color: #666; font-weight: 600; margin-bottom: 0.8rem; }
-                .plan-price { font-size: 4rem; font-weight: 900; margin-bottom: 1.5rem; line-height: 1; }
-                .plan-price .period { font-size: 1.1rem; color: #999; font-weight: 500; margin-left: 2px; }
-                .plan-desc { color: #777; font-size: 1rem; margin-bottom: 2.5rem; height: 3em; }
-                .plan-features { list-style: none; text-align: left; margin-bottom: 3rem; }
-                .plan-features li { margin-bottom: 1rem; font-size: 1rem; display: flex; align-items: center; gap: 12px; color: #444; }
+                .plan-name { font-size: 1.2rem; color: #666; font-weight: 600; margin-bottom: 0.8rem; }
+                .plan-price { font-size: 3rem; font-weight: 900; margin-bottom: 1.5rem; line-height: 1; }
+                .plan-price .period { font-size: 1rem; color: #999; font-weight: 500; margin-left: 2px; }
+                .plan-desc { color: #777; font-size: 0.9rem; margin-bottom: 2rem; height: 3em; }
+                .plan-features { list-style: none; text-align: left; margin-bottom: auto; padding-bottom: 2rem; }
+                .plan-features li { margin-bottom: 0.8rem; font-size: 0.9rem; display: flex; align-items: start; gap: 10px; color: #444; }
+
+                @media (max-width: 1024px) {
+                    .pricing-grid {
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 2rem;
+                    }
+                }
+                
+                @media (max-width: 640px) {
+                    .pricing-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
 
                 .footer { padding: 6rem 0 3rem; background: #fff; border-top: 1px solid #eee; }
                 .footer-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 5rem; }
@@ -678,7 +719,7 @@ export default function LandingPage() {
                     letter-spacing: 0.02em;
                 }
             `}</style>
-        </div>
+        </div >
     );
 }
 

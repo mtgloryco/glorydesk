@@ -5,15 +5,22 @@ import { useRouter } from 'next/navigation';
 import {
     ShieldAlert, Activity, CreditCard, RefreshCw,
     Calendar, Trash2, CheckCircle, Mail, MessageSquare, Clock,
-    Eye, CheckCircle2, XCircle
+    Eye, XCircle, Search, Edit, Plus, Save, RotateCcw, CheckCircle2
 } from 'lucide-react';
 
 export default function AdminDashboard() {
     const [licenses, setLicenses] = useState([]);
     const [contacts, setContacts] = useState([]);
+    const [plans, setPlans] = useState([]);
     const [activeTab, setActiveTab] = useState('licenses');
     const [loading, setLoading] = useState(true);
     const [selectedProof, setSelectedProof] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // UI States
+    const [replyModal, setReplyModal] = useState(null); // { id, name, replyMessage: '' }
+    const [planModal, setPlanModal] = useState(null);   // { mode: 'edit'|'add', plan: {} }
+
     const router = useRouter();
 
     useEffect(() => {
@@ -25,16 +32,14 @@ export default function AdminDashboard() {
         }
         fetchAdminData();
         fetchContacts();
+        fetchPlans();
     }, []);
 
     const fetchAdminData = async () => {
         const token = localStorage.getItem('token');
         try {
-            const res = await fetch('/api/admin/licenses', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
-            setLicenses(data);
+            const res = await fetch('/api/admin/licenses', { headers: { 'Authorization': `Bearer ${token}` } });
+            setLicenses(await res.json());
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
     };
@@ -42,10 +47,18 @@ export default function AdminDashboard() {
     const fetchContacts = async () => {
         try {
             const res = await fetch('/api/contacts');
-            const data = await res.json();
-            setContacts(data);
+            setContacts(await res.json());
         } catch (err) { console.error(err); }
     };
+
+    const fetchPlans = async () => {
+        try {
+            const res = await fetch('/api/plans');
+            setPlans(await res.json());
+        } catch (e) { console.error(e); }
+    };
+
+    // --- ACTIONS ---
 
     const handleApprove = async (id) => {
         if (!confirm('Approve this payment and generate RSA license key?')) return;
@@ -53,10 +66,7 @@ export default function AdminDashboard() {
         try {
             const res = await fetch('/api/admin/licenses', {
                 method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, action: 'approve' })
             });
             if (res.ok) fetchAdminData();
@@ -69,15 +79,58 @@ export default function AdminDashboard() {
         try {
             await fetch('/api/admin/licenses', {
                 method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, action: 'update_status', status })
             });
             fetchAdminData();
         } catch (err) { alert('Failed'); }
     };
+
+    const sendReply = async () => {
+        if (!replyModal.replyMessage) return alert('Message is empty');
+        try {
+            await fetch('/api/contacts', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: replyModal.id, replyMessage: replyModal.replyMessage })
+            });
+            setReplyModal(null);
+            fetchContacts();
+            alert('Reply sent!');
+        } catch (e) { alert('Failed to send reply'); }
+    };
+
+    const savePlan = async () => {
+        const url = '/api/plans';
+        const method = planModal.mode === 'add' ? 'POST' : 'PUT';
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(planModal.plan)
+            });
+            if (!res.ok) throw new Error(await res.text());
+            setPlanModal(null);
+            fetchPlans();
+        } catch (e) { alert('Failed to save plan: ' + e.message); }
+    };
+
+    const deletePlan = async (id) => {
+        if (!confirm('Delete this plan?')) return;
+        try {
+            await fetch(`/api/plans?id=${id}`, { method: 'DELETE' });
+            fetchPlans();
+        } catch (e) { alert('Failed to delete'); }
+    };
+
+    // --- FILTERING ---
+    const filteredLicenses = licenses.filter(l =>
+        l.userDetails?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        l.userDetails?.username?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const filteredContacts = contacts.filter(c =>
+        c.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
         <div style={{ background: '#f8fafc', minHeight: '100vh' }}>
@@ -86,8 +139,22 @@ export default function AdminDashboard() {
                     <div style={{ fontWeight: 800, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '10px', color: '#fff' }}>
                         <ShieldAlert color="#ef4444" /> <span>MSS ADMIN</span>
                     </div>
+
+                    {/* Search Bar */}
+                    <div style={{ position: 'relative', width: '300px' }}>
+                        <Search size={16} style={{ position: 'absolute', left: '10px', top: '10px', color: '#666' }} />
+                        <input
+                            type="text"
+                            placeholder="Search by email..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{ width: '100%', padding: '8px 10px 8px 35px', borderRadius: '6px', border: 'none', background: '#374151', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                    </div>
+
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <TabBtn active={activeTab === 'licenses'} onClick={() => setActiveTab('licenses')}>Activations</TabBtn>
+                        <TabBtn active={activeTab === 'plans'} onClick={() => setActiveTab('plans')}>Plans</TabBtn>
                         <TabBtn active={activeTab === 'contacts'} onClick={() => setActiveTab('contacts')}>Messages</TabBtn>
                         <button onClick={() => { localStorage.clear(); router.push('/login'); }} className="btn" style={{ background: '#ef4444', color: '#fff', fontSize: '0.8rem' }}>Logout</button>
                     </div>
@@ -97,10 +164,10 @@ export default function AdminDashboard() {
             <div className="container" style={{ padding: '3rem 1.5rem' }}>
                 <header style={{ marginBottom: '2.5rem' }}>
                     <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem' }}>Authority Control</h1>
-                    <p style={{ color: '#64748b' }}>Validate payments and issue cryptographically signed IMS licenses.</p>
+                    <p style={{ color: '#64748b' }}>Validate payments, manage tiers, and support users.</p>
                 </header>
 
-                {activeTab === 'licenses' ? (
+                {activeTab === 'licenses' && (
                     <>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
                             <StatCard title="Total" value={licenses.length} color="#3b82f6" icon={<Activity size={20} />} />
@@ -122,7 +189,7 @@ export default function AdminDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {licenses.map(lic => (
+                                        {filteredLicenses.map(lic => (
                                             <tr key={lic._id}>
                                                 <td>
                                                     <div style={{ fontWeight: 700 }}>{lic.userDetails?.username}</div>
@@ -134,26 +201,17 @@ export default function AdminDashboard() {
                                                 <td>
                                                     {lic.paymentProof ? (
                                                         <button onClick={() => setSelectedProof(lic.paymentProof)} className="btn" style={{ background: '#ecfdf5', color: '#047857', padding: '6px 12px', fontSize: '0.7rem' }}>
-                                                            <Eye size={14} /> View Proof
+                                                            <Eye size={14} /> View
                                                         </button>
-                                                    ) : (
-                                                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>No proof yet</span>
-                                                    )}
+                                                    ) : <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>None</span>}
                                                 </td>
                                                 <td>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         {lic.status === 'Pending' && (
-                                                            <button
-                                                                onClick={() => handleApprove(lic._id)}
-                                                                disabled={!lic.paymentProof}
-                                                                className="btn btn-primary"
-                                                                style={{ padding: '6px 12px', fontSize: '0.7rem' }}
-                                                            >
-                                                                Approve & Sign
-                                                            </button>
+                                                            <button onClick={() => handleApprove(lic._id)} disabled={!lic.paymentProof} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.7rem' }}>Approve</button>
                                                         )}
                                                         <button onClick={() => handleUpdateStatus(lic._id, lic.status === 'Active' ? 'Revoked' : 'Active')} className="btn" style={{ background: '#f1f5f9', padding: '6px' }}>
-                                                            {lic.status === 'Active' ? <Trash2 size={14} color="#ef4444" /> : <CheckCircle size={14} color="#10b981" />}
+                                                            {lic.status === 'Active' ? <Trash2 size={14} color="#ef4444" /> : <RotateCcw size={14} color="#10b981" />}
                                                         </button>
                                                     </div>
                                                 </td>
@@ -164,41 +222,158 @@ export default function AdminDashboard() {
                             </div>
                         </section>
                     </>
-                ) : (
+                )}
+
+                {activeTab === 'plans' && (
+                    <section className="glass-card" style={{ background: '#fff' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                            <h3>Pricing Plans</h3>
+                            <button className="btn btn-primary" onClick={() => setPlanModal({ mode: 'add', plan: { tier: 'Basic', durationDays: 30 } })}>
+                                <Plus size={16} /> Add Plan
+                            </button>
+                        </div>
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Price</th>
+                                        <th>Duration</th>
+                                        <th>Features (Count)</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {plans.map(p => (
+                                        <tr key={p._id}>
+                                            <td><code>{p.id}</code></td>
+                                            <td><b>{p.name}</b><br /><span style={{ fontSize: '0.8rem', color: '#666' }}>{p.tier}</span></td>
+                                            <td>${p.price}</td>
+                                            <td>{p.durationDays} days</td>
+                                            <td>{p.features?.length || 0}</td>
+                                            <td>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button onClick={() => setPlanModal({ mode: 'edit', plan: { ...p } })} className="btn" style={{ padding: '6px' }}><Edit size={16} /></button>
+                                                    <button onClick={() => deletePlan(p.id)} className="btn" style={{ padding: '6px', color: '#ef4444' }}><Trash2 size={16} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                )}
+
+                {activeTab === 'contacts' && (
                     <section className="glass-card" style={{ background: '#fff' }}>
                         <h3 style={{ marginBottom: '2rem' }}>Support Messages</h3>
-                        {contacts.map(msg => (
+                        {filteredContacts.map(msg => (
                             <div key={msg._id} style={{ borderBottom: '1px solid #f1f5f9', padding: '1.5rem 0' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <div style={{ fontWeight: 700 }}>{msg.name} ({msg.email})</div>
+                                    <div>
+                                        <span style={{ fontWeight: 700, marginRight: '10px' }}>{msg.name} ({msg.email})</span>
+                                        {msg.status === 'Replied' && <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem' }}>Replied</span>}
+                                    </div>
                                     <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(msg.createdAt).toLocaleString()}</div>
                                 </div>
-                                <p style={{ fontSize: '0.9rem', color: '#334155' }}>{msg.message}</p>
+                                <p style={{ fontSize: '0.9rem', color: '#334155', marginBottom: '1rem' }}>{msg.message}</p>
+
+                                {msg.status !== 'Replied' && (
+                                    <button onClick={() => setReplyModal({ id: msg._id, name: msg.name, message: msg.message, replyMessage: '' })} className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
+                                        <Mail size={14} style={{ marginRight: '5px' }} /> Reply
+                                    </button>
+                                )}
+
+                                {msg.replies && msg.replies.map((r, i) => (
+                                    <div key={i} style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', marginTop: '1rem', borderLeft: '3px solid #3b82f6' }}>
+                                        <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#3b82f6' }}>Reply from Support:</p>
+                                        <p style={{ fontSize: '0.85rem', color: '#475569' }}>{r.message}</p>
+                                    </div>
+                                ))}
                             </div>
                         ))}
                     </section>
                 )}
             </div>
 
+            {/* MODALS */}
+
             {/* Proof Modal */}
             {selectedProof && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-                    <div style={{ background: '#fff', padding: '1rem', borderRadius: '16px', width: '90%', maxWidth: '1000px', height: '90%', position: 'relative' }}>
-                        <button onClick={() => setSelectedProof(null)} style={{ position: 'absolute', top: '-40px', right: 0, background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><XCircle size={32} /></button>
-
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ width: '90%', maxWidth: '1000px', height: '90%' }}>
+                        <button onClick={() => setSelectedProof(null)} className="close-btn"><XCircle size={32} /></button>
                         {selectedProof.startsWith('data:application/pdf') ? (
-                            <iframe src={selectedProof} style={{ width: '100%', height: '100%', border: 'none', borderRadius: '8px' }} />
+                            <iframe src={selectedProof} style={{ width: '100%', height: '100%', border: 'none' }} />
                         ) : (
-                            <div style={{ width: '100%', height: '100%', overflow: 'auto', display: 'flex', justifyContent: 'center' }}>
-                                <img src={selectedProof} alt="Payment Proof" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} />
-                            </div>
+                            <img src={selectedProof} alt="Proof" style={{ maxWidth: '100%', height: 'auto', margin: '0 auto' }} />
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Reply Modal */}
+            {replyModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <h3>Reply to {replyModal.name}</h3>
+
+                        <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', borderLeft: '4px solid #3b82f6', margin: '1rem 0', fontStyle: 'italic', color: '#555' }}>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem', color: '#3b82f6' }}>Original Message:</p>
+                            <p style={{ fontSize: '0.9rem' }}>"{replyModal.message}"</p>
+                        </div>
+
+                        <textarea
+                            value={replyModal.replyMessage}
+                            onChange={(e) => setReplyModal({ ...replyModal, replyMessage: e.target.value })}
+                            placeholder="Type your reply..."
+                            style={{ width: '100%', height: '150px', padding: '10px', marginBottom: '1rem', border: '1px solid #ddd', borderRadius: '8px' }}
+                        />
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setReplyModal(null)} className="btn">Cancel</button>
+                            <button onClick={sendReply} className="btn btn-primary">Send Email</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Plan Modal */}
+            {planModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <h3>{planModal.mode === 'add' ? 'Add Plan' : 'Edit Plan'}</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                            <input type="text" placeholder="ID (unique slug)" value={planModal.plan.id || ''} onChange={e => setPlanModal({ ...planModal, plan: { ...planModal.plan, id: e.target.value } })} disabled={planModal.mode === 'edit'} className="input-field" />
+                            <input type="text" placeholder="Name" value={planModal.plan.name || ''} onChange={e => setPlanModal({ ...planModal, plan: { ...planModal.plan, name: e.target.value } })} className="input-field" />
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <input type="number" placeholder="Price" value={planModal.plan.price || 0} onChange={e => setPlanModal({ ...planModal, plan: { ...planModal.plan, price: e.target.value } })} className="input-field" />
+                                <input type="number" placeholder="Duration (Days)" value={planModal.plan.durationDays || 30} onChange={e => setPlanModal({ ...planModal, plan: { ...planModal.plan, durationDays: e.target.value } })} className="input-field" />
+                            </div>
+                            <select value={planModal.plan.tier || 'Basic'} onChange={e => setPlanModal({ ...planModal, plan: { ...planModal.plan, tier: e.target.value } })} className="input-field">
+                                <option value="Basic">Basic</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Pro">Pro</option>
+                                <option value="Enterprise">Enterprise</option>
+                            </select>
+                            <textarea placeholder="Description" value={planModal.plan.description || ''} onChange={e => setPlanModal({ ...planModal, plan: { ...planModal.plan, description: e.target.value } })} className="input-field" style={{ height: '80px' }} />
+                            <textarea placeholder="Features (comma separated)" value={Array.isArray(planModal.plan.features) ? planModal.plan.features.join(', ') : planModal.plan.features || ''} onChange={e => setPlanModal({ ...planModal, plan: { ...planModal.plan, features: e.target.value.split(',').map(s => s.trim()) } })} className="input-field" style={{ height: '80px' }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                            <button onClick={() => setPlanModal(null)} className="btn">Cancel</button>
+                            <button onClick={savePlan} className="btn btn-primary">Save Plan</button>
+                        </div>
                     </div>
                 </div>
             )}
 
             <style jsx global>{`
                 .status-pending { background: #fef3c7; color: #92400e; }
+                .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; alignItems: center; justifyContent: center; padding: 1rem; }
+                .modal-content { background: #fff; padding: 2rem; borderRadius: 16px; width: 100%; maxWidth: 600px; position: relative; max-height: 90vh; overflow-y: auto; }
+                .close-btn { position: absolute; top: 10px; right: 10px; background: none; border: none; cursor: pointer; }
+                .input-field { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; }
             `}</style>
         </div>
     );

@@ -108,7 +108,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToReports()
     {
-        if (!_licenseService.IsPremiumActive())
+        if (!_licenseService.CanAccessAdvancedReports())
         {
             // Redirect to License/Upgrade page if not premium
             GoToLicense(); 
@@ -120,7 +120,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToPOS()
     {
-        if (!_licenseService.IsPremiumActive())
+        if (!_licenseService.CanAccessPOS())
         {
             // Redirect to License/Upgrade page if not premium
             GoToLicense();
@@ -132,7 +132,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToAnalytics()
     {
-         if (!_licenseService.IsPremiumActive())
+         if (!_licenseService.CanAccessAnalytics())
         {
              // Analytics is a premium feature
             GoToLicense();

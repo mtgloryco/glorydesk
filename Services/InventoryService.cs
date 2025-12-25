@@ -10,10 +10,12 @@ namespace InventoryManagementSystem.Services
     public class InventoryService
     {
         private readonly DatabaseService _databaseService;
+        private readonly LicenseService _licenseService;
 
-        public InventoryService(DatabaseService databaseService)
+        public InventoryService(DatabaseService databaseService, LicenseService licenseService)
         {
             _databaseService = databaseService;
+            _licenseService = licenseService;
         }
 
         // Product CRUD
@@ -29,6 +31,12 @@ namespace InventoryManagementSystem.Services
 
         public async Task AddProductAsync(Product product)
         {
+            var count = await GetTotalProductCountAsync();
+            if (count >= _licenseService.GetMaxProductCount())
+            {
+                 throw new InvalidOperationException($"Product limit reached for your {_licenseService.CurrentLicense.Type} license. Upgrade to add more.");
+            }
+
             await _databaseService.Connection.RunInTransactionAsync(conn =>
             {
                 conn.Insert(product);
@@ -60,11 +68,25 @@ namespace InventoryManagementSystem.Services
 
         public async Task AddProductsAsync(IEnumerable<Product> products)
         {
+             var currentCount = await GetTotalProductCountAsync();
+             var newCount = products.Count();
+             if (currentCount + newCount > _licenseService.GetMaxProductCount())
+             {
+                 throw new InvalidOperationException($"Import would exceed product limit for your {_licenseService.CurrentLicense.Type} license.");
+             }
+
             await _databaseService.Connection.InsertAllAsync(products);
         }
 
         public async Task BulkAddProductsWithMovementsAsync(IEnumerable<Product> products, string user, string reasonPrefix)
         {
+             var currentCount = await GetTotalProductCountAsync();
+             var newCount = products.Count();
+             if (currentCount + newCount > _licenseService.GetMaxProductCount())
+             {
+                 throw new InvalidOperationException($"Import would exceed product limit for your {_licenseService.CurrentLicense.Type} license.");
+             }
+
             await _databaseService.Connection.RunInTransactionAsync(conn =>
             {
                 foreach (var product in products)
