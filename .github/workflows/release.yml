@@ -1,0 +1,82 @@
+name: Build and Release
+
+on:
+    release:
+        types: [published]
+
+permissions:
+    contents: write
+
+jobs:
+    build-windows:
+        name: Build Windows
+        runs-on: windows-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: "8.0.x"
+
+            - name: Install Velopack Tool
+              run: dotnet tool install -g vpk
+
+            - name: Get Version (Strip v)
+              id: version
+              shell: pwsh
+              run: |
+                  $tag = "${{ github.event.release.tag_name }}"
+                  $version = $tag.TrimStart('v')
+                  echo "VERSION=$version" >> $env:GITHUB_ENV
+                  Write-Host "Building version: $version"
+
+            - name: Publish App
+              run: dotnet publish InventoryManagementSystem.csproj -c Release -o ./publish
+
+            - name: Pack Release (Velopack)
+              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "InventoryManagementSystem.exe"
+
+            - name: Upload Assets to Public Release Repo
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: Releases/*
+                  repository: itbienvenu/Releases
+                  token: ${{ secrets.RELEASE_TOKEN }}
+
+    build-linux:
+        name: Build Linux
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: "8.0.x"
+
+            - name: Install Velopack Tool
+              run: dotnet tool install -g vpk
+
+            - name: Get Version (Strip v)
+              id: version
+              run: |
+                  TAG="${{ github.event.release.tag_name }}"
+                  VERSION="${TAG#v}"
+                  echo "VERSION=$VERSION" >> $GITHUB_ENV
+                  echo "Building version: $VERSION"
+
+            - name: Publish App
+              run: dotnet publish InventoryManagementSystem.csproj -c Release -o ./publish
+
+            - name: Pack Release (Velopack)
+              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "InventoryManagementSystem"
+
+            - name: Upload Assets to Public Release Repo
+              uses: softprops/action-gh-release@v1
+              with:
+                  files: Releases/*
+                  repository: itbienvenu/Releases
+                  token: ${{ secrets.RELEASE_TOKEN }}

@@ -18,7 +18,7 @@ public class AppConfig
 public class UpdateService
 {
     private UpdateManager? _mgr;
-    public string CurrentVersion { get; private set; } = "1.0.0";
+    public string CurrentVersion { get; private set; } = "1.2.1";
     private bool _isInitialized = false;
     private readonly HttpClient _httpClient;
 
@@ -68,7 +68,7 @@ public class UpdateService
             }
 
             _mgr = new UpdateManager(source);
-            CurrentVersion = _mgr.CurrentVersion?.ToString() ?? "1.0.0";
+            CurrentVersion = _mgr.CurrentVersion?.ToString() ?? "1.2.1";
             _isInitialized = true;
         }
         catch (Exception ex)

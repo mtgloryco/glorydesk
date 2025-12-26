@@ -472,7 +472,7 @@ export default function AdminDashboard() {
                         <h3>{downloadModal.mode === 'add' ? 'Add Version' : 'Edit Version'}</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
                             <div style={{ display: 'flex', gap: '1rem' }}>
-                                <input type="text" placeholder="Version (e.g. 1.0.0)" value={downloadModal.item.version || ''} onChange={e => setDownloadModal({ ...downloadModal, item: { ...downloadModal.item, version: e.target.value } })} className="input-field" />
+                                <input type="text" placeholder="Version (e.g. 1.2.1)" value={downloadModal.item.version || ''} onChange={e => setDownloadModal({ ...downloadModal, item: { ...downloadModal.item, version: e.target.value } })} className="input-field" />
                                 <select value={downloadModal.item.os || 'Windows'} onChange={e => setDownloadModal({ ...downloadModal, item: { ...downloadModal.item, os: e.target.value } })} className="input-field">
                                     <option value="Windows">Windows</option>
                                     <option value="Linux">Linux</option>
