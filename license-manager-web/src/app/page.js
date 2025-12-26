@@ -10,11 +10,14 @@ import {
 import { LICENSE_CONFIG } from '@/lib/config';
 import LoginModal from '@/components/LoginModal';
 import RegisterModal from '@/components/RegisterModal';
+import DemoRequestModal from '@/components/DemoRequestModal';
 
 export default function LandingPage() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showLogin, setShowLogin] = useState(false);
+
     const [showRegister, setShowRegister] = useState(false);
+    const [showDemo, setShowDemo] = useState(false);
     const [scrolled, setScrolled] = useState(false);
 
     const [plans, setPlans] = useState([]);
@@ -170,6 +173,9 @@ export default function LandingPage() {
                         <button onClick={openRegister} className="btn btn-primary btn-lg">
                             Request My License <ArrowRight size={20} />
                         </button>
+                        <button onClick={() => setShowDemo(true)} className="btn btn-outline btn-lg" style={{ borderColor: '#aaa', background: 'rgba(255,255,255,0.5)' }}>
+                            <Clock size={20} /> Try Demo
+                        </button>
                         <button onClick={openLogin} className="btn btn-secondary btn-lg">
                             Software Login
                         </button>
@@ -213,7 +219,7 @@ export default function LandingPage() {
             </section>
 
             {/* Downloads Section */}
-            <section id="downloads" className="section bg-gradient-to-b from-white to-gray-50">
+            <section id="downloads" className="section bg-with-pattern">
                 <div className="container">
                     <div className="section-header">
                         <h2 className="section-title">Download IMS Ready</h2>
@@ -402,6 +408,7 @@ export default function LandingPage() {
 
             <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} onSwitchToRegister={openRegister} />
             <RegisterModal isOpen={showRegister} onClose={() => setShowRegister(false)} onSwitchToLogin={openLogin} />
+            <DemoRequestModal isOpen={showDemo} onClose={() => setShowDemo(false)} />
 
             {/* History Modal */}
             {showHistory && (
@@ -520,7 +527,10 @@ export default function LandingPage() {
                 .hero {
                     padding: 12rem 0 8rem;
                     background: radial-gradient(circle at top right, rgba(0, 112, 243, 0.08), transparent),
-                                radial-gradient(circle at bottom left, rgba(121, 40, 202, 0.08), transparent);
+                                radial-gradient(circle at bottom left, rgba(121, 40, 202, 0.08), transparent),
+                                var(--bg-pattern);
+                    background-size: 100% 100%, 100% 100%, 24px 24px;
+                    background-attachment: scroll, scroll, fixed;
                     text-align: center;
                 }
                 .hero-title {
@@ -553,7 +563,12 @@ export default function LandingPage() {
                 .section-title { font-size: 3rem; font-weight: 800; margin-bottom: 1.2rem; letter-spacing: -0.02em; }
                 .section-subtitle { color: #666; font-size: 1.2rem; max-width: 600px; margin: 0 auto; }
 
-                .bg-white { background: #fff; }
+                .bg-white { 
+                    background-color: #fff;
+                    background-image: var(--bg-pattern);
+                    background-size: 24px 24px;
+                    background-attachment: fixed;
+                }
 
                 .feature-grid {
                     display: grid;
@@ -705,6 +720,15 @@ export default function LandingPage() {
                 .plan-desc { color: #777; font-size: 0.9rem; margin-bottom: 2rem; height: 3em; }
                 .plan-features { list-style: none; text-align: left; margin-bottom: auto; padding-bottom: 2rem; }
                 .plan-features li { margin-bottom: 0.8rem; font-size: 0.9rem; display: flex; align-items: start; gap: 10px; color: #444; }
+
+                /* Custom background for Downloads */
+                .bg-with-pattern {
+                    background: linear-gradient(to bottom, #ffffff, #f9fafb),
+                                var(--bg-pattern);
+                    background-size: 100% 100%, 24px 24px;
+                    background-attachment: scroll, fixed;
+                    background-blend-mode: overlay;
+                }
 
                 @media (max-width: 1024px) {
                     .pricing-grid {
