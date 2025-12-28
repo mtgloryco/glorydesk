@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
@@ -9,31 +9,25 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
-    <AvaloniaResource Include="Assets\**" />
+    <Compile Remove="InventoryManagementSystem.Shared/**" />
+    <EmbeddedResource Remove="InventoryManagementSystem.Shared/**" />
+    <None Remove="InventoryManagementSystem.Shared/**" />
+    <AvaloniaResource Remove="InventoryManagementSystem.Shared/**" />
+    <Page Remove="InventoryManagementSystem.Shared/**" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Explicitly define App.axaml to ensure it is compiled correctly -->
-    <ApplicationDefinition Include="App.axaml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.10" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.10" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.10" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.10" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.10" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.10">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
-    <PackageReference Include="CsvHelper" Version="33.0.1" />
-    <PackageReference Include="QuestPDF" Version="2025.12.0" />
-    <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
     <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InventoryManagementSystem.Shared\InventoryManagementSystem.Shared.csproj" />
   </ItemGroup>
 </Project>

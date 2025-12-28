@@ -83,7 +83,7 @@ export async function POST(request) {
 export async function PUT(request) {
     try {
         const body = await request.json();
-        const { id, ...updates } = body;
+        const { id, _id, ...updates } = body;
 
         if (!id) return NextResponse.json({ error: 'Plan ID required' }, { status: 400 });
 

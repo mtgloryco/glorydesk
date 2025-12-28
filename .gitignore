@@ -75,3 +75,11 @@ publish/
 
 # Web Downloads
 license-manager-web/public/downloads/
+
+# Android
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+*.keystore
