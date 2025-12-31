@@ -52,9 +52,12 @@ export default function RootLayout({ children }) {
         />
         {/* EffectiveGateCPM Script */}
         <script src="https://pl28373489.effectivegatecpm.com/53/3b/f2/533bf2824e1da8c50fb338693c952f5d.js"></script>
+        {/* Native Banner Script */}
+        <script async data-cfasync="false" src="https://pl28374620.effectivegatecpm.com/ad0327c4527ce063da80e69c1b23be43/invoke.js"></script>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
+        <div id="container-ad0327c4527ce063da80e69c1b23be43"></div>
       </body>
     </html>
   );
