@@ -1,5 +1,5 @@
 export default function robots() {
-    const baseUrl = 'https://your-domain.com'; // TODO: Update this to your actual domain
+    const baseUrl = 'https://itims.online'; // TODO: Update this to your actual domain
 
     return {
         rules: {
