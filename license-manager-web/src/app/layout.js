@@ -50,6 +50,8 @@ export default function RootLayout({ children }) {
           `,
           }}
         />
+        {/* EffectiveGateCPM Script */}
+        <script src="https://pl28373489.effectivegatecpm.com/53/3b/f2/533bf2824e1da8c50fb338693c952f5d.js"></script>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
