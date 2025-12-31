@@ -37,26 +37,32 @@ export default function RootLayout({ children }) {
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1595689628350805"
           crossOrigin="anonymous"
         ></script>
-        {/* Ezoic Privacy Scripts */}
+        {/* Scripts moved to body for performance and DOM access */}
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        {children}
+
+        {/* Ezoic Privacy & Helper Scripts (Moved to Body) */}
         <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
         <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script>
-        {/* Ezoic Header Script */}
-        <script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
+
+        {/* Ezoic Analytics Queue Init */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
+            window._ezaq = window._ezaq || [];
             window.ezstandalone = window.ezstandalone || {};
             ezstandalone.cmd = ezstandalone.cmd || [];
           `,
           }}
         />
-        {/* EffectiveGateCPM Script */}
+        <script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
+
+        {/* EffectiveGateCPM Main Script */}
         <script src="https://pl28373489.effectivegatecpm.com/53/3b/f2/533bf2824e1da8c50fb338693c952f5d.js"></script>
+
         {/* Native Banner Script */}
         <script async data-cfasync="false" src="https://pl28374620.effectivegatecpm.com/ad0327c4527ce063da80e69c1b23be43/invoke.js"></script>
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
         <div id="container-ad0327c4527ce063da80e69c1b23be43"></div>
       </body>
     </html>
