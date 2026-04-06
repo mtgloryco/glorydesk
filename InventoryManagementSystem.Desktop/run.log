@@ -1,0 +1,4 @@
+Failed to fetch remote config: Response status code does not indicate success: 404 (Not Found).. Using default URL.
+Initializing UpdateManager with Source: https://ims-lilac-beta.vercel.app/updates
+Update check skipped (App is not installed/packaged).
+Update check skipped (App is not installed/packaged).
