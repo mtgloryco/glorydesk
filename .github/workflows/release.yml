@@ -33,10 +33,10 @@ jobs:
                   Write-Host "Building version: $version"
 
             - name: Publish App
-              run: dotnet publish InventoryManagementSystem.csproj -c Release -o ./publish
+              run: dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj -c Release -o ./publish
 
             - name: Pack Release (Velopack)
-              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "InventoryManagementSystem.exe"
+              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "InventoryManagementSystem.Desktop.exe"
 
             - name: Upload Assets to Public Release Repo
               uses: softprops/action-gh-release@v1
@@ -69,10 +69,10 @@ jobs:
                   echo "Building version: $VERSION"
 
             - name: Publish App
-              run: dotnet publish InventoryManagementSystem.csproj -c Release -o ./publish
+              run: dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj -c Release -o ./publish
 
             - name: Pack Release (Velopack)
-              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "InventoryManagementSystem"
+              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "InventoryManagementSystem.Desktop"
 
             - name: Upload Assets to Public Release Repo
               uses: softprops/action-gh-release@v1
