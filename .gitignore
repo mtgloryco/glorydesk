@@ -83,3 +83,4 @@ license-manager-web/public/downloads/
 *.dex
 *.class
 *.keystore
+/.kiro
