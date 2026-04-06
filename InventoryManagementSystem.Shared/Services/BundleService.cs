@@ -55,6 +55,9 @@ namespace InventoryManagementSystem.Services
                 foreach (var comp in components)
                 {
                     var product = conn.Find<Product>(comp.ComponentProductId);
+                    if (product == null)
+                        throw new InvalidOperationException($"Component product ID {comp.ComponentProductId} not found.");
+
                     int totalNeeded = comp.QuantityRequired * quantity;
 
                     if (product.StockQuantity < totalNeeded)
@@ -76,6 +79,9 @@ namespace InventoryManagementSystem.Services
                 }
 
                 var bundleProduct = conn.Find<Product>(bundleProductId);
+                if (bundleProduct == null)
+                    throw new InvalidOperationException($"Bundle product ID {bundleProductId} not found.");
+
                 bundleProduct.StockQuantity += quantity;
                 conn.Update(bundleProduct);
 
@@ -96,6 +102,9 @@ namespace InventoryManagementSystem.Services
             await _databaseService.Connection.RunInTransactionAsync(conn =>
             {
                 var bundleProduct = conn.Find<Product>(bundleProductId);
+                if (bundleProduct == null)
+                    throw new InvalidOperationException($"Bundle product ID {bundleProductId} not found.");
+
                 if (bundleProduct.StockQuantity < quantity)
                     throw new InvalidOperationException("Insufficient bundle stock to disassemble.");
 
@@ -119,6 +128,9 @@ namespace InventoryManagementSystem.Services
                 foreach (var comp in components)
                 {
                     var product = conn.Find<Product>(comp.ComponentProductId);
+                    if (product == null)
+                        throw new InvalidOperationException($"Component product ID {comp.ComponentProductId} not found.");
+
                     int totalReturn = comp.QuantityRequired * quantity;
 
                     product.StockQuantity += totalReturn;

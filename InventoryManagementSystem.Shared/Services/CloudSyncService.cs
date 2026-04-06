@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Net.Http;
 using System.Threading.Tasks;
 using InventoryManagementSystem.Infrastructure;
 
@@ -9,14 +8,10 @@ namespace InventoryManagementSystem.Services
     public class CloudSyncService
     {
         private readonly DatabaseService _databaseService;
-        private readonly HttpClient _httpClient;
-
-        private const string ApiEndpoint = "https://ims-cloud-sync.api.example.com";
 
         public CloudSyncService(DatabaseService databaseService)
         {
             _databaseService = databaseService;
-            _httpClient = new HttpClient();
         }
 
         public async Task<bool> BackupToCloudAsync(string userId, string authToken)

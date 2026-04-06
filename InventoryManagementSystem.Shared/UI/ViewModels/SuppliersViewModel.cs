@@ -53,8 +53,9 @@ namespace InventoryManagementSystem.UI.ViewModels
         }
 
         [RelayCommand]
-        private void EditSupplier(Supplier supplier)
+        private void EditSupplier(Supplier? supplier)
         {
+            if (supplier == null) return;
             CurrentSupplier = new Supplier
             {
                 Id = supplier.Id,
@@ -72,8 +73,9 @@ namespace InventoryManagementSystem.UI.ViewModels
         }
 
         [RelayCommand]
-        private async Task DeleteSupplier(Supplier supplier)
+        private async Task DeleteSupplier(Supplier? supplier)
         {
+            if (supplier == null) return;
             await _supplierService.DeleteSupplierAsync(supplier.Id);
             await LoadSuppliers();
         }

@@ -3,9 +3,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             xmlns:conv="clr-namespace:InventoryManagementSystem.UI.Converters"
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="800"
              x:Class="InventoryManagementSystem.UI.Views.ExpiryDashboardView"
              x:DataType="vm:ExpiryDashboardViewModel">
+    <UserControl.Resources>
+        <conv:StringToBrushConverter x:Key="StringToBrushConverter"/>
+    </UserControl.Resources>
 
     <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20">
         <!-- Header -->
@@ -65,7 +69,7 @@
                         <DataGridTemplateColumn Header="Alert" Width="70">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Ellipse Width="10" Height="10" Fill="{Binding ColorHex}" VerticalAlignment="Center"/>
+                                    <Ellipse Width="10" Height="10" Fill="{Binding ColorHex, Converter={StaticResource StringToBrushConverter}}" VerticalAlignment="Center"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

@@ -57,30 +57,68 @@ namespace InventoryManagementSystem.Services
         {
             await _databaseService.Connection.RunInTransactionAsync(conn =>
             {
-                // Log return
+                var product = conn.Find<Product>(ret.ProductId);
+                if (product == null) return;
+
+                // 1. Availability validation
+                if (ret.Quantity > product.StockQuantity)
+                {
+                    throw new InvalidOperationException($"Insufficient stock for return. Available: {product.StockQuantity}, Returning: {ret.Quantity}");
+                }
+
+                // 2. Log return
                 conn.Insert(ret);
 
-                // Deduct stock via StockMovement OUT
+                // 3. Log Stock Movement OUT
                 var movement = new StockMovement
                 {
                     ProductId = ret.ProductId,
-                    QuantityChanged = -ret.Quantity,
+                    QuantityChanged = ret.Quantity,
                     MovementType = "OUT",
                     Reason = "Supplier Return - Overstock/Defective",
                     Date = DateTime.Now,
+                    Username = ret.ProcessedByUsername ?? "System",
+                    UnitPrice = product.Price
                 };
                 conn.Insert(movement);
 
-                // Update product total stock
-                var product = conn.Find<Product>(ret.ProductId);
-                if (product != null)
+                // 4. Batch Consumption (FIFO)
+                int remainingToDeduct = ret.Quantity;
+                var batches = conn.Table<PurchaseBatch>()
+                                  .Where(b => b.ProductId == ret.ProductId && b.QuantityRemaining > 0)
+                                  .OrderBy(b => b.PurchaseDate)
+                                  .ThenBy(b => b.Id)
+                                  .ToList();
+
+                foreach (var batch in batches)
                 {
-                    product.StockQuantity -= ret.Quantity;
-                    conn.Update(product);
+                    if (remainingToDeduct <= 0) break;
+
+                    int deductFromThisBatch = Math.Min(batch.QuantityRemaining, remainingToDeduct);
+
+                    // Link this OUT movement to the purchase batch for proper COGS/Value tracking
+                    conn.Insert(new SaleBatchUsage
+                    {
+                        StockMovementId = movement.Id,
+                        PurchaseBatchId = batch.Id,
+                        QuantityUsed = deductFromThisBatch,
+                        CostPerUnit = batch.CostPerUnit
+                    });
+
+                    batch.QuantityRemaining -= deductFromThisBatch;
+                    conn.Update(batch);
+
+                    remainingToDeduct -= deductFromThisBatch;
                 }
 
-                // Note: Real batch logic would require knowing which batch is being returned
-                // For simplicity as per Phase 5 prompt, we focus on stock deduction
+                if (remainingToDeduct > 0)
+                {
+                    throw new InvalidOperationException("Batches were out of sync with product stock. Return failed.");
+                }
+
+                // 5. Update master stock
+                product.StockQuantity -= ret.Quantity;
+                conn.Update(product);
             });
         }
 

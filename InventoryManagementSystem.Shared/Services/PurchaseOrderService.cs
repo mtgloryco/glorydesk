@@ -54,43 +54,65 @@ namespace InventoryManagementSystem.Services
 
         public async Task ReceivePurchaseOrderAsync(int poId, List<(int itemId, int quantityReceived)> receivedItems)
         {
-            var po = await _databaseService.Connection.FindAsync<PurchaseOrder>(poId);
-            if (po == null || po.Status == "Cancelled") return;
-
-            foreach (var line in receivedItems)
+            await _databaseService.Connection.RunInTransactionAsync(conn =>
             {
-                var item = await _databaseService.Connection.FindAsync<PurchaseOrderItem>(line.itemId);
-                if (item == null) continue;
+                var po = conn.Find<PurchaseOrder>(poId);
+                if (po == null || po.Status == "Cancelled" || po.Status == "Received") return;
 
-                item.QuantityReceived += line.quantityReceived;
-                await _databaseService.Connection.UpdateAsync(item);
-
-                if (line.quantityReceived > 0)
+                foreach (var line in receivedItems)
                 {
-                    await _inventoryService.AddStockMovementAsync(
-                        item.ProductId,
-                        line.quantityReceived,
-                        "IN",
-                        $"PO Receipt: {po.PONumber}",
-                        UserSession.CurrentUser?.Username ?? "System",
-                        item.UnitCost,
-                        unitPrice: null,
-                        batchNumber: $"{po.PONumber}-ITEM-{item.Id}",
-                        expiryDate: null,
-                        qualityStatus: "Good");
+                    if (line.quantityReceived <= 0) continue;
+
+                    var item = conn.Find<PurchaseOrderItem>(line.itemId);
+                    if (item == null || item.PurchaseOrderId != poId) continue;
+
+                    int remainingToReceive = item.QuantityOrdered - item.QuantityReceived;
+                    if (line.quantityReceived > remainingToReceive) continue;
+
+                    item.QuantityReceived += line.quantityReceived;
+                    conn.Update(item);
+
+                    var product = conn.Find<Product>(item.ProductId);
+                    if (product != null)
+                    {
+                        product.StockQuantity += line.quantityReceived;
+                        if (item.UnitCost > 0) product.Cost = item.UnitCost;
+                        conn.Update(product);
+
+                        conn.Insert(new PurchaseBatch
+                        {
+                            ProductId = product.Id,
+                            QuantityPurchased = line.quantityReceived,
+                            QuantityRemaining = line.quantityReceived,
+                            CostPerUnit = item.UnitCost,
+                            PurchaseDate = DateTime.Now,
+                            BatchNumber = $"{po.PONumber}-BATCH-{item.Id}-{DateTime.Now:MMddHHmm}",
+                            QualityStatus = "Good"
+                        });
+
+                        conn.Insert(new StockMovement
+                        {
+                            ProductId = product.Id,
+                            QuantityChanged = line.quantityReceived,
+                            MovementType = "IN",
+                            Reason = $"PO Receipt: {po.PONumber}",
+                            Date = DateTime.Now,
+                            Username = UserSession.CurrentUser?.Username ?? "System",
+                            UnitPrice = product.Price
+                        });
+                    }
                 }
-            }
 
-            var allItems = await _databaseService.Connection.Table<PurchaseOrderItem>()
-                .Where(i => i.PurchaseOrderId == poId)
-                .ToListAsync();
-
-            po.Status = allItems.All(i => i.QuantityReceived >= i.QuantityOrdered) ? "Received" : "Shipped";
-            if (po.Status == "Received")
-            {
-                po.ActualDeliveryDate = DateTime.Now;
-            }
-            await _databaseService.Connection.UpdateAsync(po);
+                var allItems = conn.Table<PurchaseOrderItem>().Where(i => i.PurchaseOrderId == poId).ToList();
+                bool allReceived = allItems.All(i => i.QuantityReceived >= i.QuantityOrdered);
+                
+                po.Status = allReceived ? "Received" : "Shipped";
+                if (po.Status == "Received")
+                {
+                    po.ActualDeliveryDate = DateTime.Now;
+                }
+                conn.Update(po);
+            });
         }
 
         public async Task<List<PurchaseOrderListItem>> GetAllPurchaseOrdersAsync()

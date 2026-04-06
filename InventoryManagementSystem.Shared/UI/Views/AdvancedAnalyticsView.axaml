@@ -42,7 +42,7 @@
                                 <DataGridTextColumn Header="Product" Binding="{Binding ProductName}" Width="*"/>
                                 <DataGridTextColumn Header="Revenue" Binding="{Binding TotalRevenue, StringFormat='C'}" Width="150"/>
                                 <DataGridTextColumn Header="Profit" Binding="{Binding TotalProfit, StringFormat='C'}" Width="150"/>
-                                <DataGridTextColumn Header="Margin %" Binding="{Binding MarginPercentage, StringFormat='P1'}" Width="100"/>
+                                <DataGridTextColumn Header="Margin %" Binding="{Binding MarginPercent, StringFormat='P1'}" Width="100"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </StackPanel>

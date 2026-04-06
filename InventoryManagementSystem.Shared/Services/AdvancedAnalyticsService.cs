@@ -76,10 +76,11 @@ namespace InventoryManagementSystem.Services
                 }
 
                 var profit = revenue - totalCogs;
-                var margin = revenue == 0 ? 0 : (profit / revenue) * 100;
+                var margin = revenue == 0 ? 0 : (profit / revenue);
 
                 result.Add(new ProfitabilityItem
                 {
+                    SKU = p.SKU ?? string.Empty,
                     ProductName = p.Name,
                     TotalProfit = profit,
                     MarginPercent = margin,
@@ -134,8 +135,9 @@ namespace InventoryManagementSystem.Services
             foreach (var item in ranking)
             {
                 cumulativeRev += item.TotalRevenue;
+                item.CumulativePercentage = totalRevenue > 0 ? cumulativeRev / totalRevenue : 0;
                 result.Add(item);
-                if (cumulativeRev / totalRevenue >= 0.80m) break;
+                if (item.CumulativePercentage >= 0.80m) break;
             }
 
             return result;
@@ -150,10 +152,12 @@ namespace InventoryManagementSystem.Services
 
     public class ProfitabilityItem
     {
+        public string SKU { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
         public decimal TotalProfit { get; set; }
         public decimal MarginPercent { get; set; }
         public decimal TotalRevenue { get; set; }
+        public decimal CumulativePercentage { get; set; }
     }
 
     public class MonthlyTrend

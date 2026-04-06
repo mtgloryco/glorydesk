@@ -42,8 +42,8 @@
         </StackPanel>
 
         <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
-            <Button Content="Edit Selected" Command="{Binding EditSupplierCommand}" CommandParameter="{Binding SelectedSupplier}" />
-            <Button Content="Delete Selected" Command="{Binding DeleteSupplierCommand}" CommandParameter="{Binding SelectedSupplier}" />
+            <Button Content="Edit Selected" Command="{Binding EditSupplierCommand}" CommandParameter="{Binding SelectedSupplier}" IsEnabled="{Binding SelectedSupplier, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <Button Content="Delete Selected" Command="{Binding DeleteSupplierCommand}" CommandParameter="{Binding SelectedSupplier}" IsEnabled="{Binding SelectedSupplier, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
     </Grid>
 </UserControl>

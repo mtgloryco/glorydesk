@@ -14,43 +14,45 @@
 
         <!-- Sidebar -->
         <Border Grid.Column="0" Background="{DynamicResource PageBackgroundColor}" Padding="20" IsVisible="{Binding IsLoggedIn}">
-            <StackPanel Spacing="15">
-                <TextBlock Text="IMS" FontWeight="Bold" FontSize="24" Margin="0,30,0,20"/>
-                <TextBlock Text="{Binding CurrentUserName}" FontWeight="SemiBold" Margin="0,0,0,20"/>
-                
-                <Button Content="{Binding Language.Resources[Dashboard]}" Command="{Binding GoToDashboardCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="{Binding Language.Resources[POS]}" Command="{Binding GoToPOSCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="{Binding Language.Resources[Inventory]}" Command="{Binding GoToInventoryCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Suppliers" Command="{Binding GoToSuppliersCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Purchase Orders" Command="{Binding GoToPurchaseOrdersCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Forecasting" Command="{Binding GoToForecastingCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Reorder Dashboard" Command="{Binding GoToReorderDashboardCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Expiry Dashboard" Command="{Binding GoToExpiryDashboardCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Locations" Command="{Binding GoToLocationsCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Returns" Command="{Binding GoToReturnsCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Bundles &amp; Kits" Command="{Binding GoToBundlesCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Audit Trail" Command="{Binding GoToAuditTrailCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="{Binding Language.Resources[Reports]}" Command="{Binding GoToReportsCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="{Binding Language.Resources[Insights]}" Command="{Binding GoToAnalyticsCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Advanced Insights" Command="{Binding GoToAdvancedAnalyticsCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="{Binding Language.Resources[Users]}" Command="{Binding GoToUsersCommand}" IsVisible="{Binding IsAdmin}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="{Binding Language.Resources[License]}" Command="{Binding GoToLicenseCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="Settings" Command="{Binding GoToSettingsCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                <Button Content="{Binding UpdateStatusText}" Command="{Binding CheckForUpdatesCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                
-                <StackPanel VerticalAlignment="Bottom" Margin="0,40,0,0" Spacing="10">
-                    <Button Content="Toggle Theme" Command="{Binding ToggleThemeCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="IMS" FontWeight="Bold" FontSize="24" Margin="0,30,0,20"/>
+                    <TextBlock Text="{Binding CurrentUserName}" FontWeight="SemiBold" Margin="0,0,0,20"/>
                     
-                    <TextBlock Text="Language / Ururimi" FontSize="10" Foreground="Gray"/>
-                    <Grid ColumnDefinitions="*,*,*">
-                       <Button Content="EN" Command="{Binding ChangeLanguageCommand}" CommandParameter="en" Background="Transparent" BorderThickness="0" FontSize="10"/>
-                       <Button Grid.Column="1" Content="FR" Command="{Binding ChangeLanguageCommand}" CommandParameter="fr" Background="Transparent" BorderThickness="0" FontSize="10"/>
-                       <Button Grid.Column="2" Content="RW" Command="{Binding ChangeLanguageCommand}" CommandParameter="rw" Background="Transparent" BorderThickness="0" FontSize="10"/>
-                    </Grid>
-                
-                     <Button Content="{Binding Language.Resources[Exit]}" Command="{Binding LogoutCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10" Foreground="#FF5252"/>
+                    <Button Content="{Binding Language.Resources[Dashboard]}" Command="{Binding GoToDashboardCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[POS]}" Command="{Binding GoToPOSCommand}" IsVisible="{Binding CanAccessPOS}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Inventory]}" Command="{Binding GoToInventoryCommand}" IsVisible="{Binding CanAccessInventory}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Suppliers]}" Command="{Binding GoToSuppliersCommand}" IsVisible="{Binding CanAccessSuppliers}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[PurchaseOrders]}" Command="{Binding GoToPurchaseOrdersCommand}" IsVisible="{Binding CanAccessPurchaseOrders}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Forecasting]}" Command="{Binding GoToForecastingCommand}" IsVisible="{Binding CanAccessForecasting}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[ReorderDashboard]}" Command="{Binding GoToReorderDashboardCommand}" IsVisible="{Binding CanAccessForecasting}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[ExpiryDashboard]}" Command="{Binding GoToExpiryDashboardCommand}" IsVisible="{Binding CanAccessExpiry}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Locations]}" Command="{Binding GoToLocationsCommand}" IsVisible="{Binding CanAccessLocations}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Returns]}" Command="{Binding GoToReturnsCommand}" IsVisible="{Binding CanAccessReturns}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Bundles]}" Command="{Binding GoToBundlesCommand}" IsVisible="{Binding CanAccessBundles}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[AuditTrail]}" Command="{Binding GoToAuditTrailCommand}" IsVisible="{Binding CanAccessAudit}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Reports]}" Command="{Binding GoToReportsCommand}" IsVisible="{Binding CanAccessReports}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Insights]}" Command="{Binding GoToAnalyticsCommand}" IsVisible="{Binding CanAccessAnalytics}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[AdvancedInsights]}" Command="{Binding GoToAdvancedAnalyticsCommand}" IsVisible="{Binding CanAccessAdvancedAnalytics}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Users]}" Command="{Binding GoToUsersCommand}" IsVisible="{Binding IsAdmin}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[License]}" Command="{Binding GoToLicenseCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Settings]}" Command="{Binding GoToSettingsCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding UpdateStatusText}" Command="{Binding CheckForUpdatesCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    
+                    <StackPanel VerticalAlignment="Bottom" Margin="0,40,0,0" Spacing="10">
+                        <Button Content="Toggle Theme" Command="{Binding ToggleThemeCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                        
+                        <TextBlock Text="Language / Ururimi" FontSize="10" Foreground="Gray"/>
+                        <Grid ColumnDefinitions="*,*,*">
+                           <Button Content="EN" Command="{Binding ChangeLanguageCommand}" CommandParameter="en" Background="Transparent" BorderThickness="0" FontSize="10"/>
+                           <Button Grid.Column="1" Content="FR" Command="{Binding ChangeLanguageCommand}" CommandParameter="fr" Background="Transparent" BorderThickness="0" FontSize="10"/>
+                           <Button Grid.Column="2" Content="RW" Command="{Binding ChangeLanguageCommand}" CommandParameter="rw" Background="Transparent" BorderThickness="0" FontSize="10"/>
+                        </Grid>
+                    
+                         <Button Content="{Binding Language.Resources[Exit]}" Command="{Binding LogoutCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10" Foreground="#FF5252"/>
+                    </StackPanel>
                 </StackPanel>
-            </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <!-- Main Content (Spans entire window if not logged in) -->

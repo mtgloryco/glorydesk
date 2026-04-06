@@ -244,6 +244,7 @@ namespace InventoryManagementSystem.Services
         public bool CanAccessAdvancedAnalytics() => IsPro || IsEnterprise;
         public bool CanAccessKitting() => IsPro || IsEnterprise;
         public bool CanAccessAuditTrail() => IsPro || IsEnterprise;
+        public bool CanAccessReturns() => IsMedium || IsPro || IsEnterprise;
         public bool CanAccessCloudSync() => IsEnterprise;
         public bool CanAccessAutoReorder() => IsEnterprise;
 

@@ -152,6 +152,20 @@ public partial class MainViewModel : ViewModelBase
         CurrentPage = new DashboardViewModel(_inventoryService, _licenseService, Language, _settingsService, _dailyBriefingService, GoToInventory, GoToReports, GoToPOS);
         _navigationStack.Clear();
         CanGoBack = false;
+        OnPropertyChanged(nameof(CanAccessPOS));
+        OnPropertyChanged(nameof(CanAccessReports));
+        OnPropertyChanged(nameof(CanAccessInventory));
+        OnPropertyChanged(nameof(CanAccessSuppliers));
+        OnPropertyChanged(nameof(CanAccessPurchaseOrders));
+        OnPropertyChanged(nameof(CanAccessForecasting));
+        OnPropertyChanged(nameof(CanAccessExpiry));
+        OnPropertyChanged(nameof(CanAccessLocations));
+        OnPropertyChanged(nameof(CanAccessReturns));
+        OnPropertyChanged(nameof(CanAccessBundles));
+        OnPropertyChanged(nameof(CanAccessAudit));
+        OnPropertyChanged(nameof(CanAccessAdvancedAnalytics));
+        OnPropertyChanged(nameof(CanAccessAnalytics));
+
         OnPropertyChanged(nameof(SidebarGridLength));
     }
 
@@ -175,6 +189,21 @@ public partial class MainViewModel : ViewModelBase
             CanGoBack = _navigationStack.Count > 0;
         }
     }
+
+    // Permission flags for UI
+    public bool CanAccessPOS => _licenseService.CanAccessPOS();
+    public bool CanAccessReports => _licenseService.CanAccessAdvancedReports();
+    public bool CanAccessInventory => true; // Basic free tier
+    public bool CanAccessSuppliers => _licenseService.CanAccessSupplierManagement();
+    public bool CanAccessPurchaseOrders => _licenseService.CanAccessPurchaseOrders();
+    public bool CanAccessForecasting => _licenseService.CanAccessForecasting();
+    public bool CanAccessExpiry => _licenseService.CanAccessExpiryTracking();
+    public bool CanAccessLocations => _licenseService.CanAccessMultiLocation();
+    public bool CanAccessReturns => _licenseService.CanAccessReturns();
+    public bool CanAccessBundles => _licenseService.CanAccessKitting();
+    public bool CanAccessAudit => _licenseService.CanAccessAuditTrail();
+    public bool CanAccessAdvancedAnalytics => _licenseService.CanAccessAdvancedAnalytics();
+    public bool CanAccessAnalytics => _licenseService.CanAccessAnalytics();
 
     private void NavigateTo(ViewModelBase newPage)
     {
@@ -351,6 +380,11 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToReturns()
     {
+        if (!_licenseService.CanAccessReturns())
+        {
+            GoToLicense();
+            return;
+        }
         NavigateTo(new ReturnsViewModel(_returnsService, _inventoryService));
     }
 

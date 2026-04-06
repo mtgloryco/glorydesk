@@ -106,7 +106,19 @@ namespace InventoryManagementSystem.Services
                 ["Rep_LowStock"] = "Low Stock",
                 ["Rep_Profit"] = "Profit & Loss",
                 ["Rep_Generate"] = "Generate Report",
-                ["Rep_ExportPDF"] = "Export PDF"
+                ["Rep_ExportPDF"] = "Export PDF",
+                // Sidebar
+                ["Suppliers"] = "Suppliers",
+                ["PurchaseOrders"] = "Purchase Orders",
+                ["Forecasting"] = "Forecasting",
+                ["ReorderDashboard"] = "Reorder Dashboard",
+                ["ExpiryDashboard"] = "Expiry Dashboard",
+                ["Locations"] = "Locations",
+                ["Returns"] = "Returns",
+                ["Bundles"] = "Bundles & Kits",
+                ["AuditTrail"] = "Audit Trail",
+                ["AdvancedInsights"] = "Advanced Insights",
+                ["Settings"] = "Settings"
             },
             ["fr"] = new()
             {
@@ -188,7 +200,19 @@ namespace InventoryManagementSystem.Services
                 ["Rep_LowStock"] = "Stock Faible",
                 ["Rep_Profit"] = "Pertes & Profits",
                 ["Rep_Generate"] = "Generer Rapport",
-                ["Rep_ExportPDF"] = "Exporter PDF"
+                ["Rep_ExportPDF"] = "Exporter PDF",
+                // Sidebar
+                ["Suppliers"] = "Fournisseurs",
+                ["PurchaseOrders"] = "Bons de Commande",
+                ["Forecasting"] = "Previsions",
+                ["ReorderDashboard"] = "Tableau Reapprov.",
+                ["ExpiryDashboard"] = "Tableau Expiration",
+                ["Locations"] = "Emplacements",
+                ["Returns"] = "Retours",
+                ["Bundles"] = "Kitting & Bundles",
+                ["AuditTrail"] = "Audit System",
+                ["AdvancedInsights"] = "Analyses Avancees",
+                ["Settings"] = "Parametres"
             },
             ["rw"] = new()
             {
@@ -270,7 +294,19 @@ namespace InventoryManagementSystem.Services
                 ["Rep_LowStock"] = "Ibike mu bubiko",
                 ["Rep_Profit"] = "Inyungu & Igihombo",
                 ["Rep_Generate"] = "Kora Raporo",
-                ["Rep_ExportPDF"] = "Bika nka PDF"
+                ["Rep_ExportPDF"] = "Bika nka PDF",
+                // Sidebar
+                ["Suppliers"] = "Abasupplier",
+                ["PurchaseOrders"] = "Bons de Commande",
+                ["Forecasting"] = "Ibibanziriza Igihe",
+                ["ReorderDashboard"] = "Guhindura Ububiko",
+                ["ExpiryDashboard"] = "Ibirangiriza Igihe",
+                ["Locations"] = "Ahari Ububiko",
+                ["Returns"] = "Ibiregarwa",
+                ["Bundles"] = "Ibicuruzwa Bivanzwe",
+                ["AuditTrail"] = "Imicungire y'Ububiko",
+                ["AdvancedInsights"] = "Isesengura Ryimbitse",
+                ["Settings"] = "Igenamiterere"
             }
         };
 

@@ -21,10 +21,10 @@
             <DataGrid ItemsSource="{Binding Logs}" AutoGenerateColumns="False" IsReadOnly="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, StringFormat='G'}" Width="180"/>
-                    <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="120"/>
+                    <DataGridTextColumn Header="User" Binding="{Binding ChangedByUsername}" Width="120"/>
                     <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="100"/>
-                    <DataGridTextColumn Header="Table" Binding="{Binding EntityName}" Width="120"/>
-                    <DataGridTextColumn Header="Details" Binding="{Binding ChangesJson}" Width="*"/>
+                    <DataGridTextColumn Header="Entity" Binding="{Binding EntityType}" Width="120"/>
+                    <DataGridTextColumn Header="New State" Binding="{Binding NewValues}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

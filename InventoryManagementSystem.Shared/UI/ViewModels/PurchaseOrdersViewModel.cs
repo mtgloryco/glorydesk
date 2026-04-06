@@ -16,7 +16,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         private ObservableCollection<PurchaseOrderListItem> _purchaseOrders = new();
 
         [ObservableProperty]
-        private PurchaseOrder? _selectedPurchaseOrder;
+        private PurchaseOrderListItem? _selectedPurchaseOrder;
 
         [ObservableProperty]
         private string _statusMessage = string.Empty;
@@ -51,22 +51,25 @@ namespace InventoryManagementSystem.UI.ViewModels
         }
 
         [RelayCommand]
-        private async Task ApprovePurchaseOrder(PurchaseOrderListItem item)
+        private async Task ApprovePurchaseOrder(PurchaseOrderListItem? item)
         {
+            if (item == null) return;
             await _purchaseOrderService.ApprovePurchaseOrderAsync(item.PurchaseOrder.Id, UserSession.CurrentUser?.Username ?? "System");
             await LoadPurchaseOrders();
         }
 
         [RelayCommand]
-        private async Task MarkAsShipped(PurchaseOrderListItem item)
+        private async Task MarkAsShipped(PurchaseOrderListItem? item)
         {
+            if (item == null) return;
             await _purchaseOrderService.MarkAsShippedAsync(item.PurchaseOrder.Id);
             await LoadPurchaseOrders();
         }
 
         [RelayCommand]
-        private async Task CancelPurchaseOrder(PurchaseOrderListItem item)
+        private async Task CancelPurchaseOrder(PurchaseOrderListItem? item)
         {
+            if (item == null) return;
             await _purchaseOrderService.CancelPurchaseOrderAsync(item.PurchaseOrder.Id);
             await LoadPurchaseOrders();
         }

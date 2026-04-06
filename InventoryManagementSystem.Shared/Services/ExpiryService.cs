@@ -200,6 +200,11 @@ namespace InventoryManagementSystem.Services
                 };
                 conn.Insert(usage);
 
+                var recalledQty = batch.QuantityRemaining;
+                product.StockQuantity -= recalledQty;
+                if (product.StockQuantity < 0) product.StockQuantity = 0; // Safety guard
+                conn.Update(product);
+
                 batch.QuantityRemaining = 0;
                 conn.Update(batch);
             });
