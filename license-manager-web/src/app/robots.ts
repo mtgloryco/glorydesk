@@ -1,4 +1,6 @@
-export default function robots() {
+import type { MetadataRoute } from 'next';
+
+export default function robots(): MetadataRoute.Robots {
     const baseUrl = 'https://itims.online'; // TODO: Update this to your actual domain
 
     return {

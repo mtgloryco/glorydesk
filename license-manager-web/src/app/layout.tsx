@@ -28,45 +28,53 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  const isProduction = process.env.NODE_ENV === "production";
+
   return (
     <html lang="en">
       <head>
         <title>{metadata.title}</title>
         <meta name="google-adsense-account" content="ca-pub-1595689628350805"></meta>
         <meta name="description" content={metadata.description} />
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1595689628350805"
-          crossOrigin="anonymous"
-        ></script>
+        {isProduction && (
+          <script
+            async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1595689628350805"
+            crossOrigin="anonymous"
+          ></script>
+        )}
         {/* Scripts moved to body for performance and DOM access */}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
 
         {/* Ezoic Privacy & Helper Scripts (Moved to Body) */}
-        <Script strategy="afterInteractive" data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js" />
-        <Script strategy="afterInteractive" data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js" />
+        {isProduction && (
+          <>
+            <Script strategy="afterInteractive" data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js" />
+            <Script strategy="afterInteractive" data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js" />
 
-        {/* Ezoic Analytics Queue Init */}
-        <Script
-          id="ezo-init"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
+            {/* Ezoic Analytics Queue Init */}
+            <Script
+              id="ezo-init"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
             window._ezaq = window._ezaq || [];
             window.ezstandalone = window.ezstandalone || {};
             ezstandalone.cmd = ezstandalone.cmd || [];
           `,
-          }}
-        />
-        <Script strategy="lazyOnload" src="//www.ezojs.com/ezoic/sa.min.js" />
+              }}
+            />
+            <Script strategy="lazyOnload" src="//www.ezojs.com/ezoic/sa.min.js" />
 
-        {/* EffectiveGateCPM Main Script */}
-        <Script strategy="lazyOnload" src="https://pl28373489.effectivegatecpm.com/53/3b/f2/533bf2824e1da8c50fb338693c952f5d.js" />
+            {/* EffectiveGateCPM Main Script */}
+            <Script strategy="lazyOnload" src="https://pl28373489.effectivegatecpm.com/53/3b/f2/533bf2824e1da8c50fb338693c952f5d.js" />
 
-        {/* Native Banner Component */}
-        <NativeBanner />
+            {/* Native Banner Component */}
+            <NativeBanner />
+          </>
+        )}
       </body>
     </html>
   );

@@ -6,13 +6,13 @@
 
 *.userprefs
 
-Release/
-Release/
+/Releases/
+
 
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
-[Rr]eleases/
+# Broad releases rule removed to allow web app routes
 x64/
 x86/
 [Ww]in32/

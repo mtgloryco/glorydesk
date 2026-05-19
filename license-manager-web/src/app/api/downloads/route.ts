@@ -49,7 +49,7 @@ export async function GET(request) {
             await db.collection(COLLECTION).insertMany(SEED_DOWNLOADS);
         }
 
-        let query = {};
+        const query: Record<string, unknown> = {};
         if (featured === 'true') {
             query.isFeatured = true;
         }

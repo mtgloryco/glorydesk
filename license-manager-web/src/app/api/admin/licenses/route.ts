@@ -5,6 +5,7 @@ import { signLicense } from '@/lib/license-crypto';
 import { ObjectId } from 'mongodb';
 import { LICENSE_CONFIG } from '@/lib/config';
 import { sendLicenseActivationEmail } from '@/lib/email';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(request) {
     const user = await getAuthUser(request);
@@ -77,7 +78,7 @@ export async function POST(request) {
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + (parseInt(durationDays) || 365));
 
-        const licenseId = require('uuid').v4(); // Ensure uuid is imported or use crypto.randomUUID
+        const licenseId = uuidv4();
 
         const payload = {
             licenseId,
@@ -134,7 +135,7 @@ export async function PATCH(request) {
         const existingLicense = await db.collection('licenses').findOne({ _id: new ObjectId(id) });
         if (!existingLicense) return NextResponse.json({ error: 'License not found' }, { status: 404 });
 
-        let updateData = { updatedAt: new Date() };
+        let updateData: Record<string, unknown> = { updatedAt: new Date() };
 
         if (action === 'approve') {
             const plan = LICENSE_CONFIG.plans[existingLicense.planType];

@@ -569,7 +569,7 @@ export default function AdminDashboard() {
                                     <option value="Installer">Installer (.exe/.msi)</option>
                                     <option value="Archive">Archive (.zip/.tar.gz)</option>
                                 </select>
-                                <div style={{ display: 'flex', items: 'center', gap: '10px', padding: '10px', border: '1px solid #ddd', borderRadius: '8px', flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', border: '1px solid #ddd', borderRadius: '8px', flex: 1 }}>
                                     <input
                                         type="checkbox"
                                         id="isFeatured"

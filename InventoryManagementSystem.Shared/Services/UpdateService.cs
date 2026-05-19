@@ -32,7 +32,7 @@ namespace InventoryManagementSystem.Services
     public class UpdateService
     {
         private UpdateManager? _mgr;
-        public string CurrentVersion { get; private set; } = "1.2.1";
+        public string CurrentVersion { get; private set; } = "2.0.0-PRO";
         private bool _isInitialized = false;
         private readonly HttpClient _httpClient;
 

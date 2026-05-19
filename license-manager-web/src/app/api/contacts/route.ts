@@ -13,6 +13,7 @@ export async function POST(request) {
 
         const client = await clientPromise;
         const db = client.db('license_manager');
+        const contactsCollection = db.collection<any>('contacts');
 
         const newContact = {
             name,
@@ -22,7 +23,7 @@ export async function POST(request) {
             createdAt: new Date()
         };
 
-        await db.collection('contacts').insertOne(newContact);
+        await contactsCollection.insertOne(newContact);
 
         return NextResponse.json({ success: true, message: 'Message sent successfully.' }, { status: 201 });
     } catch (error) {
@@ -34,7 +35,8 @@ export async function GET(request) {
     try {
         const client = await clientPromise;
         const db = client.db('license_manager');
-        const contacts = await db.collection('contacts').find({}).sort({ createdAt: -1 }).toArray();
+        const contactsCollection = db.collection<any>('contacts');
+        const contacts = await contactsCollection.find({}).sort({ createdAt: -1 }).toArray();
         return NextResponse.json(contacts);
     } catch (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -52,20 +54,21 @@ export async function PATCH(request) {
 
         const client = await clientPromise;
         const db = client.db('license_manager');
+        const contactsCollection = db.collection<any>('contacts');
 
         // Update status in DB
-        const result = await db.collection('contacts').updateOne(
+        const result = await contactsCollection.updateOne(
             { _id: new ObjectId(id) },
             {
                 $set: { status: 'Replied', repliedAt: new Date() },
                 $push: { replies: { message: replyMessage, sentAt: new Date() } }
-            }
+            } as any
         );
 
         if (result.matchedCount === 0) return NextResponse.json({ error: 'Message not found' }, { status: 404 });
 
         // Get the contact to send email
-        const contact = await db.collection('contacts').findOne({ _id: new ObjectId(id) });
+        const contact = await contactsCollection.findOne({ _id: new ObjectId(id) });
 
         // Send Email via Nodemailer
         // NOTE: You need to configure these env variables: SMTP_HOST, SMTP_USER, SMTP_PASS

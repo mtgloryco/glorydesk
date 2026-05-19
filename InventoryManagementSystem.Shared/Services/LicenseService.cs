@@ -186,7 +186,6 @@ namespace InventoryManagementSystem.Services
             return 0; // Or minimal if we want to allow something for free
         }
 
-        // --- Permission Helpers ---
 
         public bool CanAccessPOS()
         {

@@ -27,50 +27,86 @@ export default function ReleaseNotesPage() {
     const router = useRouter();
     const version = params.version || '2.0.0';
 
-    const changes = [
-        {
-            title: "Supplier & Procurement Management",
-            icon: <Truck size={24} className="text-blue-600" />,
-            description: "Full lifecycle procurement including PO generation, supplier rating, and on-time performance tracking.",
-            features: ["PO Number Auto-generation", "Purchase Order Status Badges", "Supplier Performance Scorecard"]
+    // Version-specific content
+    const versionContent = {
+        '1.0.0': {
+            title: "The Foundation.",
+            subtitle: `Version 1.0.0 introduces the core inventory management system with essential tools for business tracking.`,
+            transactionCount: "10,000",
+            changes: [
+                {
+                    title: "Basic Inventory Tracking",
+                    icon: <Package size={24} className="text-slate-600" />,
+                    description: "Simple, intuitive stock management with product categories and quantities.",
+                    features: ["Product Database", "Stock Levels", "Basic Reporting"]
+                },
+                {
+                    title: "Local Database",
+                    icon: <Database size={24} className="text-emerald-600" />,
+                    description: "Offline-first SQLite database for reliable local data storage.",
+                    features: ["Local Backups", "Offline Functionality", "Data Persistence"]
+                },
+                {
+                    title: "Basic User Management",
+                    icon: <Settings size={24} className="text-indigo-600" />,
+                    description: "Single user support with basic authentication.",
+                    features: ["User Login", "Password Protection", "Session Management"]
+                }
+            ]
         },
-        {
-            title: "Multi-Location Control",
-            icon: <Box size={24} className="text-emerald-600" />,
-            description: "Manage stock across warehouses, retail stores, and mobile vans from a single interface.",
-            features: ["Stock Transfer Workflows", "Location-Specific Reorder Points", "Consolidated Stock Reports"]
-        },
-        {
-            title: "Advanced Analytics & BI",
-            icon: <BarChart3 size={24} className="text-purple-600" />,
-            description: "Deep insights into your inventory health using ABC/XYZ classification and Pareto (80/20) rules.",
-            features: ["Cohort Analysis", "Stockout Risk Alerts", "Inventory Health Score (0-100)"]
-        },
-        {
-            title: "Intelligent Forecasting",
-            icon: <Zap size={24} className="text-amber-600" />,
-            description: "AI-driven demand prediction that calculates daily velocity and days-until-stockout.",
-            features: ["EOQ Calculation", "Seasonal Trend Analysis", "Automated Safety Stock Management"]
-        },
-        {
-            title: "Proactive Morning Briefing",
-            icon: <LayoutDashboard size={24} className="text-emerald-600" />,
-            description: "Start your day with a prioritized feed of action items: expiring stock, stockouts, and sales trends.",
-            features: ["Daily To-Do Feed", "Top Performer Alert", "Overdue Delivery Reminders"]
-        },
-        {
-            title: "Hardware Orchestration",
-            icon: <Printer size={24} className="text-slate-600" />,
-            description: "Native support for professional hardware for high-speed POS and inventory workflows.",
-            features: ["ESC/POS Thermal Printing", "High-speed HID Barcode Scanning", "Custom Label Generation"]
-        },
-        {
-            title: "Enterprise Governance",
-            icon: <ShieldCheck size={24} className="text-indigo-600" />,
-            description: "Granular Role-Based Access Control (RBAC) to ensure your data stays secure and staff stay focused.",
-            features: ["Audit Trail & Timber Logs", "Custom User Permissions", "Role Presets (Admin, Staff, Guest)"]
+        '2.0.0': {
+            title: "The Enterprise Upgrade.",
+            subtitle: `Version 2.0.0 transforms IMS from a functional tool into an enterprise-grade ERP system.`,
+            transactionCount: "50,000",
+            changes: [
+                {
+                    title: "Supplier & Procurement Management",
+                    icon: <Truck size={24} className="text-blue-600" />,
+                    description: "Full lifecycle procurement including PO generation, supplier rating, and on-time performance tracking.",
+                    features: ["PO Number Auto-generation", "Purchase Order Status Badges", "Supplier Performance Scorecard"]
+                },
+                {
+                    title: "Multi-Location Control",
+                    icon: <Box size={24} className="text-emerald-600" />,
+                    description: "Manage stock across warehouses, retail stores, and mobile vans from a single interface.",
+                    features: ["Stock Transfer Workflows", "Location-Specific Reorder Points", "Consolidated Stock Reports"]
+                },
+                {
+                    title: "Advanced Analytics & BI",
+                    icon: <BarChart3 size={24} className="text-purple-600" />,
+                    description: "Deep insights into your inventory health using ABC/XYZ classification and Pareto (80/20) rules.",
+                    features: ["Cohort Analysis", "Stockout Risk Alerts", "Inventory Health Score (0-100)"]
+                },
+                {
+                    title: "Intelligent Forecasting",
+                    icon: <Zap size={24} className="text-amber-600" />,
+                    description: "AI-driven demand prediction that calculates daily velocity and days-until-stockout.",
+                    features: ["EOQ Calculation", "Seasonal Trend Analysis", "Automated Safety Stock Management"]
+                },
+                {
+                    title: "Proactive Morning Briefing",
+                    icon: <LayoutDashboard size={24} className="text-emerald-600" />,
+                    description: "Start your day with a prioritized feed of action items: expiring stock, stockouts, and sales trends.",
+                    features: ["Daily To-Do Feed", "Top Performer Alert", "Overdue Delivery Reminders"]
+                },
+                {
+                    title: "Hardware Orchestration",
+                    icon: <Printer size={24} className="text-slate-600" />,
+                    description: "Native support for professional hardware for high-speed POS and inventory workflows.",
+                    features: ["ESC/POS Thermal Printing", "High-speed HID Barcode Scanning", "Custom Label Generation"]
+                },
+                {
+                    title: "Enterprise Governance",
+                    icon: <ShieldCheck size={24} className="text-indigo-600" />,
+                    description: "Granular Role-Based Access Control (RBAC) to ensure your data stays secure and staff stay focused.",
+                    features: ["Audit Trail & Timber Logs", "Custom User Permissions", "Role Presets (Admin, Staff, Guest)"]
+                }
+            ]
         }
-    ];
+    };
+
+    const currentVersionContent = versionContent[version as keyof typeof versionContent] || versionContent['2.0.0'];
+    const changes = currentVersionContent.changes;
 
     return (
         <div className="release-page">
@@ -95,10 +131,10 @@ export default function ReleaseNotesPage() {
                     className="hero-release"
                 >
                     <div className="badge-v2">RELEASE VERSION {version}</div>
-                    <h1 className="main-title">The Enterprise Upgrade.</h1>
+                    <h1 className="main-title">{currentVersionContent.title}</h1>
                     <p className="main-subtitle">
-                        Version {version} transforms IMS from a functional tool into an enterprise-grade ERP system. 
-                        Powering over {version === '2.0.0' ? '50,000' : '10,000'} monthly transactions globally.
+                        {currentVersionContent.subtitle} 
+                        Powering over {currentVersionContent.transactionCount} monthly transactions globally.
                     </p>
                 </motion.div>
 

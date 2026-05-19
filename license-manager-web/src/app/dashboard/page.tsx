@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Shield, Plus, LogOut, Clock, Layers, Monitor,
-  Copy, CheckCircle2, Upload, HelpCircle, Info, Image as LucideImage
+  Copy, CheckCircle2, Upload, HelpCircle, Info, Image as LucideImage, FileText
 } from 'lucide-react';
 
 export default function UserDashboard() {
@@ -15,6 +15,7 @@ export default function UserDashboard() {
   const [hardwareId, setHardwareId] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('freemium');
   const [copiedKey, setCopiedKey] = useState(null);
+  const currentVersion = '2.0.0'; // Update this when version changes
 
   // Plans Logic
   const [plans, setPlans] = useState([]);
@@ -131,6 +132,9 @@ export default function UserDashboard() {
             </div>
           </Link>
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+            <button onClick={() => router.push(`/releases/${currentVersion}`)} className="btn" style={{ fontSize: '0.9rem', color: '#666', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <FileText size={18} /> Release Notes
+            </button>
             <button onClick={handleLogout} className="btn" style={{ fontSize: '0.9rem', color: '#666' }}><LogOut size={18} /> Logout</button>
           </div>
         </div>
@@ -234,7 +238,7 @@ export default function UserDashboard() {
                 {licenses.map(lic => (
                   <tr key={lic._id}>
                     <td><code style={{ fontSize: '0.75rem', color: '#777' }}>{lic.licenseId.substring(0, 8)}...</code></td>
-                    <td><span className="status-badge" style={{ background: '#ebf8ff', color: '#2b6cb0' }}>{lic.tier}</span></td>
+                    <td><span className="status-badge" style={{ background: '#fef3c7', color: '#92400e' }}>{lic.tier}</span></td>
                     <td>
                       <span className={`status-badge status-${lic.status?.toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         {lic.status === 'Pending' && <Clock size={12} />}
@@ -270,7 +274,7 @@ export default function UserDashboard() {
                   </tr>
                 ))}
                 {licenses.length === 0 && !loading && (
-                  <tr><td colSpan="5" style={{ textAlign: 'center', padding: '4rem', color: '#999' }}>Generate a request to get started.</td></tr>
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '4rem', color: '#999' }}>Generate a request to get started.</td></tr>
                 )}
               </tbody>
             </table>
@@ -306,11 +310,11 @@ export default function UserDashboard() {
         }
         .pricing-highlight {
             border: 2px solid var(--primary);
-            box-shadow: 0 10px 30px rgba(0, 112, 243, 0.1);
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.1);
             z-index: 1;
         }
         .pricing-card.selected {
-            background: #f0f7ff;
+            background: #fef3c7;
             border-color: var(--primary);
         }
         .save-badge {

@@ -1,5 +1,7 @@
-export default function sitemap() {
-    const baseUrl = 'https://itims.online'; // TODO: Update this to your actual domain
+import type { MetadataRoute } from 'next';
+
+export default function sitemap(): MetadataRoute.Sitemap {
+    const baseUrl = 'https://ims.mtglory.com';
 
     return [
         {
