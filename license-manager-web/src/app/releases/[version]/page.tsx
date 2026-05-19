@@ -14,12 +14,9 @@ import {
     Truck, 
     LayoutDashboard, 
     Printer, 
-    ScanBarcode, 
     ShieldCheck, 
-    RefreshCw, 
-    Settings, 
     Activity, 
-    FileText 
+    Settings
 } from 'lucide-react';
 
 export default function ReleaseNotesPage() {
@@ -27,79 +24,91 @@ export default function ReleaseNotesPage() {
     const router = useRouter();
     const version = params.version || '2.0.0';
 
-    // Version-specific content
+    // Version-specific content mapping precisely to the actual software implementation
     const versionContent = {
         '1.0.0': {
-            title: "The Foundation.",
-            subtitle: `Version 1.0.0 introduces the core inventory management system with essential tools for business tracking.`,
+            title: "The Core Foundations.",
+            subtitle: "Version 1.0.0 introduces the secure, offline-first inventory management local engine built for business tracking.",
             transactionCount: "10,000",
             changes: [
                 {
-                    title: "Basic Inventory Tracking",
-                    icon: <Package size={24} className="text-slate-600" />,
-                    description: "Simple, intuitive stock management with product categories and quantities.",
-                    features: ["Product Database", "Stock Levels", "Basic Reporting"]
+                    title: "Core Stock Controls",
+                    icon: <Package size={24} className="text-amber-500" />,
+                    description: "Dynamic product database containing category filters, price registers, stock counts, and direct Stock IN/OUT adjustment forms.",
+                    features: ["Product Master Database", "Category & SKU Categorization", "Stock Adjustments Sheets"]
                 },
                 {
-                    title: "Local Database",
-                    icon: <Database size={24} className="text-emerald-600" />,
-                    description: "Offline-first SQLite database for reliable local data storage.",
-                    features: ["Local Backups", "Offline Functionality", "Data Persistence"]
+                    title: "Offline-First local SQLite",
+                    icon: <Database size={24} className="text-amber-500" />,
+                    description: "Secure local data persistence using structured sqlite-net-pcl relational tables and thread-safe db transactions.",
+                    features: ["Zero Latency Local Database", "Manual SQLite Backup Logs", "Fully Offline Working Capability"]
                 },
                 {
-                    title: "Basic User Management",
-                    icon: <Settings size={24} className="text-indigo-600" />,
-                    description: "Single user support with basic authentication.",
-                    features: ["User Login", "Password Protection", "Session Management"]
+                    title: "Basic User Account Access",
+                    icon: <Settings size={24} className="text-amber-500" />,
+                    description: "Operator profile permissions with protected login prompts and salted password hashing algorithms.",
+                    features: ["Local Console Gating", "Salted Password Hashing", "Secure User Profiles Settings"]
                 }
             ]
         },
         '2.0.0': {
             title: "The Enterprise Upgrade.",
-            subtitle: `Version 2.0.0 transforms IMS from a functional tool into an enterprise-grade ERP system.`,
+            subtitle: "Version 2.0.0 introduces intelligent demand forecasting, strict FIFO batch depletion, multi-location networks, and hardware integrations.",
             transactionCount: "50,000",
             changes: [
                 {
-                    title: "Supplier & Procurement Management",
-                    icon: <Truck size={24} className="text-blue-600" />,
-                    description: "Full lifecycle procurement including PO generation, supplier rating, and on-time performance tracking.",
-                    features: ["PO Number Auto-generation", "Purchase Order Status Badges", "Supplier Performance Scorecard"]
+                    title: "FIFO Batch Costing Engine",
+                    icon: <Database size={24} className="text-amber-500" />,
+                    description: "Strict FIFO batch cost calculation. Every stock OUT depletes available PurchaseBatch units in chronological order, locking in precise historic COGS and profit metrics.",
+                    features: ["Dynamic COGS & Profit margins", "Lot-by-lot batch tracker pools", "Historical transaction snapshots"]
                 },
                 {
-                    title: "Multi-Location Control",
-                    icon: <Box size={24} className="text-emerald-600" />,
-                    description: "Manage stock across warehouses, retail stores, and mobile vans from a single interface.",
-                    features: ["Stock Transfer Workflows", "Location-Specific Reorder Points", "Consolidated Stock Reports"]
+                    title: "Supplier & Procurement Lifecycle",
+                    icon: <Truck size={24} className="text-amber-500" />,
+                    description: "Complete procurement pipeline from Draft to Approved, Shipped, and Received stages. Real-time supplier scorecards track on-time delivery rates and average lead times.",
+                    features: ["Unique Auto-generated PO manifest", "Interactive PO Status badges", "Weighted Supplier Scoring dashboard"]
                 },
                 {
-                    title: "Advanced Analytics & BI",
-                    icon: <BarChart3 size={24} className="text-purple-600" />,
-                    description: "Deep insights into your inventory health using ABC/XYZ classification and Pareto (80/20) rules.",
-                    features: ["Cohort Analysis", "Stockout Risk Alerts", "Inventory Health Score (0-100)"]
+                    title: "Multi-Location Control Network",
+                    icon: <Box size={24} className="text-amber-500" />,
+                    description: "Track inventory valuation and quantities across physical warehouses, retail outlets, and mobile vans with active in-transit Stock Transfer workflows.",
+                    features: ["Stock Transfer approval runs", "Location-specific safety thresholds", "Consolidated total company counts"]
                 },
                 {
-                    title: "Intelligent Forecasting",
-                    icon: <Zap size={24} className="text-amber-600" />,
-                    description: "AI-driven demand prediction that calculates daily velocity and days-until-stockout.",
-                    features: ["EOQ Calculation", "Seasonal Trend Analysis", "Automated Safety Stock Management"]
+                    title: "Advanced Analytics BI Matrix",
+                    icon: <BarChart3 size={24} className="text-amber-500" />,
+                    description: "Segment catalog performance using 90-day demand volatility metrics (XYZ classification) and dynamic historic revenue share contribution scores (ABC analysis).",
+                    features: ["Pareto (80/20) revenue classification", "Demand stability tracking coefficients", "Consolidated inventory health metric"]
+                },
+                {
+                    title: "Linear Regression Forecasting",
+                    icon: <Zap size={24} className="text-amber-500" />,
+                    description: "Project future item replenishment counts using historical linear regression lines ($y = m \\cdot x + b$) combined with Economic Order Quantity (EOQ) optimization models.",
+                    features: ["Economic Order Quantity models", "Days-until-depletion countdown metrics", "Sales velocity trend calculators"]
                 },
                 {
                     title: "Proactive Morning Briefing",
-                    icon: <LayoutDashboard size={24} className="text-emerald-600" />,
-                    description: "Start your day with a prioritized feed of action items: expiring stock, stockouts, and sales trends.",
-                    features: ["Daily To-Do Feed", "Top Performer Alert", "Overdue Delivery Reminders"]
+                    icon: <LayoutDashboard size={24} className="text-amber-500" />,
+                    description: "Start the day with a dynamic operational list of action items: batch recalls, expiring items, out-of-stock items, and pending PO confirmations.",
+                    features: ["Impending stockout warnings", "Batch expiry quarantine list", "Single-click PO approval cards"]
                 },
                 {
-                    title: "Hardware Orchestration",
-                    icon: <Printer size={24} className="text-slate-600" />,
-                    description: "Native support for professional hardware for high-speed POS and inventory workflows.",
-                    features: ["ESC/POS Thermal Printing", "High-speed HID Barcode Scanning", "Custom Label Generation"]
+                    title: "Thermal POS & Barcode Buffer",
+                    icon: <Printer size={24} className="text-amber-500" />,
+                    description: "Direct printing to 80mm and 58mm thermal receipt hardware using custom ESC/POS buffers. High-speed USB barcode capture updates carts in under 50ms.",
+                    features: ["Native ESC/POS print commands", "Fast scanning buffer capture", "Integrated price sticker generation"]
                 },
                 {
-                    title: "Enterprise Governance",
-                    icon: <ShieldCheck size={24} className="text-indigo-600" />,
-                    description: "Granular Role-Based Access Control (RBAC) to ensure your data stays secure and staff stay focused.",
-                    features: ["Audit Trail & Timber Logs", "Custom User Permissions", "Role Presets (Admin, Staff, Guest)"]
+                    title: "Enterprise Security & Audits",
+                    icon: <ShieldCheck size={24} className="text-amber-500" />,
+                    description: "Forensic state history capturing pre-and-post entity values into JSON strings. Cryptographic licensing verifies RSA-signed keys bound to system hardware bios fingerprints.",
+                    features: ["JSON-snapshot audit trail tables", "Granular role access parameters (RBAC)", "System-clock anti-rollback guards"]
+                },
+                {
+                    title: "Lot Quality & Kitting Engine",
+                    icon: <Activity size={24} className="text-amber-500" />,
+                    description: "Lock batches approaching lot expiration dates using status markers (Rejected, Recalled) and package standard items into custom assembly bundles.",
+                    features: ["Batch quality gating parameters", "Kit assembly and disassembly logic", "Detailed waste and stock loss analysis"]
                 }
             ]
         }
@@ -109,55 +118,86 @@ export default function ReleaseNotesPage() {
     const changes = currentVersionContent.changes;
 
     return (
-        <div className="release-page">
-            <header className="release-header">
-                <div className="container header-container">
-                    <Link href="/" className="back-link">
-                        <ArrowLeft size={18} />
+        <div className="bg-slate-950 min-h-screen text-slate-100 flex flex-col relative overflow-hidden font-sans">
+            {/* Ambient Background Gradients */}
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-amber-500/5 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute -left-20 top-40 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[100px] pointer-events-none" />
+
+            {/* Premium Sticky Glass Header */}
+            <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-900 py-4">
+                <div className="max-w-7xl mx-auto px-6 flex justify-between items-center w-full">
+                    <Link href="/" className="flex items-center gap-2 group text-slate-400 hover:text-amber-500 font-bold transition-all text-sm">
+                        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                         <span>Back to Home</span>
                     </Link>
-                    <div className="logo-small">
-                        <Box size={24} className="icon-blue" />
-                        <span>IMS Ready</span>
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 font-black">
+                            <Box className="w-5 h-5" />
+                        </div>
+                        <span className="font-extrabold text-sm tracking-wide text-white">
+                            MT GLORY <span className="text-amber-500">IMS</span>
+                        </span>
                     </div>
                 </div>
             </header>
 
-            <main className="container">
+            {/* Main Content Container */}
+            <main className="max-w-7xl mx-auto px-6 flex-1 py-16 relative z-10 w-full">
+                {/* Hero Feature Block */}
                 <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 25 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="hero-release"
+                    transition={{ duration: 0.6 }}
+                    className="text-center max-w-4xl mx-auto mb-16"
                 >
-                    <div className="badge-v2">RELEASE VERSION {version}</div>
-                    <h1 className="main-title">{currentVersionContent.title}</h1>
-                    <p className="main-subtitle">
-                        {currentVersionContent.subtitle} 
-                        Powering over {currentVersionContent.transactionCount} monthly transactions globally.
+                    <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-4 py-1.5 rounded-full text-xs font-black tracking-wider uppercase inline-block mb-6 shadow-sm">
+                        RELEASE NOTES v{version}
+                    </span>
+                    <h1 className="bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 bg-clip-text text-transparent text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
+                        {currentVersionContent.title}
+                    </h1>
+                    <p className="text-slate-400 text-lg sm:text-xl leading-relaxed max-w-3xl mx-auto">
+                        {currentVersionContent.subtitle} Already running over <strong className="text-slate-200">{currentVersionContent.transactionCount}</strong> transactions smoothly on active client devices.
                     </p>
                 </motion.div>
 
-                <div className="features-section">
-                    <h2 className="group-title">Key Core Changes</h2>
-                    <div className="feature-grid-v2">
+                {/* Key Core Changes Section */}
+                <div className="mt-12">
+                    <div className="text-center mb-12">
+                        <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight relative inline-block">
+                            Engineered System Upgrades
+                            <span className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-12 h-1 bg-amber-500 rounded-full" />
+                        </h2>
+                    </div>
+
+                    {/* Dynamic Glassmorphic Card Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {changes.map((change, idx) => (
                             <motion.div 
                                 key={idx}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                whileInView={{ opacity: 1, scale: 1 }}
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
-                                transition={{ delay: idx * 0.1 }}
-                                className="change-card"
+                                transition={{ delay: idx * 0.08, duration: 0.5 }}
+                                className="bg-slate-900/40 border border-slate-800/80 hover:border-amber-500/30 rounded-3xl p-6 flex flex-col justify-between shadow-2xl hover:shadow-amber-500/5 transition-all duration-300 hover:-translate-y-1"
                             >
-                                <div className="card-header">
-                                    {change.icon}
-                                    <h3>{change.title}</h3>
+                                <div>
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0 shadow-inner">
+                                            {change.icon}
+                                        </div>
+                                        <h3 className="text-lg font-bold text-white tracking-tight">{change.title}</h3>
+                                    </div>
+                                    <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                                        {change.description}
+                                    </p>
                                 </div>
-                                <p className="card-desc">{change.description}</p>
-                                <ul className="card-features">
-                                    {change.features.map((f, i) => (
-                                        <li key={i}><ChevronRight size={14} /> {f}</li>
+                                <ul className="flex flex-col gap-2.5 border-t border-slate-800/50 pt-4">
+                                    {change.features.map((feat, i) => (
+                                        <li key={i} className="flex items-start gap-2 text-xs font-semibold text-slate-300 leading-tight">
+                                            <ChevronRight size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                                            <span>{feat}</span>
+                                        </li>
                                     ))}
                                 </ul>
                             </motion.div>
@@ -165,19 +205,30 @@ export default function ReleaseNotesPage() {
                     </div>
                 </div>
 
+                {/* Call To Action Glassmorphic Box */}
                 <motion.div 
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    className="cta-section-v2"
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    className="bg-gradient-to-b from-slate-900/60 to-slate-950 border border-slate-800/80 rounded-3xl p-8 sm:p-12 text-center mt-20 max-w-4xl mx-auto shadow-2xl shadow-amber-500/5 relative overflow-hidden"
                 >
-                    <div className="cta-content">
-                        <h3>Ready to upgrade your business?</h3>
-                        <p>Activate the Enterprise tier today and unlock the full power of advanced automation.</p>
-                        <div className="cta-buttons">
-                            <button onClick={() => router.push('/?auth=register')} className="btn-v2 btn-primary-v2">
+                    <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+                    <div className="relative z-10">
+                        <h3 className="text-3xl font-extrabold text-white mb-4">Ready to upgrade your enterprise setup?</h3>
+                        <p className="text-slate-400 max-w-xl mx-auto text-sm sm:text-base leading-relaxed mb-8">
+                            Lock in your upgrade to Version 2.0.0. Activate our Enterprise or Pro subscription tier now to unlock premium forecasting metrics and live cloud backups.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                            <button 
+                                onClick={() => router.push('/?auth=register')} 
+                                className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black px-8 py-3.5 rounded-xl shadow-lg shadow-amber-500/10 hover:shadow-amber-500/25 transition-all duration-150 text-sm hover:-translate-y-0.5 active:translate-y-0"
+                            >
                                 Request Enterprise Trial
                             </button>
-                            <button onClick={() => router.push('/#contact')} className="btn-v2 btn-outline-v2">
+                            <button 
+                                onClick={() => router.push('/#contact')} 
+                                className="w-full sm:w-auto bg-transparent border border-slate-800 hover:border-amber-500 hover:text-amber-500 text-slate-350 font-bold px-8 py-3.5 rounded-xl transition-all duration-150 text-sm hover:-translate-y-0.5"
+                            >
                                 Talk to an Expert
                             </button>
                         </div>
@@ -185,231 +236,12 @@ export default function ReleaseNotesPage() {
                 </motion.div>
             </main>
 
-            <footer className="release-footer">
-                <div className="container">
-                    <p>&copy; {new Date().getFullYear()} IMS ERP Solutions. Built for African Enterprises.</p>
+            {/* Clean Centered Footer */}
+            <footer className="py-8 border-t border-slate-900 text-center text-xs text-slate-500">
+                <div className="max-w-7xl mx-auto px-6">
+                    <p>&copy; {new Date().getFullYear()} MT Glory . Built for African Enterprises.</p>
                 </div>
             </footer>
-
-            <style jsx>{`
-                .release-page {
-                    min-height: 100vh;
-                    background-color: #f8fafc;
-                    font-family: 'Inter', -apple-system, system-ui, sans-serif;
-                    color: #1e293b;
-                    padding-bottom: 5rem;
-                }
-                .container {
-                    max-width: 1100px;
-                    margin: 0 auto;
-                    padding: 0 1.5rem;
-                }
-                .release-header {
-                    background: #fff;
-                    border-bottom: 1px solid #e2e8f0;
-                    position: sticky;
-                    top: 0;
-                    z-index: 100;
-                    padding: 1rem 0;
-                }
-                .header-container {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                .back-link {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    color: #64748b;
-                    text-decoration: none;
-                    font-weight: 500;
-                    font-size: 0.95rem;
-                    transition: color 0.2s;
-                }
-                .back-link:hover { color: #020617; }
-                .logo-small {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    font-weight: 700;
-                    font-size: 1.1rem;
-                }
-                .icon-blue { color: #2563eb; }
-
-                .hero-release {
-                    text-align: center;
-                    padding: 6rem 0 4rem;
-                }
-                .badge-v2 {
-                    display: inline-block;
-                    background: #f1f5f9;
-                    color: #0f172a;
-                    padding: 0.5rem 1rem;
-                    border-radius: 50px;
-                    font-size: 0.75rem;
-                    font-weight: 700;
-                    letter-spacing: 0.05em;
-                    margin-bottom: 2rem;
-                    border: 1px solid #e2e8f0;
-                }
-                .main-title {
-                    font-size: 4rem;
-                    font-weight: 900;
-                    letter-spacing: -0.04em;
-                    margin-bottom: 1.5rem;
-                    line-height: 1;
-                }
-                .main-subtitle {
-                    color: #475569;
-                    font-size: 1.25rem;
-                    max-width: 700px;
-                    margin: 0 auto;
-                    line-height: 1.6;
-                }
-
-                .features-section {
-                    margin-top: 4rem;
-                }
-                .group-title {
-                    font-size: 1.5rem;
-                    font-weight: 800;
-                    margin-bottom: 3rem;
-                    text-align: center;
-                    position: relative;
-                }
-                .group-title::after {
-                    content: '';
-                    position: absolute;
-                    bottom: -15px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 40px;
-                    height: 4px;
-                    background: #2563eb;
-                    border-radius: 2px;
-                }
-
-                .feature-grid-v2 {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-                    gap: 2rem;
-                }
-                .change-card {
-                    background: #fff;
-                    padding: 2.5rem;
-                    border-radius: 24px;
-                    border: 1px solid #e2e8f0;
-                    transition: all 0.3s ease;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                }
-                .change-card:hover {
-                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-                    border-color: #cbd5e1;
-                    transform: translateY(-4px);
-                }
-                .card-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                    margin-bottom: 1.5rem;
-                }
-                .card-header h3 {
-                    font-size: 1.25rem;
-                    font-weight: 700;
-                    letter-spacing: -0.01em;
-                }
-                .card-desc {
-                    color: #64748b;
-                    line-height: 1.6;
-                    margin-bottom: 2rem;
-                    font-size: 0.95rem;
-                }
-                .card-features {
-                    list-style: none;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                }
-                .card-features li {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    font-size: 0.9rem;
-                    font-weight: 600;
-                    color: #334155;
-                }
-
-                .cta-section-v2 {
-                    margin-top: 8rem;
-                    background: #020617;
-                    border-radius: 32px;
-                    padding: 5rem 3rem;
-                    text-align: center;
-                    color: #fff;
-                }
-                .cta-content h3 {
-                    font-size: 2.5rem;
-                    font-weight: 800;
-                    margin-bottom: 1.5rem;
-                    letter-spacing: -0.02em;
-                }
-                .cta-content p {
-                    color: #94a3b8;
-                    font-size: 1.1rem;
-                    margin-bottom: 3rem;
-                    max-width: 500px;
-                    margin-left: auto;
-                    margin-right: auto;
-                }
-                .cta-buttons {
-                    display: flex;
-                    gap: 1.5rem;
-                    justify-content: center;
-                }
-                .btn-v2 {
-                    padding: 1rem 2rem;
-                    border-radius: 12px;
-                    font-weight: 700;
-                    font-size: 1rem;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                .btn-primary-v2 {
-                    background: #fff;
-                    color: #020617;
-                    border: none;
-                }
-                .btn-primary-v2:hover {
-                    background: #f1f5f9;
-                    transform: scale(1.02);
-                }
-                .btn-outline-v2 {
-                    background: transparent;
-                    color: #fff;
-                    border: 1px solid #334155;
-                }
-                .btn-outline-v2:hover {
-                    background: rgba(255,255,255,0.05);
-                    border-color: #475569;
-                }
-
-                .release-footer {
-                    margin-top: 8rem;
-                    text-align: center;
-                    padding-bottom: 2rem;
-                    color: #94a3b8;
-                    font-size: 0.85rem;
-                }
-
-                @media (max-width: 768px) {
-                    .main-title { font-size: 2.5rem; }
-                    .cta-buttons { flex-direction: column; }
-                    .feature-grid-v2 { grid-template-columns: 1fr; }
-                    .cta-content h3 { font-size: 1.8rem; }
-                    .hero-release { padding: 4rem 0 2rem; }
-                }
-            `}</style>
         </div>
     );
 }

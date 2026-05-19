@@ -49,7 +49,7 @@ export default function AboutPage() {
 
             <div className="container" style={{ padding: '10rem 2rem 6rem' }}>
                 <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
-                    <span className="badge">MANAGEMENT SYSTEMS (MSS)</span>
+                    <span className="badge">MT GLORY</span>
                     <h1 className="title" style={{ fontSize: '3.5rem', marginBottom: '1.5rem' }}>Our Organization</h1>
                     <p style={{ fontSize: '1.25rem', color: '#555', maxWidth: '800px', margin: '0 auto', lineHeight: 1.6 }}>
                         Architecting professional Business Intelligence through innovative ERP and MIS solutions.
@@ -62,7 +62,7 @@ export default function AboutPage() {
                         <Target size={48} color="var(--primary)" style={{ marginBottom: '2rem' }} />
                         <h2 style={{ fontSize: '1.8rem', marginBottom: '1.5rem' }}>The Vision</h2>
                         <p style={{ color: '#666', fontSize: '1.1rem', lineHeight: 1.8 }}>
-                            At <strong>MSS</strong>, we believe every business deserves enterprise-grade tools.
+                            At <strong>MT GLORY</strong>, we believe every business deserves enterprise-grade tools.
                             Our mission is to replace fragmented workflows with unified Management Information Systems (MIS)
                             that provide real-time clarity and control over global operations.
                         </p>
@@ -72,7 +72,7 @@ export default function AboutPage() {
                         <Globe size={48} color="var(--secondary)" style={{ marginBottom: '2rem' }} />
                         <h2 style={{ fontSize: '1.8rem', marginBottom: '1.5rem' }}>Full-Stack ERP</h2>
                         <p style={{ color: '#666', fontSize: '1.1rem', lineHeight: 1.8 }}>
-                            Beyond the IMS software, MSS is a full-stack technical house specializing in
+                            Beyond the IMS software, MT GLORY  is a full-stack technical house specializing in
                             Enterprise Resource Planning systems, financial trackers, and logistics automation
                             software designed for high-availability environments.
                         </p>
@@ -102,7 +102,7 @@ export default function AboutPage() {
 
             <footer className="footer" style={{ marginTop: 0 }}>
                 <div className="container" style={{ textAlign: 'center', color: '#aaa', fontSize: '0.9rem', paddingTop: '3rem', borderTop: '1px solid #f0f0f0', paddingBottom: '3rem' }}>
-                    &copy; {new Date().getFullYear()} Management Systems (MSS). All rights reserved.
+                    &copy; {new Date().getFullYear()} MT GLORY. All rights reserved.
                 </div>
             </footer>
 

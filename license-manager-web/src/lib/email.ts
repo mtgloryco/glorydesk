@@ -37,7 +37,7 @@ export async function sendLicenseActivationEmail(to, username, licenseKey, tier)
                 
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
                 <p style="font-size: 0.8rem; color: #999;">If you didn't request this, please ignore this email.</p>
-                <p style="font-size: 0.8rem; color: #999;">Support: mwimulebienvenu05@gmail.com</p>
+                <p style="font-size: 0.8rem; color: #999;">Support: info@mtglory.com</p>
             </div>
         `,
     };

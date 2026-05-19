@@ -132,6 +132,7 @@ export default function LandingPage() {
                         <a href="#features" className="text-slate-600 hover:text-amber-600 font-semibold transition-colors duration-150">Features</a>
                         <a href="#downloads" className="text-slate-600 hover:text-amber-600 font-semibold transition-colors duration-150">Downloads</a>
                         <a href="#pricing" className="text-slate-600 hover:text-amber-600 font-semibold transition-colors duration-150">Pricing</a>
+                        <Link href="/releases/2.0.0" className="text-slate-600 hover:text-amber-600 font-semibold transition-colors duration-150">What's New</Link>
                         <Link href="/about" className="text-slate-600 hover:text-amber-600 font-semibold transition-colors duration-150">About Us</Link>
                         <a href="#contact" className="text-slate-600 hover:text-amber-600 font-semibold transition-colors duration-150">Contact</a>
                     </div>
@@ -155,6 +156,7 @@ export default function LandingPage() {
                         <a href="#features" onClick={toggleMenu} className="text-slate-700 font-bold hover:text-amber-600 py-1">Features</a>
                         <a href="#downloads" onClick={toggleMenu} className="text-slate-700 font-bold hover:text-amber-600 py-1">Downloads</a>
                         <a href="#pricing" onClick={toggleMenu} className="text-slate-700 font-bold hover:text-amber-600 py-1">Pricing</a>
+                        <Link href="/releases/2.0.0" onClick={toggleMenu} className="text-slate-700 font-bold hover:text-amber-600 py-1">What's New</Link>
                         <Link href="/about" onClick={toggleMenu} className="text-slate-700 font-bold hover:text-amber-600 py-1">About Us</Link>
                         <a href="#contact" onClick={toggleMenu} className="text-slate-700 font-bold hover:text-amber-600 py-1">Contact</a>
                         <hr className="border-slate-100 my-2" />
@@ -211,13 +213,13 @@ export default function LandingPage() {
                     {/* Dashboard Mockup Video Player Frame */}
                     <div className="w-full max-w-5xl rounded-2xl bg-slate-950 p-3 shadow-2xl shadow-slate-900/30 border border-slate-800/80 group relative">
                         <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
-                        
+
                         <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-slate-900 flex flex-col">
                             {/* User customizable placeholder image */}
-                            <img 
-                                src="/images/mockup-hero.png" 
-                                alt="Dashboard Mockup" 
-                                className="w-full h-full object-cover absolute inset-0 opacity-80 mix-blend-normal group-hover:scale-[1.01] transition-transform duration-700" 
+                            <img
+                                src="/images/mockup-hero.png"
+                                alt="Dashboard Mockup"
+                                className="w-full h-full object-cover absolute inset-0 opacity-80 mix-blend-normal group-hover:scale-[1.01] transition-transform duration-700"
                                 onError={(e) => {
                                     e.currentTarget.style.display = 'none';
                                 }}
@@ -373,13 +375,13 @@ export default function LandingPage() {
                         {/* Visual Mockup Column */}
                         <div className="lg:col-span-7 order-1 lg:order-2">
                             <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center">
-                                <img 
-                                    src="/images/mockup-organizing.png" 
-                                    alt="Organizing Mockup" 
+                                <img
+                                    src="/images/mockup-organizing.png"
+                                    alt="Organizing Mockup"
                                     className="w-full h-full object-cover rounded-xl shadow border border-slate-200"
                                     onError={(e) => e.currentTarget.style.display = 'none'}
                                 />
-                                
+
                                 {/* Fallback Interactive CSS Mockup */}
                                 <div className="absolute inset-0 w-full h-full bg-white rounded-xl shadow border border-slate-200/80 p-6 flex flex-col justify-between">
                                     <div className="flex justify-between items-center pb-4 border-b border-slate-100">
@@ -425,13 +427,13 @@ export default function LandingPage() {
                         {/* Visual Mockup Column First */}
                         <div className="lg:col-span-7">
                             <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center">
-                                <img 
-                                    src="/images/mockup-tracking.png" 
-                                    alt="Tracking Mockup" 
+                                <img
+                                    src="/images/mockup-tracking.png"
+                                    alt="Tracking Mockup"
                                     className="w-full h-full object-cover rounded-xl shadow border border-slate-200"
                                     onError={(e) => e.currentTarget.style.display = 'none'}
                                 />
-                                
+
                                 {/* Fallback Interactive CSS Mockup */}
                                 <div className="absolute inset-0 w-full h-full bg-white rounded-xl shadow border border-slate-200/80 p-6 flex flex-col justify-between">
                                     <div className="flex justify-between items-center pb-4 border-b border-slate-100">
@@ -441,14 +443,14 @@ export default function LandingPage() {
                                         </div>
                                         <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-extrabold text-[10px]">IN STOCK</span>
                                     </div>
-                                    
+
                                     <div className="flex-1 flex gap-6 items-center my-6">
                                         {/* Product Photo Box */}
                                         <div className="w-1/3 aspect-square rounded-xl bg-slate-100 border border-slate-200 flex flex-col items-center justify-center text-slate-400 relative overflow-hidden">
                                             <Package className="w-12 h-12 text-slate-300" />
                                             <span className="text-[10px] mt-2 block text-slate-500 font-bold">Image Attached</span>
                                         </div>
-                                        
+
                                         {/* Product Identifiers */}
                                         <div className="flex-1 flex flex-col gap-2.5">
                                             <span className="text-[10px] font-bold text-amber-600 tracking-wider">ELECTRONIC TOOLS</span>
@@ -565,13 +567,13 @@ export default function LandingPage() {
                         {/* Visual Mockup Column */}
                         <div className="lg:col-span-7 order-1 lg:order-2">
                             <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center">
-                                <img 
-                                    src="/images/mockup-reporting.png" 
-                                    alt="Reporting Mockup" 
+                                <img
+                                    src="/images/mockup-reporting.png"
+                                    alt="Reporting Mockup"
                                     className="w-full h-full object-cover rounded-xl shadow border border-slate-200"
                                     onError={(e) => e.currentTarget.style.display = 'none'}
                                 />
-                                
+
                                 {/* Fallback Interactive CSS Mockup */}
                                 <div className="absolute inset-0 w-full h-full bg-white rounded-xl shadow border border-slate-200/80 p-6 flex flex-col justify-between">
                                     <div className="flex justify-between items-center pb-4 border-b border-slate-100">
@@ -581,7 +583,7 @@ export default function LandingPage() {
                                         </div>
                                         <button className="px-3 py-1 rounded bg-amber-500 text-white text-[10px] font-bold hover:bg-amber-600 shadow-sm shadow-amber-500/10">Export PDF</button>
                                     </div>
-                                    
+
                                     {/* Mini Chart Mockup */}
                                     <div className="flex-1 flex flex-col justify-center gap-3 my-4">
                                         <div className="flex items-end justify-between h-20 px-4 border-b border-slate-200 pt-2 select-none">
@@ -623,13 +625,13 @@ export default function LandingPage() {
                         {/* Visual Mockup Column First */}
                         <div className="lg:col-span-7">
                             <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center">
-                                <img 
-                                    src="/images/mockup-sync.png" 
-                                    alt="Sync Mockup" 
+                                <img
+                                    src="/images/mockup-sync.png"
+                                    alt="Sync Mockup"
                                     className="w-full h-full object-cover rounded-xl shadow border border-slate-200"
                                     onError={(e) => e.currentTarget.style.display = 'none'}
                                 />
-                                
+
                                 {/* Fallback Interactive CSS Mockup */}
                                 <div className="absolute inset-0 w-full h-full bg-slate-900 rounded-xl shadow border border-slate-800 p-6 flex flex-col justify-between text-slate-400 text-xs">
                                     <div className="flex justify-between items-center pb-4 border-b border-slate-800">
@@ -715,7 +717,7 @@ export default function LandingPage() {
                             <p className="text-slate-500 text-sm mb-6 max-w-xs">
                                 Compatible with Windows 10 & 11. Full native installation with integrated automatic updates.
                             </p>
-                            
+
                             {featuredDownloads.find(d => d.os === 'Windows') ? (
                                 <button
                                     onClick={() => handleDownload(featuredDownloads.find(d => d.os === 'Windows'))}
@@ -731,9 +733,11 @@ export default function LandingPage() {
                                     Request Windows Version
                                 </button>
                             )}
-                            
+
                             <div className="flex justify-between items-center w-full mt-6 text-xs text-slate-400 font-medium">
-                                <span>Release: v2.0.0 Stable</span>
+                                <Link href="/releases/2.0.0" className="text-amber-600 hover:text-amber-700 hover:underline font-bold flex items-center gap-1">
+                                    Release: v2.0.0 Stable &rarr;
+                                </Link>
                                 <span>Size: ~45MB</span>
                             </div>
                         </div>
@@ -747,7 +751,7 @@ export default function LandingPage() {
                             <p className="text-slate-500 text-sm mb-6 max-w-xs">
                                 Compatible with Ubuntu, Debian, RedHat & Arch. Packed inside stable desktop AppImage packages.
                             </p>
-                            
+
                             {featuredDownloads.find(d => d.os === 'Linux') ? (
                                 <button
                                     onClick={() => handleDownload(featuredDownloads.find(d => d.os === 'Linux'))}
@@ -763,9 +767,11 @@ export default function LandingPage() {
                                     Request Linux Version
                                 </button>
                             )}
-                            
+
                             <div className="flex justify-between items-center w-full mt-6 text-xs text-slate-400 font-medium">
-                                <span>Release: v2.0.0-Beta</span>
+                                <Link href="/releases/2.0.0" className="text-amber-600 hover:text-amber-700 hover:underline font-bold flex items-center gap-1">
+                                    Release: v2.0.0-Beta &rarr;
+                                </Link>
                                 <span>Size: ~38MB</span>
                             </div>
                         </div>
@@ -832,8 +838,8 @@ export default function LandingPage() {
                         {displayPlans.map((plan) => {
                             const isPro = plan.id === 'pro';
                             return (
-                                <div 
-                                    key={plan.id} 
+                                <div
+                                    key={plan.id}
                                     className={`bg-slate-900/60 border rounded-3xl p-8 flex flex-col justify-between relative transition-all duration-300 ${isPro ? 'border-amber-500 shadow-xl shadow-amber-500/10 scale-105 z-10 bg-gradient-to-b from-slate-900 to-slate-950' : 'border-slate-800'}`}
                                 >
                                     {isPro && (
@@ -851,7 +857,7 @@ export default function LandingPage() {
                                             {plan.price !== 0 && <span className="text-slate-500 text-sm">/mo</span>}
                                         </div>
                                         <p className="text-slate-400 text-xs leading-relaxed mb-6 h-10 overflow-hidden">{plan.description}</p>
-                                        
+
                                         <hr className="border-slate-800/80 mb-6" />
 
                                         <ul className="flex flex-col gap-3 mb-8">
@@ -869,7 +875,7 @@ export default function LandingPage() {
                                             Contact Sales Desk
                                         </a>
                                     ) : (
-                                        <button 
+                                        <button
                                             onClick={openRegister}
                                             className={`w-full py-3 px-4 rounded-xl font-bold text-center text-xs transition-all ${isPro ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20' : 'bg-transparent border border-slate-700 hover:border-slate-500 text-slate-200'}`}
                                         >
@@ -908,42 +914,42 @@ export default function LandingPage() {
                         <div className="grid sm:grid-cols-2 gap-6 mb-6">
                             <div>
                                 <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wide mb-2">Full Name</label>
-                                <input 
-                                    type="text" 
-                                    value={contactName} 
-                                    onChange={e => setContactName(e.target.value)} 
+                                <input
+                                    type="text"
+                                    value={contactName}
+                                    onChange={e => setContactName(e.target.value)}
                                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500 text-sm transition-all"
-                                    placeholder="Enter your name" 
-                                    required 
+                                    placeholder="Enter your name"
+                                    required
                                 />
                             </div>
                             <div>
                                 <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wide mb-2">Email Address</label>
-                                <input 
-                                    type="email" 
-                                    value={contactEmail} 
-                                    onChange={e => setContactEmail(e.target.value)} 
+                                <input
+                                    type="email"
+                                    value={contactEmail}
+                                    onChange={e => setContactEmail(e.target.value)}
                                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500 text-sm transition-all"
-                                    placeholder="your@email.com" 
-                                    required 
+                                    placeholder="your@email.com"
+                                    required
                                 />
                             </div>
                         </div>
 
                         <div className="mb-8">
                             <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wide mb-2">How can we help?</label>
-                            <textarea 
-                                value={contactMsg} 
-                                onChange={e => setContactMsg(e.target.value)} 
+                            <textarea
+                                value={contactMsg}
+                                onChange={e => setContactMsg(e.target.value)}
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500 text-sm transition-all resize-none"
-                                placeholder="Detail your stock size or activation issue..." 
-                                rows={4} 
-                                required 
+                                placeholder="Detail your stock size or activation issue..."
+                                rows={4}
+                                required
                             />
                         </div>
 
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:shadow-amber-500/35 transition-all flex items-center justify-center gap-2"
                             disabled={sending}
                         >
@@ -970,14 +976,18 @@ export default function LandingPage() {
                         </p>
                         <div className="flex items-center gap-2 text-xs text-slate-400 mt-2">
                             <Mail className="w-4 h-4 text-amber-500" />
-                            <span>mwimulebienvenu05@gmail.com</span>
+                            <span>info@mtglory.com</span>
                         </div>
                     </div>
 
                     <div className="flex justify-end gap-16">
                         <div className="flex flex-col gap-3">
-                            <h4 className="font-bold text-white text-sm tracking-wide">Legal</h4>
+                            <h4 className="font-bold text-white text-sm tracking-wide">Resources</h4>
+                            <Link href="/releases/2.0.0" className="text-xs hover:text-amber-500 transition-colors">Release Notes</Link>
                             <Link href="/about" className="text-xs hover:text-amber-500 transition-colors">About Us</Link>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            <h4 className="font-bold text-white text-sm tracking-wide">Legal</h4>
                             <Link href="/privacy" className="text-xs hover:text-amber-500 transition-colors">Privacy Policy</Link>
                             <Link href="/terms" className="text-xs hover:text-amber-500 transition-colors">License Agreement</Link>
                         </div>
@@ -1022,13 +1032,20 @@ export default function LandingPage() {
                                     {downloads.map(d => (
                                         <tr key={d._id} className="border-b border-slate-100 hover:bg-slate-50/50">
                                             <td className="p-3 font-bold text-slate-900">
-                                                v{d.version} {d.isFeatured && <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/50 text-[9px] font-extrabold px-2 py-0.5 rounded-full ml-1.5">LATEST</span>}
+                                                <Link
+                                                    href={`/releases/${d.version}`}
+                                                    onClick={() => setShowHistory(false)}
+                                                    className="hover:text-amber-600 hover:underline transition-colors"
+                                                >
+                                                    v{d.version}
+                                                </Link>
+                                                {d.isFeatured && <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/50 text-[9px] font-extrabold px-2 py-0.5 rounded-full ml-1.5">LATEST</span>}
                                             </td>
                                             <td className="p-3 font-medium text-slate-600">{d.os}</td>
                                             <td className="p-3 text-slate-500">{d.downloadCount ? d.downloadCount.toLocaleString() : 0}</td>
                                             <td className="p-3 text-slate-400">{new Date(d.releaseDate).toLocaleDateString()}</td>
                                             <td className="p-3 text-right">
-                                                <button 
+                                                <button
                                                     onClick={() => { handleDownload(d); setShowHistory(false); }}
                                                     className="text-amber-600 hover:text-amber-700 font-bold hover:underline"
                                                 >
@@ -1042,7 +1059,7 @@ export default function LandingPage() {
                         </div>
 
                         <div className="pt-4 border-t border-slate-100 flex justify-end">
-                            <button 
+                            <button
                                 onClick={() => setShowHistory(false)}
                                 className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-6 rounded-xl text-xs"
                             >

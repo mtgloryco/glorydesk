@@ -43,7 +43,7 @@ export const LEGAL_CONTENT = {
                 title: "5. Contact Us",
                 content: <>
                     <p>If you have questions about this Privacy Policy or wish to exercise your rights, please contact our Data Protection Officer:</p>
-                    <p><strong>Email:</strong> mwimulebienvenu05@gmail.com</p>
+                    <p><strong>Email:</strong> info@mtglory.com</p>
                     <p><strong>Location:</strong> Kigali, Rwanda</p>
                 </>
             }
@@ -80,7 +80,7 @@ export const LEGAL_CONTENT = {
                 title: "6. Contact",
                 content: <>
                     <p>For any questions regarding these Terms, please contact us at:</p>
-                    <p><strong>Email:</strong> mwimulebienvenu05@gmail.com</p>
+                    <p><strong>Email:</strong> info@mtglory.com</p>
                 </>
             }
         ]
