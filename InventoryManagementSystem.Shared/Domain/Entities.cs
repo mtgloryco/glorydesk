@@ -311,6 +311,9 @@ namespace InventoryManagementSystem.Domain
         public string Scope { get; set; } = "Goods"; // Goods, Services
         public string IncludedInPrice { get; set; } = "Exclude"; // Include, Exclude
         public bool IsActive { get; set; } = true;
+        
+        // Associated ledger account for tax recording
+        public int? AccountId { get; set; }
     }
 
     public class ProductUnit
@@ -426,4 +429,59 @@ namespace InventoryManagementSystem.Domain
         public string Formula { get; set; } = string.Empty;
         public string Subformula { get; set; } = string.Empty;
     }
+
+    public class SalesOrder
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public string SONumber { get; set; } = string.Empty;
+        public int CustomerId { get; set; }
+        public string Status { get; set; } = "Draft"; // "Draft" (Quotation), "Confirmed" (Sales Order), "Delivered", "Cancelled"
+        public DateTime OrderDate { get; set; } = DateTime.Now;
+        public DateTime QuotationDate { get; set; } = DateTime.Now;
+        public DateTime? ExpirationDate { get; set; }
+        public DateTime? DeliveryDate { get; set; }
+        public string PaymentTerms { get; set; } = "Immediate Payment";
+        public string Notes { get; set; } = string.Empty;
+        public string CreatedByUsername { get; set; } = string.Empty;
+        public decimal TotalAmount { get; set; }
+        public bool IsTaxInclusive { get; set; } = false;
+        public string BillingStatus { get; set; } = "Waiting Invoice"; // Waiting Invoice, Invoiced
+        public string DeliveryStatus { get; set; } = "Pending"; // Pending, Delivered, Partially Delivered
+        public bool IsArchived { get; set; } = false;
+        public string Company { get; set; } = "My Company";
+        public string Currency { get; set; } = "RWF";
+    }
+
+    public class SalesOrderItem
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public int SalesOrderId { get; set; }
+        public int ProductId { get; set; }
+        public int QuantityOrdered { get; set; }
+        public int QuantityDelivered { get; set; }
+        public int QuantityInvoiced { get; set; }
+        public decimal UnitPrice { get; set; }
+        public int? TaxId { get; set; }
+    }
+
+    public class SalesOrderListItem
+    {
+        public SalesOrder SalesOrder { get; set; } = new();
+        public string CustomerName { get; set; } = string.Empty;
+
+        public bool CanDeliver => SalesOrder != null && SalesOrder.DeliveryStatus != "Delivered";
+        public bool CanInvoice => SalesOrder != null && SalesOrder.BillingStatus != "Invoiced";
+    }
+
+    public class PaymentTerm
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        [Unique]
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
 }
+

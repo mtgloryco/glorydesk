@@ -25,6 +25,15 @@
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
+                    <Button Content="Sales Actions ▾" Background="#2E7D32" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4">
+                        <Button.Flyout>
+                            <MenuFlyout Placement="Bottom">
+                                <MenuItem Header="Sales Quotations" Command="{Binding GoToSalesQuotationsScreenCommand}"/>
+                                <MenuItem Header="Sales Orders" Command="{Binding GoToSalesOrdersScreenCommand}"/>
+                                <MenuItem Header="Customers / Partners" Command="{Binding GoToCustomersScreenCommand}"/>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
                 </StackPanel>
             </Border>
 

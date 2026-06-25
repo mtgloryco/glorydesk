@@ -179,6 +179,9 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly Action? _goToRfq;
         private readonly Action? _goToPurchaseOrders;
         private readonly Action? _goToSuppliers;
+        private readonly Action? _goToSalesQuotations;
+        private readonly Action? _goToSalesOrders;
+        private readonly Action? _goToCustomers;
 
         public InventoryViewModel(
             InventoryService inventoryService, 
@@ -189,7 +192,10 @@ namespace InventoryManagementSystem.UI.ViewModels
             AccountService accountService,
             Action? goToRfq = null,
             Action? goToPurchaseOrders = null,
-            Action? goToSuppliers = null)
+            Action? goToSuppliers = null,
+            Action? goToSalesQuotations = null,
+            Action? goToSalesOrders = null,
+            Action? goToCustomers = null)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
@@ -200,6 +206,9 @@ namespace InventoryManagementSystem.UI.ViewModels
             _goToRfq = goToRfq;
             _goToPurchaseOrders = goToPurchaseOrders;
             _goToSuppliers = goToSuppliers;
+            _goToSalesQuotations = goToSalesQuotations;
+            _goToSalesOrders = goToSalesOrders;
+            _goToCustomers = goToCustomers;
             LoadProductsCommand.Execute(null);
         }
 
@@ -297,6 +306,15 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         [RelayCommand]
         private void GoToSuppliersScreen() => _goToSuppliers?.Invoke();
+
+        [RelayCommand]
+        private void GoToSalesQuotationsScreen() => _goToSalesQuotations?.Invoke();
+
+        [RelayCommand]
+        private void GoToSalesOrdersScreen() => _goToSalesOrders?.Invoke();
+
+        [RelayCommand]
+        private void GoToCustomersScreen() => _goToCustomers?.Invoke();
 
 
 

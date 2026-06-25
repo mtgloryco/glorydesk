@@ -32,7 +32,7 @@ public partial class App : Application
                 DataContext = new MainViewModel(
                     services.inventory, services.user, services.license, services.hardware,
                     services.analytics, services.receipt, services.language, services.update,
-                    services.settings, services.supplier, services.purchaseOrder, services.forecasting,
+                    services.settings, services.supplier, services.purchaseOrder, services.salesOrder, services.forecasting,
                     services.expiry, services.location, services.returns, services.advancedAnalytics,
                     services.bundle, services.audit, services.reporting, services.cloudSync,
                     services.briefing, services.tax, services.account, services.journal, services.accountingReport),
@@ -45,7 +45,7 @@ public partial class App : Application
                 DataContext = new MainViewModel(
                     services.inventory, services.user, services.license, services.hardware,
                     services.analytics, services.receipt, services.language, services.update,
-                    services.settings, services.supplier, services.purchaseOrder, services.forecasting,
+                    services.settings, services.supplier, services.purchaseOrder, services.salesOrder, services.forecasting,
                     services.expiry, services.location, services.returns, services.advancedAnalytics,
                     services.bundle, services.audit, services.reporting, services.cloudSync,
                     services.briefing, services.tax, services.account, services.journal, services.accountingReport),
@@ -58,7 +58,7 @@ public partial class App : Application
     private (
         InventoryService inventory, UserService user, LicenseService license, HardwareIdService hardware,
         AnalyticsService analytics, ReceiptService receipt, LanguageService language, UpdateService update,
-        SettingsService settings, SupplierService supplier, PurchaseOrderService purchaseOrder,
+        SettingsService settings, SupplierService supplier, PurchaseOrderService purchaseOrder, SalesOrderService salesOrder,
         ForecastingService forecasting, ExpiryService expiry, LocationService location, ReturnsService returns,
         AdvancedAnalyticsService advancedAnalytics, BundleService bundle, AuditService audit,
         ReportingService reporting, CloudSyncService cloudSync, DailyBriefingService briefing,
@@ -79,6 +79,7 @@ public partial class App : Application
         var receiptService = new ReceiptService(settingsService);
         var supplierService = new SupplierService(dbService);
         var purchaseOrderService = new PurchaseOrderService(dbService, inventoryService);
+        var salesOrderService = new SalesOrderService(dbService, inventoryService);
         var forecastingService = new ForecastingService(dbService);
         var expiryService = new ExpiryService(dbService);
         
@@ -114,7 +115,7 @@ public partial class App : Application
         return (
             inventoryService, userService, licenseService, hardwareService,
             analyticsService, receiptService, languageService, updateService,
-            settingsService, supplierService, purchaseOrderService, forecastingService,
+            settingsService, supplierService, purchaseOrderService, salesOrderService, forecastingService,
             expiryService, locationService, returnsService, advancedAnalyticsService,
             bundleService, auditService, reportingService, cloudSyncService, dailyBriefingService,
             taxService, accountService, journalService, accountingReportService);

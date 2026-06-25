@@ -82,6 +82,30 @@ namespace InventoryManagementSystem.Services
 
             return result.OrderByDescending(r => r.Date).ToList();
         }
+
+        public async Task ClearAllTransactionsAndStockAsync()
+        {
+            var db = _databaseService.Connection;
+            await db.RunInTransactionAsync(conn =>
+            {
+                conn.Execute("DELETE FROM JournalLine;");
+                conn.Execute("DELETE FROM JournalEntry;");
+                conn.Execute("DELETE FROM StockMovement;");
+                conn.Execute("DELETE FROM PurchaseBatch;");
+                conn.Execute("DELETE FROM SaleBatchUsage;");
+                conn.Execute("DELETE FROM SalesOrderItem;");
+                conn.Execute("DELETE FROM SalesOrder;");
+                conn.Execute("DELETE FROM PurchaseOrderItem;");
+                conn.Execute("DELETE FROM PurchaseOrder;");
+                conn.Execute("DELETE FROM CustomerReturn;");
+                conn.Execute("DELETE FROM SupplierReturn;");
+                conn.Execute("DELETE FROM LocationStock;");
+                conn.Execute("DELETE FROM StockTransfer;");
+                conn.Execute("DELETE FROM AuditLog;");
+
+                conn.Execute("UPDATE Product SET StockQuantity = 0, Cost = 0;");
+            });
+        }
     }
 
     public class AccountTransactionRow

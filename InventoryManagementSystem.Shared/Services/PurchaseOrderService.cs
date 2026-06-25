@@ -187,6 +187,41 @@ namespace InventoryManagementSystem.Services
                             conn.Insert(entry);
 
                             decimal purchaseAmount = line.quantityReceived * item.UnitCost;
+                            decimal taxAmount = 0;
+                            decimal inventoryValue = purchaseAmount;
+                            decimal apAmount = purchaseAmount;
+
+                            if (item.TaxId.HasValue)
+                            {
+                                var tax = conn.Find<Tax>(item.TaxId.Value);
+                                if (tax != null)
+                                {
+                                    if (tax.IncludedInPrice == "Include")
+                                    {
+                                        if (tax.Computation == "Percentage")
+                                        {
+                                            inventoryValue = purchaseAmount / (1 + (tax.Amount / 100));
+                                        }
+                                        else
+                                        {
+                                            inventoryValue = Math.Max(0, purchaseAmount - (line.quantityReceived * tax.Amount));
+                                        }
+                                        taxAmount = purchaseAmount - inventoryValue;
+                                    }
+                                    else
+                                    {
+                                        if (tax.Computation == "Percentage")
+                                        {
+                                            taxAmount = purchaseAmount * (tax.Amount / 100);
+                                        }
+                                        else
+                                        {
+                                            taxAmount = line.quantityReceived * tax.Amount;
+                                        }
+                                        apAmount = purchaseAmount + taxAmount;
+                                    }
+                                }
+                            }
 
                             int debitAccountId;
                             if (product.ProductType == "Service")
@@ -207,16 +242,42 @@ namespace InventoryManagementSystem.Services
                             var apAccount = conn.Table<Account>().Where(a => a.Code == "201000").FirstOrDefault();
                             int creditAccountId = apAccount?.Id ?? 7; // Accounts Payable fallback
 
+                            // 1. Debit Inventory Asset (or Expense)
                             conn.Insert(new JournalLine
                             {
                                 JournalEntryId = entry.Id,
                                 AccountId = debitAccountId,
                                 ProductId = product.Id,
                                 Label = $"Purchase Receipt - {product.Name} (Qty: {line.quantityReceived})",
-                                Debit = purchaseAmount,
+                                Debit = inventoryValue,
                                 Credit = 0
                             });
 
+                            // 2. Debit VAT Receivable (Input Tax)
+                            if (taxAmount > 0)
+                            {
+                                var taxAccount = conn.Table<Account>()
+                                    .Where(a => a.Code == "125000" || a.Name.Contains("VAT Receivable") || a.Name.Contains("Tax Receivable"))
+                                    .FirstOrDefault();
+                                int taxAccountId = taxAccount?.Id ?? 0;
+                                if (taxAccountId == 0)
+                                {
+                                    var vatPayable = conn.Table<Account>().Where(a => a.Code == "220000").FirstOrDefault();
+                                    taxAccountId = vatPayable?.Id ?? 9; // Fallback to VAT Payable
+                                }
+
+                                conn.Insert(new JournalLine
+                                {
+                                    JournalEntryId = entry.Id,
+                                    AccountId = taxAccountId,
+                                    ProductId = product.Id,
+                                    Label = $"VAT on Purchase - {product.Name}",
+                                    Debit = taxAmount,
+                                    Credit = 0
+                                });
+                            }
+
+                            // 3. Credit Accounts Payable
                             conn.Insert(new JournalLine
                             {
                                 JournalEntryId = entry.Id,
@@ -224,7 +285,7 @@ namespace InventoryManagementSystem.Services
                                 ProductId = product.Id,
                                 Label = $"Purchase Receipt - {product.Name} (Qty: {line.quantityReceived})",
                                 Debit = 0,
-                                Credit = purchaseAmount
+                                Credit = apAmount
                             });
                         }
                     }

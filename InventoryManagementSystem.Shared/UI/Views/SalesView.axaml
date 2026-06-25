@@ -1,0 +1,595 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             xmlns:domain="clr-namespace:InventoryManagementSystem.Domain"
+             xmlns:helpers="using:InventoryManagementSystem.UI.Helpers"
+             mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="700"
+             x:Class="InventoryManagementSystem.UI.Views.SalesView"
+             x:DataType="vm:SalesViewModel">
+    
+    <Grid>
+        <!-- Main list and dashboard layer -->
+        <Grid RowDefinitions="Auto, Auto, *" Margin="15" IsEnabled="{Binding !IsFormOpen}">
+            <!-- Header Toolbar -->
+            <Border Grid.Row="0" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="0,0,0,12" Margin="0,0,0,12">
+                <Grid ColumnDefinitions="*, Auto">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="Back to Inventory" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).GoToInventoryCommand}" Background="#007ACC" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4" />
+                        <TextBlock Text="Sales Management" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    </StackPanel>
+                    
+                    <TabStrip Grid.Column="1" SelectedIndex="{Binding SelectedTabIndex}" Margin="0,0,15,0">
+                        <TabItem Header="Sales Quotations"/>
+                        <TabItem Header="Sales Orders"/>
+                    </TabStrip>
+                </Grid>
+            </Border>
+
+            <!-- Search & Actions -->
+            <Grid Grid.Row="1" ColumnDefinitions="*, Auto" Margin="0,0,0,15">
+                <TextBox Text="{Binding SearchText}" Watermark="Search by SQ/SO reference or customer..." Width="350" HorizontalAlignment="Left"/>
+                <Button Grid.Column="1" Content="Create Sale Quotation" Command="{Binding OpenAddSaleCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4"/>
+            </Grid>
+
+            <!-- Sales List Content -->
+            <Grid Grid.Row="2">
+                <!-- Quotations Tab -->
+                <DataGrid ItemsSource="{Binding Quotations}"
+                          SelectedItem="{Binding SelectedOrder}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          GridLinesVisibility="All"
+                          BorderThickness="1" BorderBrush="{DynamicResource BorderColor}" Background="{DynamicResource ContentBackgroundColor}"
+                          IsVisible="{Binding IsQuotationsTabSelected}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Reference" Binding="{Binding SalesOrder.SONumber}" Width="120"/>
+                        <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*"/>
+                        <DataGridTextColumn Header="Date" Binding="{Binding SalesOrder.QuotationDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="120"/>
+                        <DataGridTextColumn Header="Expiration Date" Binding="{Binding SalesOrder.ExpirationDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="130"/>
+                        <DataGridTemplateColumn Header="Total Amount" Width="130">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="domain:SalesOrderListItem">
+                                    <TextBlock VerticalAlignment="Center" Margin="5,0,5,0" TextAlignment="Right" FontWeight="SemiBold">
+                                        <Run Text="{Binding SalesOrder.TotalAmount, StringFormat='{}{0:N2}'}"/>
+                                        <Run Text=" "/>
+                                        <Run Text="{Binding SalesOrder.Currency}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Status" Binding="{Binding SalesOrder.Status}" Width="100"/>
+                        
+                        <DataGridTemplateColumn Header="Actions" Width="260">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="domain:SalesOrderListItem">
+                                    <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                        <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).OpenEditSaleCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,4" CornerRadius="3"/>
+                                        <Button Content="Confirm SO" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).ConfirmQuotationCommand}" CommandParameter="{Binding .}" Background="#2E7D32" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3"/>
+                                        <Button Content="Print PDF" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PrintPdfCommand}" CommandParameter="{Binding .}" Background="#007ACC" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3"/>
+                                        <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).DeleteOrderCommand}" CommandParameter="{Binding .}" Background="#C62828" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- Confirmed Orders Tab -->
+                <DataGrid ItemsSource="{Binding SalesOrders}"
+                          SelectedItem="{Binding SelectedOrder}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          GridLinesVisibility="All"
+                          BorderThickness="1" BorderBrush="{DynamicResource BorderColor}" Background="{DynamicResource ContentBackgroundColor}"
+                          IsVisible="{Binding IsSalesOrdersTabSelected}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Reference" Binding="{Binding SalesOrder.SONumber}" Width="120"/>
+                        <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*"/>
+                        <DataGridTextColumn Header="Order Date" Binding="{Binding SalesOrder.OrderDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="120"/>
+                        <DataGridTextColumn Header="Delivery Status" Binding="{Binding SalesOrder.DeliveryStatus}" Width="130"/>
+                        <DataGridTextColumn Header="Invoice Status" Binding="{Binding SalesOrder.BillingStatus}" Width="120"/>
+                        <DataGridTemplateColumn Header="Total Amount" Width="130">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="domain:SalesOrderListItem">
+                                    <TextBlock VerticalAlignment="Center" Margin="5,0,5,0" TextAlignment="Right" FontWeight="SemiBold">
+                                        <Run Text="{Binding SalesOrder.TotalAmount, StringFormat='{}{0:N2}'}"/>
+                                        <Run Text=" "/>
+                                        <Run Text="{Binding SalesOrder.Currency}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        
+                        <DataGridTemplateColumn Header="Actions" Width="100">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate DataType="domain:SalesOrderListItem">
+                                    <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+                                        <Button Content="Details" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).OpenDetailsCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,4" CornerRadius="3"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Grid>
+
+        <!-- Create/Edit Form Overlay Modal -->
+        <Grid Background="#7F000000" IsVisible="{Binding IsFormOpen}" ZIndex="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource ContentBackgroundColor}"
+                    BorderBrush="{DynamicResource BorderColor}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    MaxWidth="1180"
+                    MinWidth="800"
+                    MinHeight="500"
+                    Width="1100"
+                    Height="680"
+                    Margin="20"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    BoxShadow="0 8 32 0 #40000000"
+                    Padding="25"
+                    helpers:ResizableHelper.CanResize="True">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <!-- Title and Status -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,15">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Sale Quotation / Order Form - " FontSize="20" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding CurrentOrder.SONumber}" FontSize="20" FontWeight="Bold" Foreground="#2E7D32"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding CurrentOrder.Status}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Scrollable Body with Two-Column Form -->
+                    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Spacing="20">
+                            <!-- Two Column Header Section -->
+                            <Grid ColumnDefinitions="*, 25, *">
+                                <!-- Column 1 -->
+                                <StackPanel Grid.Column="0" Spacing="12">
+                                    <!-- Customer Search / Selection -->
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="Customer / Partner *" FontSize="12" FontWeight="SemiBold"/>
+                                        <TextBox Watermark="Type to search customers..." Text="{Binding CustomerSearchText, Mode=TwoWay}"/>
+                                        
+                                        <!-- Inline Matched Customers List -->
+                                        <ListBox ItemsSource="{Binding MatchedCustomers}" 
+                                                 IsVisible="{Binding IsCustomerListVisible}" 
+                                                 MaxHeight="120" BorderThickness="1" BorderBrush="{DynamicResource BorderColor}" CornerRadius="4">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate DataType="domain:Supplier">
+                                                    <Button Content="{Binding Name}" 
+                                                            Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).SelectCustomerCommand}" 
+                                                            CommandParameter="{Binding .}" 
+                                                            Background="Transparent" 
+                                                            HorizontalAlignment="Stretch" 
+                                                            HorizontalContentAlignment="Left"
+                                                            FontSize="12" Padding="6,2"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <Button Content="+ Create New Customer" 
+                                                Command="{Binding OpenCreateCustomerCommand}" 
+                                                IsVisible="{Binding IsCreateCustomerButtonVisible}" 
+                                                Foreground="#2E7D32" Background="Transparent" Padding="0,5" FontSize="12" FontWeight="SemiBold"/>
+                                    </StackPanel>
+
+                                    <!-- Currency -->
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="Currency *" FontSize="12" FontWeight="SemiBold"/>
+                                        <ComboBox ItemsSource="{Binding Currencies}" SelectedItem="{Binding CurrentOrder.Currency}" HorizontalAlignment="Stretch"/>
+                                    </StackPanel>
+
+                                    <!-- Payment Terms -->
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="Payment Terms *" FontSize="12" FontWeight="SemiBold"/>
+                                        <TextBox Watermark="Search or enter payment terms..." Text="{Binding PaymentTermsSearchText, Mode=TwoWay}"/>
+                                        
+                                        <!-- Inline Matched Payment Terms List -->
+                                        <ListBox ItemsSource="{Binding MatchedPaymentTerms}" 
+                                                 IsVisible="{Binding IsPaymentTermsListVisible}" 
+                                                 MaxHeight="120" BorderThickness="1" BorderBrush="{DynamicResource BorderColor}" CornerRadius="4">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate DataType="domain:PaymentTerm">
+                                                    <Button Content="{Binding Name}" 
+                                                            Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).SelectPaymentTermCommand}" 
+                                                            CommandParameter="{Binding .}" 
+                                                            Background="Transparent" 
+                                                            HorizontalAlignment="Stretch" 
+                                                            HorizontalContentAlignment="Left"
+                                                            FontSize="12" Padding="6,2"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <Button Content="+ Create New Payment Term" 
+                                                Command="{Binding OpenCreatePaymentTermCommand}" 
+                                                IsVisible="{Binding IsCreatePaymentTermButtonVisible}" 
+                                                Foreground="#2E7D32" Background="Transparent" Padding="0,5" FontSize="12" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Column 2 -->
+                                <StackPanel Grid.Column="2" Spacing="12">
+                                    <!-- Quotation Date -->
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="Quotation Date *" FontSize="12" FontWeight="SemiBold"/>
+                                        <CalendarDatePicker SelectedDate="{Binding CurrentOrder.QuotationDate}" HorizontalAlignment="Stretch"/>
+                                    </StackPanel>
+
+                                    <!-- Expiration Date -->
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="Expiration Date" FontSize="12" FontWeight="SemiBold"/>
+                                        <CalendarDatePicker SelectedDate="{Binding CurrentOrder.ExpirationDate}" HorizontalAlignment="Stretch"/>
+                                    </StackPanel>
+
+                                    <!-- Tax Policy Switcher -->
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="Taxes Policy" FontSize="12" FontWeight="SemiBold"/>
+                                        <CheckBox Content="Tax Inclusive (Prices entered include tax)" IsChecked="{Binding IsTaxInclusive}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Products Grid Section -->
+                            <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,10,0,0">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Products / Order Lines" FontSize="14" FontWeight="Bold"/>
+                                    
+                                    <ItemsControl ItemsSource="{Binding OrderItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="vm:SalesItemRow">
+                                                <Grid ColumnDefinitions="*, 80, 120, 150, 110, Auto" Margin="0,0,0,8" VerticalAlignment="Top">
+                                                    <!-- Product Autocomplete -->
+                                                    <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,8,0">
+                                                        <TextBox Watermark="Search product..." Text="{Binding ProductSearchText, Mode=TwoWay}" FontSize="12"/>
+                                                        <ListBox ItemsSource="{Binding MatchedProducts}" 
+                                                                 IsVisible="{Binding IsDropdownVisible}" 
+                                                                 MaxHeight="120" BorderThickness="1" BorderBrush="{DynamicResource BorderColor}" CornerRadius="4">
+                                                            <ListBox.ItemTemplate>
+                                                                <DataTemplate DataType="domain:Product">
+                                                                    <Button Content="{Binding Name}" 
+                                                                            Command="{Binding $parent[ListBox].((vm:SalesItemRow)DataContext).SelectProductCommand}" 
+                                                                            CommandParameter="{Binding .}" 
+                                                                            Background="Transparent" 
+                                                                            HorizontalAlignment="Stretch" 
+                                                                            HorizontalContentAlignment="Left"
+                                                                            FontSize="11" Padding="4,2"/>
+                                                                </DataTemplate>
+                                                            </ListBox.ItemTemplate>
+                                                        </ListBox>
+                                                    </StackPanel>
+
+                                                    <!-- Quantity -->
+                                                    <TextBox Grid.Column="1" Text="{Binding Quantity}" TextAlignment="Center" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Top"/>
+
+                                                    <!-- Unit Price -->
+                                                    <TextBox Grid.Column="2" Text="{Binding UnitPrice}" TextAlignment="Right" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Top"/>
+
+                                                    <!-- Tax Dropdown -->
+                                                    <ComboBox Grid.Column="3" ItemsSource="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).SalesTaxes}" 
+                                                              SelectedItem="{Binding SelectedTax}" DisplayMemberBinding="{Binding Name}" 
+                                                              HorizontalAlignment="Stretch" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Top"/>
+
+                                                    <!-- Row Total Price -->
+                                                    <TextBlock Grid.Column="4" Text="{Binding TotalPrice, StringFormat='{}{0:N2}'}" TextAlignment="Right" VerticalAlignment="Top" FontWeight="SemiBold" FontSize="12" Margin="5,8,8,0"/>
+
+                                                    <!-- Remove Row Button -->
+                                                    <Button Grid.Column="5" Content="✕" 
+                                                            Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).RemoveItemRowCommand}" 
+                                                            CommandParameter="{Binding .}" 
+                                                            Background="#C62828" Foreground="White" Width="28" Height="28" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" CornerRadius="4" FontSize="11" VerticalAlignment="Top"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <Button Content="+ Add Product Line" Command="{Binding AddItemRowCommand}" Background="#007ACC" Foreground="White" Padding="10,5" FontSize="12" CornerRadius="4"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Summary Totals Section -->
+                            <Grid ColumnDefinitions="*, Auto" Margin="0,15,0,0">
+                                <TextBlock Grid.Column="0" Text="{Binding OrderTaxBreakdownText}" Foreground="{DynamicResource SubTextColor}" FontSize="12" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Spacing="8" Width="300" HorizontalAlignment="Right">
+                                    <Grid ColumnDefinitions="*, *">
+                                        <TextBlock Text="Subtotal (Exclusive of Taxes):" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding OrderSubtotalAmount, StringFormat='{}{0:N2} RWF'}" TextAlignment="Right" FontWeight="SemiBold" FontSize="12"/>
+                                    </Grid>
+                                    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,5,0,0">
+                                        <Grid ColumnDefinitions="*, *">
+                                            <TextBlock Text="Total Amount:" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Foreground="#2E7D32"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding OrderTotalAmount, StringFormat='{}{0:N2} RWF'}" TextAlignment="Right" FontWeight="Bold" FontSize="16" Foreground="#2E7D32"/>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Bottom Buttons -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,15,0,0">
+                        <TextBlock Text="{Binding ErrorMessage}" Foreground="Red" FontSize="12" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                        <Button Content="Cancel" Command="{Binding CloseFormCommand}" Background="#757575" Foreground="White" Padding="15,8" CornerRadius="4"/>
+                        <Button Content="Save Quotation" Command="{Binding SaveSaleCommand}" Background="#2E7D32" Foreground="White" Padding="15,8" CornerRadius="4" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Inline New Customer Modal (Layer 2) -->
+        <Grid Background="#B0000000" IsVisible="{Binding IsCreateCustomerModalOpen}" ZIndex="20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Width="450" Height="400" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <TextBlock Grid.Row="0" Margin="0,0,0,12" Text="Create New Customer / Partner" FontSize="16" FontWeight="Bold" Foreground="#2E7D32"/>
+                    
+                    <StackPanel Grid.Row="1" Spacing="10" Margin="0,10,0,0">
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="Customer Name *" FontSize="11" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding NewCustomerName}" Watermark="Enter company or individual name..."/>
+                        </StackPanel>
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="Phone Number" FontSize="11" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding NewCustomerPhone}" Watermark="e.g. +250788000000"/>
+                        </StackPanel>
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="Email Address" FontSize="11" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding NewCustomerEmail}" Watermark="e.g. contact@domain.com"/>
+                        </StackPanel>
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="Physical Address" FontSize="11" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding NewCustomerAddress}" Watermark="Street/City details..."/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding NewCustomerErrorMessage}" Foreground="Red" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Button Content="Cancel" Command="{Binding CloseCreateCustomerModalCommand}" Background="#757575" Foreground="White" Padding="10,6" CornerRadius="4" FontSize="12"/>
+                        <Button Content="Save Customer" Command="{Binding SaveNewCustomerCommand}" Background="#2E7D32" Foreground="White" Padding="10,6" CornerRadius="4" FontSize="12" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Inline New Payment Term Modal (Layer 2) -->
+        <Grid Background="#B0000000" IsVisible="{Binding IsCreatePaymentTermModalOpen}" ZIndex="20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Width="450" Height="280" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <TextBlock Grid.Row="0" Margin="0,0,0,12" Text="Create New Payment Term" FontSize="16" FontWeight="Bold" Foreground="#2E7D32"/>
+                    
+                    <StackPanel Grid.Row="1" Spacing="10" Margin="0,10,0,0">
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="Term Code / Name *" FontSize="11" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding NewPaymentTermName}" Watermark="e.g. Net 45, 60 Days..."/>
+                        </StackPanel>
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="Description" FontSize="11" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding NewPaymentTermDescription}" Watermark="Short description details..."/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding NewPaymentTermErrorMessage}" Foreground="Red" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Button Content="Cancel" Command="{Binding CloseCreatePaymentTermModalCommand}" Background="#757575" Foreground="White" Padding="10,6" CornerRadius="4" FontSize="12"/>
+                        <Button Content="Save Term" Command="{Binding SaveNewPaymentTermCommand}" Background="#2E7D32" Foreground="White" Padding="10,6" CornerRadius="4" FontSize="12" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Centered Details Modal Overlay (Layer 1) -->
+        <Grid Background="#7F000000" IsVisible="{Binding IsDetailsOpen}" ZIndex="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource ContentBackgroundColor}"
+                    BorderBrush="{DynamicResource BorderColor}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    MaxWidth="1180"
+                    MinWidth="800"
+                    MinHeight="500"
+                    Width="1100"
+                    Height="680"
+                    Margin="20"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    BoxShadow="0 8 32 0 #40000000"
+                    Padding="25"
+                    helpers:ResizableHelper.CanResize="True">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <!-- Title and Status -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,15">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="Sales Order Details - " FontSize="20" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding DetailedSo.SONumber}" FontSize="20" FontWeight="Bold" Foreground="#007ACC"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <!-- Delivery status badge -->
+                            <Border CornerRadius="4" Padding="6,2" Tag="{Binding DetailedSo.DeliveryStatus}">
+                                <Border.Styles>
+                                    <Style Selector="Border[Tag=Delivered]">
+                                        <Setter Property="Background" Value="#2E7D32"/>
+                                    </Style>
+                                    <Style Selector="Border[Tag=Pending]">
+                                        <Setter Property="Background" Value="#EF6C00"/>
+                                    </Style>
+                                    <Style Selector="Border[Tag=Partially Delivered]">
+                                        <Setter Property="Background" Value="#0288D1"/>
+                                    </Style>
+                                </Border.Styles>
+                                <TextBlock Text="{Binding DetailedSo.DeliveryStatus, StringFormat='Delivery: {0}'}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                            </Border>
+                            <!-- Billing status badge -->
+                            <Border CornerRadius="4" Padding="6,2" Tag="{Binding DetailedSo.BillingStatus}">
+                                <Border.Styles>
+                                    <Style Selector="Border[Tag=Invoiced]">
+                                        <Setter Property="Background" Value="#2E7D32"/>
+                                    </Style>
+                                    <Style Selector="Border[Tag=Waiting Invoice]">
+                                        <Setter Property="Background" Value="#EF6C00"/>
+                                    </Style>
+                                </Border.Styles>
+                                <TextBlock Text="{Binding DetailedSo.BillingStatus, StringFormat='Invoice: {0}'}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Scrollable Body with Details -->
+                    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Spacing="20">
+                            <!-- Two Column Layout for Header Fields -->
+                            <Grid ColumnDefinitions="*, 25, *">
+                                <!-- Left Column -->
+                                <StackPanel Grid.Column="0" Spacing="12">
+                                    <Grid ColumnDefinitions="120, *">
+                                        <TextBlock Grid.Column="0" Text="Customer:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding DetailedCustomer.Name}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="120, *">
+                                        <TextBlock Grid.Column="0" Text="Phone / Email:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DetailedCustomer.Phone}"/>
+                                            <TextBlock Text="|"/>
+                                            <TextBlock Text="{Binding DetailedCustomer.Email}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="120, *">
+                                        <TextBlock Grid.Column="0" Text="Company / Entity:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding DetailedSo.Company}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="120, *">
+                                        <TextBlock Grid.Column="0" Text="Seller / Creator:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding DetailedSo.CreatedByUsername}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- Right Column -->
+                                <StackPanel Grid.Column="2" Spacing="12">
+                                    <Grid ColumnDefinitions="140, *">
+                                        <TextBlock Grid.Column="0" Text="Order Date:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding DetailedSo.OrderDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="140, *">
+                                        <TextBlock Grid.Column="0" Text="Expected Delivery:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding DetailedSo.DeliveryDate, StringFormat='{}{0:yyyy-MM-dd}'}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="140, *">
+                                        <TextBlock Grid.Column="0" Text="Payment Terms:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding DetailedSo.PaymentTerms}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="140, *">
+                                        <TextBlock Grid.Column="0" Text="Currency:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding DetailedSo.Currency}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Products Table -->
+                            <StackPanel Spacing="5" Margin="0,10,0,0">
+                                <TextBlock Text="Ordered Products" FontSize="14" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4">
+                                    <DataGrid ItemsSource="{Binding DetailedItems}" AutoGenerateColumns="False" GridLinesVisibility="Horizontal" CanUserResizeColumns="True" Height="220">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Product Name" Binding="{Binding ProductName}" Width="*"/>
+                                            <DataGridTextColumn Header="Ordered Qty" Binding="{Binding QuantityOrdered}" Width="110"/>
+                                            <DataGridTextColumn Header="Delivered Qty" Binding="{Binding QuantityDelivered}" Width="110"/>
+                                            <DataGridTextColumn Header="Invoiced Qty" Binding="{Binding QuantityInvoiced}" Width="110"/>
+                                            <DataGridTextColumn Header="Unit Price" Binding="{Binding UnitPrice, StringFormat='{}{0:N2}'}" Width="110"/>
+                                            <DataGridTextColumn Header="Tax" Binding="{Binding TaxName}" Width="120"/>
+                                            <DataGridTextColumn Header="Total Cost" Binding="{Binding Amount, StringFormat='{}{0:N2}'}" Width="130"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Notes section -->
+                            <StackPanel Spacing="5" Margin="0,5,0,0">
+                                <TextBlock Text="Terms &amp; Notes" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DetailedSo.Notes}" IsVisible="{Binding DetailedSo.Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" FontStyle="Italic" TextWrapping="Wrap"/>
+                                <TextBlock Text="No additional notes." IsVisible="{Binding DetailedSo.Notes, Converter={x:Static StringConverters.IsNullOrEmpty}}" FontStyle="Italic" Foreground="Gray"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Footer Action Buttons & Total -->
+                    <Border Grid.Row="2" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,20,0,0">
+                        <Grid ColumnDefinitions="Auto, *">
+                            <StackPanel Orientation="Vertical" Spacing="4" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="Sub Total:" FontSize="12" Foreground="Gray" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DetailedSubtotal, StringFormat='{}{0:N2}'}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DetailedSo.Currency}" FontSize="12" Foreground="Gray" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding DetailedTaxBreakdownText}" FontSize="11" Foreground="Gray" TextWrapping="Wrap" MaxWidth="400"/>
+                                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,5,0,0">
+                                    <TextBlock Text="Total Amount:" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DetailedTotal, StringFormat='{}{0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="#007ACC" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DetailedSo.Currency}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+                            
+                            <WrapPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                                <Button Content="Validate / Deliver Goods" Command="{Binding ValidateDeliveryCommand}" IsEnabled="{Binding CanDeliverDetailedSo}" Background="#2E7D32" Foreground="White" Margin="5"/>
+                                <Button Content="Create Invoice" Command="{Binding InvoiceDetailedOrderCommand}" IsEnabled="{Binding CanInvoiceDetailedSo}" Background="#EF6C00" Foreground="White" Margin="5"/>
+                                <Button Content="Print SO (PDF)" Command="{Binding PrintDetailedSoPdfCommand}" Background="#007ACC" Foreground="White" Margin="5"/>
+                                <Button Content="Print Invoice (PDF)" Command="{Binding PrintDetailedInvoicePdfCommand}" IsVisible="{Binding IsDetailedSoInvoiced}" Background="#2E7D32" Foreground="White" Margin="5"/>
+                                <Button Content="Cancel Order" Command="{Binding CancelDetailedSoCommand}" IsEnabled="{Binding CanCancelDetailedSo}" Background="#E53935" Foreground="White" Margin="5"/>
+                                <Button Content="{Binding ArchiveDetailedSoButtonText}" Command="{Binding ToggleArchiveDetailedSoCommand}" Background="#78909C" Foreground="White" Margin="5"/>
+                                <Button Content="Delete Order" Command="{Binding DeleteDetailedSoCommand}" Background="#D32F2F" Foreground="White" Margin="5"/>
+                                <Button Content="Close" Command="{Binding CloseDetailsCommand}" Margin="5"/>
+                            </WrapPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Delivery Quantities Modal Overlay (Layer 2) -->
+        <Grid Background="#B0000000" IsVisible="{Binding IsDeliveryModalOpen}" ZIndex="20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Width="700" Height="450" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <TextBlock Grid.Row="0" Margin="0,0,0,12" Text="Ship / Deliver Sales Order Items" FontSize="16" FontWeight="Bold" Foreground="#E65100"/>
+                    
+                    <!-- Table Grid of items to deliver -->
+                    <ScrollViewer Grid.Row="1">
+                        <ItemsControl ItemsSource="{Binding DeliveryRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:SalesOrderDeliveryRow">
+                                    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="0,8" Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="*, 80, 80, 100, 100">
+                                            <StackPanel Grid.Column="0" Spacing="2">
+                                                <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold" FontSize="12"/>
+                                                <TextBlock Text="{Binding AvailableStock, StringFormat='{}Stock Available: {0}'}" FontSize="10" Foreground="Gray"/>
+                                            </StackPanel>
+                                            
+                                            <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                                <TextBlock Text="Ordered" FontSize="9" Foreground="Gray"/>
+                                                <TextBlock Text="{Binding QuantityOrdered}" FontSize="12"/>
+                                            </StackPanel>
+ 
+                                            <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                                <TextBlock Text="Delivered" FontSize="9" Foreground="Gray"/>
+                                                <TextBlock Text="{Binding QuantityDeliveredSoFar}" FontSize="12"/>
+                                            </StackPanel>
+ 
+                                            <StackPanel Grid.Column="3" Margin="5,0,0,0">
+                                                <TextBlock Text="Deliver Qty *" FontSize="9" Foreground="Gray"/>
+                                                <TextBox Text="{Binding QuantityToDeliver}" FontSize="12" TextAlignment="Center" Height="28"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding DeliveryErrorMessage}" Foreground="Red" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Button Content="Cancel" Command="{Binding CloseDeliveryModalCommand}" Background="#757575" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12"/>
+                        <Button Content="Confirm Shipment" Command="{Binding SubmitDeliveryCommand}" Background="#E65100" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

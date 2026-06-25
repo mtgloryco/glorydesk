@@ -8,174 +8,352 @@
              x:Class="InventoryManagementSystem.UI.Views.ReportsView"
              x:DataType="vm:ReportsViewModel"
              x:Name="Root">
+    
+    <UserControl.Styles>
+        <Style Selector="TextBlock.header">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Foreground" Value="#007ACC"/>
+        </Style>
+        <Style Selector="TextBlock.subHeader">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryColor}"/>
+        </Style>
+    </UserControl.Styles>
+    
     <Grid RowDefinitions="Auto, *" Margin="30">
         <!-- Header & Actions -->
         <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,25">
             <StackPanel Spacing="10">
                 <TextBlock Text="Reports &amp; Analytics" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}" />
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <Button Content="All Products" Command="{Binding LoadStockReportCommand}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"/>
-                    <Button Content="Low Stock" Command="{Binding LoadLowStockReportCommand}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"/>
-                    <Button Content="Stock Audit" Command="{Binding LoadStockHistoryReportCommand}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"/>
-                    <Button Content="Monthly Profit" Command="{Binding LoadMonthlyProfitReportCommand}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"/>
-                </StackPanel>
+                <TabStrip SelectedIndex="{Binding SelectedTabIndex}">
+                    <TabItem Header="Balance Sheet"/>
+                    <TabItem Header="Profit &amp; Loss"/>
+                    <TabItem Header="Stock Status"/>
+                    <TabItem Header="Stock History"/>
+                </TabStrip>
             </StackPanel>
             
-            <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="1" VerticalAlignment="Top">
+            <StackPanel Orientation="Horizontal" Spacing="10" Grid.Column="1" VerticalAlignment="Center">
+                 <Button Content="Refresh" Command="{Binding LoadSelectedReportAsync}" 
+                         Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="15,8" CornerRadius="6"
+                         IsVisible="{Binding !IsStockStatusSelected}"/>
+                         
                  <Button Content="View Details" Command="{Binding OpenDetailsCommand}" 
                          IsEnabled="{Binding SelectedStockMovement, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" 
                          Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="15,8" CornerRadius="6"
-                         IsVisible="{Binding IsHistoryReport}"/>
+                         IsVisible="{Binding IsStockHistorySelected}"/>
                  
-                 <Button Content="Export to CSV" Command="{Binding ExportToCsvCommand}" Background="#007ACC" Foreground="White" Padding="15,8" CornerRadius="6"/>
+                 <Button Content="Export to CSV" Command="{Binding ExportToCsvCommand}" Background="#007ACC" Foreground="White" Padding="15,8" CornerRadius="6"
+                         IsVisible="{Binding IsStockStatusSelected}"/>
             </StackPanel>
         </Grid>
 
         <Border Grid.Row="1" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="8" BoxShadow="0 4 15 0 #10000000" BorderThickness="0" ClipToBounds="True">
              <Grid RowDefinitions="Auto, *">
-                 <Border Background="{DynamicResource PageBackgroundColor}" Padding="15" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
-                     <TextBlock Text="{Binding ReportTitle}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryColor}" FontSize="16"/>
-                 </Border>
-                 
-                 <Panel Grid.Row="1">
-                     <!-- Stock Reports -->
-                     <DataGrid ItemsSource="{Binding ReportData}" 
-                               IsVisible="{Binding IsStockReport}"
-                               AutoGenerateColumns="False" 
-                               IsReadOnly="True" 
-                               GridLinesVisibility="Horizontal"
-                               BorderThickness="0" 
-                               Background="{DynamicResource ContentBackgroundColor}"
-                               RowHeight="45">
-                          <DataGrid.Columns>
-                             <DataGridTextColumn Header="SKU" Binding="{Binding SKU}" Width="120"/>
-                             <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
-                             <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120"/>
-                             <DataGridTextColumn Header="Qty" Binding="{Binding StockQuantity}" Width="80"/>
-                             <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="80"/>
-                             <DataGridTemplateColumn Header="Price" Width="100">
-                                 <DataGridTemplateColumn.CellTemplate>
-                                     <DataTemplate>
-                                         <TextBlock VerticalAlignment="Center" Margin="10,0,0,0">
-                                             <Run Text="{Binding Price, StringFormat='{}{0:N0}'}"/>
-                                             <Run Text="{Binding #Root.DataContext.CurrencySymbol}"/>
-                                         </TextBlock>
-                                     </DataTemplate>
-                                 </DataGridTemplateColumn.CellTemplate>
-                             </DataGridTemplateColumn>
-                          </DataGrid.Columns>
-                      </DataGrid>
+                  <Border Background="{DynamicResource PageBackgroundColor}" Padding="15" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
+                      <TextBlock Text="{Binding ReportTitle}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryColor}" FontSize="16"/>
+                  </Border>
+                  
+                  <Panel Grid.Row="1">
+                      <!-- Balance Sheet Report -->
+                      <ScrollViewer IsVisible="{Binding IsBalanceSheetSelected}" Margin="20">
+                          <StackPanel Spacing="15">
+                              <Grid ColumnDefinitions="*, Auto" Margin="5,0,15,5">
+                                  <TextBlock Text="REPORT LINE" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12"/>
+                                  <TextBlock Grid.Column="1" Text="BALANCE" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12" Margin="0,0,10,0"/>
+                              </Grid>
+                              <Separator Height="1" Background="{DynamicResource BorderColor}" Margin="0,0,0,5"/>
+                              <ItemsControl ItemsSource="{Binding BalanceSheetLines}">
+                                  <ItemsControl.ItemTemplate>
+                                      <DataTemplate DataType="vm:ReportLineWrapper">
+                                          <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="0,8">
+                                              <Panel>
+                                                  <!-- Non-clickable header/structural lines -->
+                                                  <Grid ColumnDefinitions="*, Auto" Margin="{Binding Margin}" IsVisible="{Binding !Result.HasComputations}">
+                                                      <TextBlock Text="{Binding Name}" 
+                                                                 Classes.header="{Binding IsHeader}"
+                                                                 Classes.subHeader="{Binding IsSubHeader}"
+                                                                 VerticalAlignment="Center"/>
+                                                      
+                                                      <TextBlock Grid.Column="1" 
+                                                                 Text="{Binding FormattedBalance}" 
+                                                                 Classes.header="{Binding IsHeader}"
+                                                                 Classes.subHeader="{Binding IsSubHeader}"
+                                                                 TextAlignment="Right" 
+                                                                 VerticalAlignment="Center"
+                                                                 Margin="0,0,10,0"/>
+                                                  </Grid>
+                                                  
+                                                  <!-- Clickable computed balance lines -->
+                                                  <Button Command="{Binding #Root.DataContext.OpenJournalEntriesCommand}"
+                                                          CommandParameter="{Binding .}"
+                                                          Background="#00000000"
+                                                          BorderThickness="0"
+                                                          Padding="0"
+                                                          HorizontalAlignment="Stretch"
+                                                          HorizontalContentAlignment="Stretch"
+                                                          Cursor="Hand"
+                                                          IsVisible="{Binding Result.HasComputations}">
+                                                      <Grid ColumnDefinitions="*, Auto" Margin="{Binding Margin}" Background="#00000000" Cursor="Hand">
+                                                          <TextBlock Text="{Binding Name}" 
+                                                                     Classes.header="{Binding IsHeader}"
+                                                                     Classes.subHeader="{Binding IsSubHeader}"
+                                                                     Foreground="#007ACC"
+                                                                     TextDecorations="Underline"
+                                                                     Cursor="Hand"
+                                                                     VerticalAlignment="Center"/>
+                                                          
+                                                          <TextBlock Grid.Column="1" 
+                                                                     Text="{Binding FormattedBalance}" 
+                                                                     Classes.header="{Binding IsHeader}"
+                                                                     Classes.subHeader="{Binding IsSubHeader}"
+                                                                     Foreground="#007ACC"
+                                                                     TextDecorations="Underline"
+                                                                     TextAlignment="Right" 
+                                                                     Cursor="Hand"
+                                                                     VerticalAlignment="Center"
+                                                                     Margin="0,0,10,0"/>
+                                                      </Grid>
+                                                  </Button>
+                                              </Panel>
+                                          </Border>
+                                      </DataTemplate>
+                                  </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                          </StackPanel>
+                      </ScrollViewer>
 
-                     <!-- Audit Reports -->
-                     <DataGrid ItemsSource="{Binding StockHistoryData}" 
-                               SelectedItem="{Binding SelectedStockMovement}"
-                               IsVisible="{Binding IsHistoryReport}"
-                               AutoGenerateColumns="False" 
-                               IsReadOnly="True" 
-                               GridLinesVisibility="Horizontal"
-                               BorderThickness="0" 
-                               Background="{DynamicResource ContentBackgroundColor}"
-                               RowHeight="45">
-                          <DataGrid.Columns>
-                             <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="160"/>
-                             <DataGridTextColumn Header="SKU" Binding="{Binding ProductId}" Width="100"/>
-                             <DataGridTextColumn Header="Type" Binding="{Binding MovementType}" Width="80"/>
-                             <DataGridTextColumn Header="Qty" Binding="{Binding QuantityChanged}" Width="80"/>
-                             <DataGridTextColumn Header="Batch Details" Binding="{Binding BatchTraceInfo}" Width="200"/>
-                             <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*"/>
-                             <DataGridTextColumn Header="Operator" Binding="{Binding Username}" Width="120"/>
-                          </DataGrid.Columns>
-                      </DataGrid>
+                      <!-- Profit and Loss Report -->
+                      <ScrollViewer IsVisible="{Binding IsProfitAndLossSelected}" Margin="20">
+                          <StackPanel Spacing="15">
+                              <Grid ColumnDefinitions="*, Auto" Margin="5,0,15,5">
+                                  <TextBlock Text="REPORT LINE" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12"/>
+                                  <TextBlock Grid.Column="1" Text="BALANCE" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12" Margin="0,0,10,0"/>
+                              </Grid>
+                              <Separator Height="1" Background="{DynamicResource BorderColor}" Margin="0,0,0,5"/>
+                              <ItemsControl ItemsSource="{Binding ProfitAndLossLines}">
+                                  <ItemsControl.ItemTemplate>
+                                      <DataTemplate DataType="vm:ReportLineWrapper">
+                                          <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="0,8">
+                                              <Panel>
+                                                  <!-- Non-clickable header/structural lines -->
+                                                  <Grid ColumnDefinitions="*, Auto" Margin="{Binding Margin}" IsVisible="{Binding !Result.HasComputations}">
+                                                      <TextBlock Text="{Binding Name}" 
+                                                                 Classes.header="{Binding IsHeader}"
+                                                                 Classes.subHeader="{Binding IsSubHeader}"
+                                                                 VerticalAlignment="Center"/>
+                                                      
+                                                      <TextBlock Grid.Column="1" 
+                                                                 Text="{Binding FormattedBalance}" 
+                                                                 Classes.header="{Binding IsHeader}"
+                                                                 Classes.subHeader="{Binding IsSubHeader}"
+                                                                 TextAlignment="Right" 
+                                                                 VerticalAlignment="Center"
+                                                                 Margin="0,0,10,0"/>
+                                                  </Grid>
+                                                  
+                                                  <!-- Clickable computed balance lines -->
+                                                  <Button Command="{Binding #Root.DataContext.OpenJournalEntriesCommand}"
+                                                          CommandParameter="{Binding .}"
+                                                          Background="#00000000"
+                                                          BorderThickness="0"
+                                                          Padding="0"
+                                                          HorizontalAlignment="Stretch"
+                                                          HorizontalContentAlignment="Stretch"
+                                                          Cursor="Hand"
+                                                          IsVisible="{Binding Result.HasComputations}">
+                                                      <Grid ColumnDefinitions="*, Auto" Margin="{Binding Margin}" Background="#00000000" Cursor="Hand">
+                                                          <TextBlock Text="{Binding Name}" 
+                                                                     Classes.header="{Binding IsHeader}"
+                                                                     Classes.subHeader="{Binding IsSubHeader}"
+                                                                     Foreground="#007ACC"
+                                                                     TextDecorations="Underline"
+                                                                     Cursor="Hand"
+                                                                     VerticalAlignment="Center"/>
+                                                          
+                                                          <TextBlock Grid.Column="1" 
+                                                                     Text="{Binding FormattedBalance}" 
+                                                                     Classes.header="{Binding IsHeader}"
+                                                                     Classes.subHeader="{Binding IsSubHeader}"
+                                                                     Foreground="#007ACC"
+                                                                     TextDecorations="Underline"
+                                                                     TextAlignment="Right" 
+                                                                     Cursor="Hand"
+                                                                     VerticalAlignment="Center"
+                                                                     Margin="0,0,10,0"/>
+                                                      </Grid>
+                                                  </Button>
+                                              </Panel>
+                                          </Border>
+                                      </DataTemplate>
+                                  </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                          </StackPanel>
+                      </ScrollViewer>
 
-                      <!-- Monthly Profit Reports -->
-                      <DataGrid ItemsSource="{Binding MonthlyProfitData}" 
-                                IsVisible="{Binding IsProfitReport}"
+                      <!-- Stock Status View -->
+                      <Grid RowDefinitions="Auto, *" IsVisible="{Binding IsStockStatusSelected}">
+                          <!-- Sub-toggle for Stock Status -->
+                          <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="25" Margin="20,15">
+                              <RadioButton Content="All Products" IsChecked="{Binding !IsLowStockReport}" Command="{Binding LoadStockReportCommand}" GroupName="StockFilter"/>
+                              <RadioButton Content="Low Stock (&lt; 5 items)" IsChecked="{Binding IsLowStockReport}" Command="{Binding LoadLowStockReportCommand}" GroupName="StockFilter"/>
+                          </StackPanel>
+                          <DataGrid Grid.Row="1" ItemsSource="{Binding ReportData}" 
+                                    AutoGenerateColumns="False" 
+                                    IsReadOnly="True" 
+                                    GridLinesVisibility="Horizontal"
+                                    BorderThickness="0" 
+                                    Background="{DynamicResource ContentBackgroundColor}"
+                                    RowHeight="45">
+                               <DataGrid.Columns>
+                                  <DataGridTextColumn Header="SKU" Binding="{Binding SKU}" Width="120"/>
+                                  <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                                  <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120"/>
+                                  <DataGridTextColumn Header="Qty" Binding="{Binding StockQuantity}" Width="80"/>
+                                  <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="80"/>
+                                  <DataGridTemplateColumn Header="Price" Width="100">
+                                      <DataGridTemplateColumn.CellTemplate>
+                                          <DataTemplate>
+                                              <TextBlock VerticalAlignment="Center" Margin="10,0,0,0">
+                                                  <Run Text="{Binding Price, StringFormat='{}{0:N0}'}"/>
+                                                  <Run Text="{Binding #Root.DataContext.CurrencySymbol}"/>
+                                              </TextBlock>
+                                          </DataTemplate>
+                                      </DataGridTemplateColumn.CellTemplate>
+                                  </DataGridTemplateColumn>
+                               </DataGrid.Columns>
+                           </DataGrid>
+                      </Grid>
+
+                      <!-- Audit Reports -->
+                      <DataGrid ItemsSource="{Binding StockHistoryData}" 
+                                SelectedItem="{Binding SelectedStockMovement}"
+                                IsVisible="{Binding IsStockHistorySelected}"
                                 AutoGenerateColumns="False" 
                                 IsReadOnly="True" 
                                 GridLinesVisibility="Horizontal"
                                 BorderThickness="0" 
                                 Background="{DynamicResource ContentBackgroundColor}"
                                 RowHeight="45">
-                          <DataGrid.Columns>
-                             <DataGridTextColumn Header="Month" Binding="{Binding Month}" Width="*"/>
-                             <DataGridTemplateColumn Header="Revenue" Width="150">
-                                 <DataGridTemplateColumn.CellTemplate>
-                                     <DataTemplate>
-                                         <TextBlock VerticalAlignment="Center" Margin="10,0,0,0">
-                                             <Run Text="{Binding Revenue, StringFormat='{}{0:N0}'}"/>
-                                             <Run Text="{Binding #Root.DataContext.CurrencySymbol}"/>
-                                         </TextBlock>
-                                     </DataTemplate>
-                                 </DataGridTemplateColumn.CellTemplate>
-                             </DataGridTemplateColumn>
-                             <DataGridTemplateColumn Header="COGS (Cost)" Width="150">
-                                 <DataGridTemplateColumn.CellTemplate>
-                                     <DataTemplate>
-                                         <TextBlock VerticalAlignment="Center" Margin="10,0,0,0">
-                                             <Run Text="{Binding COGS, StringFormat='{}{0:N0}'}"/>
-                                             <Run Text="{Binding #Root.DataContext.CurrencySymbol}"/>
-                                         </TextBlock>
-                                     </DataTemplate>
-                                 </DataGridTemplateColumn.CellTemplate>
-                             </DataGridTemplateColumn>
-                             <DataGridTemplateColumn Header="Gross Profit" Width="150">
-                                 <DataGridTemplateColumn.CellTemplate>
-                                     <DataTemplate>
-                                         <TextBlock VerticalAlignment="Center" Margin="10,0,0,0">
-                                             <Run Text="{Binding Profit, StringFormat='{}{0:N0}'}"/>
-                                             <Run Text="{Binding #Root.DataContext.CurrencySymbol}"/>
-                                         </TextBlock>
-                                     </DataTemplate>
-                                 </DataGridTemplateColumn.CellTemplate>
-                             </DataGridTemplateColumn>
-                          </DataGrid.Columns>
-                      </DataGrid>
-                 </Panel>
+                           <DataGrid.Columns>
+                              <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="160"/>
+                              <DataGridTextColumn Header="SKU" Binding="{Binding ProductId}" Width="100"/>
+                              <DataGridTextColumn Header="Type" Binding="{Binding MovementType}" Width="80"/>
+                              <DataGridTextColumn Header="Qty" Binding="{Binding QuantityChanged}" Width="80"/>
+                              <DataGridTextColumn Header="Batch Details" Binding="{Binding BatchTraceInfo}" Width="200"/>
+                              <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*"/>
+                              <DataGridTextColumn Header="Operator" Binding="{Binding Username}" Width="120"/>
+                           </DataGrid.Columns>
+                       </DataGrid>
+                  </Panel>
              </Grid>
         </Border>
 
         <!-- DETAILS MODAL -->
         <Border Background="#44000000" Grid.RowSpan="2" IsVisible="{Binding IsDetailsModalOpen}">
              <Border Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" MinWidth="400" MinHeight="300" Width="600" Height="480" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="30" BoxShadow="0 10 40 0 #44000000" helpers:ResizableHelper.CanResize="True">
-                 <Grid RowDefinitions="Auto, *, Auto">
-                     <StackPanel Spacing="10">
-                         <TextBlock Text="Transaction Details" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
-                         <StackPanel Orientation="Horizontal" Spacing="20">
-                              <TextBlock Text="{Binding SelectedStockMovement.Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Foreground="{DynamicResource TextSecondaryColor}"/>
-                              <TextBlock Text="{Binding SelectedStockMovement.MovementType}" FontWeight="Bold" Foreground="#007ACC"/>
-                         </StackPanel>
-                         <Separator Height="1" Background="{DynamicResource BorderColor}" Margin="0,10"/>
-                     </StackPanel>
+                  <Grid RowDefinitions="Auto, *, Auto">
+                      <StackPanel Spacing="10">
+                          <TextBlock Text="Transaction Details" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                          <StackPanel Orientation="Horizontal" Spacing="20">
+                               <TextBlock Text="{Binding SelectedStockMovement.Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Foreground="{DynamicResource TextSecondaryColor}"/>
+                               <TextBlock Text="{Binding SelectedStockMovement.MovementType}" FontWeight="Bold" Foreground="#007ACC"/>
+                          </StackPanel>
+                          <Separator Height="1" Background="{DynamicResource BorderColor}" Margin="0,10"/>
+                      </StackPanel>
 
-                     <ScrollViewer Grid.Row="1" Margin="0,15">
-                         <StackPanel Spacing="15">
-                             <StackPanel>
-                                 <TextBlock Text="Performed By" FontSize="12" Foreground="#888"/>
-                                 <TextBlock Text="{Binding SelectedStockMovement.Username}" FontSize="16"/>
-                             </StackPanel>
-                             <StackPanel>
-                                 <TextBlock Text="Product ID (SKU)" FontSize="12" Foreground="#888"/>
-                                 <TextBlock Text="{Binding SelectedStockMovement.ProductId}" FontSize="16"/>
-                             </StackPanel>
-                             <StackPanel>
-                                 <TextBlock Text="Reason" FontSize="12" Foreground="{DynamicResource TextSecondaryColor}"/>
-                                 <TextBlock Text="{Binding SelectedStockMovement.Reason}" FontSize="16" TextWrapping="Wrap"/>
-                             </StackPanel>
-                             <Border Background="{DynamicResource PageBackgroundColor}" Padding="15" CornerRadius="6">
-                                 <Grid ColumnDefinitions="*, Auto">
-                                     <StackPanel Spacing="5">
-                                        <TextBlock Text="Batch Trace / Cost Details" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryColor}"/>
-                                        <TextBlock Text="{Binding SelectedStockMovement.BatchTraceInfo}" TextWrapping="Wrap" LineHeight="22"/>
-                                     </StackPanel>
-                                     <Button Grid.Column="1" Command="{Binding CopyToClipboardCommand}" CommandParameter="{Binding SelectedStockMovement.BatchTraceInfo}" 
-                                             Content="Copy" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" VerticalAlignment="Top"/>
-                                 </Grid>
-                             </Border>
-                         </StackPanel>
-                     </ScrollViewer>
+                      <ScrollViewer Grid.Row="1" Margin="0,15">
+                          <StackPanel Spacing="15">
+                              <StackPanel>
+                                  <TextBlock Text="Performed By" FontSize="12" Foreground="#888"/>
+                                  <TextBlock Text="{Binding SelectedStockMovement.Username}" FontSize="16"/>
+                              </StackPanel>
+                              <StackPanel>
+                                  <TextBlock Text="Product ID (SKU)" FontSize="12" Foreground="#888"/>
+                                  <TextBlock Text="{Binding SelectedStockMovement.ProductId}" FontSize="16"/>
+                              </StackPanel>
+                              <StackPanel>
+                                  <TextBlock Text="Reason" FontSize="12" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                  <TextBlock Text="{Binding SelectedStockMovement.Reason}" FontSize="16" TextWrapping="Wrap"/>
+                              </StackPanel>
+                              <Border Background="{DynamicResource PageBackgroundColor}" Padding="15" CornerRadius="6">
+                                  <Grid ColumnDefinitions="*, Auto">
+                                      <StackPanel Spacing="5">
+                                         <TextBlock Text="Batch Trace / Cost Details" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                         <TextBlock Text="{Binding SelectedStockMovement.BatchTraceInfo}" TextWrapping="Wrap" LineHeight="22"/>
+                                      </StackPanel>
+                                      <Button Grid.Column="1" Command="{Binding CopyToClipboardCommand}" CommandParameter="{Binding SelectedStockMovement.BatchTraceInfo}" 
+                                              Content="Copy" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" VerticalAlignment="Top"/>
+                                  </Grid>
+                              </Border>
+                          </StackPanel>
+                      </ScrollViewer>
 
-                     <Button Grid.Row="2" Content="Close" Command="{Binding CloseDetailsCommand}" HorizontalAlignment="Right" Width="100" Background="#EEE"/>
-                 </Grid>
+                      <Button Grid.Row="2" Content="Close" Command="{Binding CloseDetailsCommand}" HorizontalAlignment="Right" Width="100" Background="#EEE"/>
+                  </Grid>
+             </Border>
+        </Border>
+
+        <!-- JOURNAL ENTRIES MODAL -->
+        <Border Background="#44000000" Grid.RowSpan="2" IsVisible="{Binding IsJournalModalOpen}">
+             <Border Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" MinWidth="750" MinHeight="450" Margin="40" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="25" BoxShadow="0 10 40 0 #44000000" helpers:ResizableHelper.CanResize="True">
+                  <Grid RowDefinitions="Auto, *, Auto">
+                      <StackPanel Spacing="10">
+                          <Grid ColumnDefinitions="*, Auto">
+                              <TextBlock Text="{Binding DetailedJournalTitle}" FontSize="22" FontWeight="Bold" Foreground="#007ACC"/>
+                              <Button Grid.Column="1" Content="X" Command="{Binding CloseJournalModalCommand}" Background="Transparent" BorderThickness="0" FontSize="16" FontWeight="Bold"/>
+                          </Grid>
+                          <Separator Height="1" Background="{DynamicResource BorderColor}" Margin="0,10"/>
+                      </StackPanel>
+
+                      <Border Grid.Row="1" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4">
+                          <DataGrid ItemsSource="{Binding DetailedJournalLines}" AutoGenerateColumns="False" GridLinesVisibility="Horizontal" CanUserResizeColumns="True" Background="{DynamicResource ContentBackgroundColor}">
+                              <DataGrid.Columns>
+                                  <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="Auto"/>
+                                  <DataGridTextColumn Header="Journal Entry" Binding="{Binding EntryNumber}" Width="Auto"/>
+                                  <DataGridTextColumn Header="Account (COA)" Binding="{Binding AccountDisplay}" Width="Auto"/>
+                                  <DataGridTextColumn Header="Partner" Binding="{Binding PartnerName}" Width="Auto"/>
+                                  <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="*"/>
+                                  <DataGridTextColumn Header="Debit" Binding="{Binding Debit, StringFormat='{}{0:N2}'}" Width="Auto"/>
+                                  <DataGridTextColumn Header="Credit" Binding="{Binding Credit, StringFormat='{}{0:N2}'}" Width="Auto"/>
+                                  <DataGridTextColumn Header="Matching" Binding="{Binding Matching}" Width="Auto"/>
+                              </DataGrid.Columns>
+                          </DataGrid>
+                      </Border>
+
+                      <Grid Grid.Row="2" ColumnDefinitions="*, Auto" Margin="0,15,0,0">
+                          <!-- Totals and Integrity Info -->
+                          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="25" VerticalAlignment="Center">
+                              <StackPanel Orientation="Horizontal" Spacing="8">
+                                  <TextBlock Text="Total Debit:" FontSize="14" Foreground="Gray" FontWeight="SemiBold"/>
+                                  <TextBlock Text="{Binding TotalDebit, StringFormat='{}{0:N2}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                              </StackPanel>
+                              <StackPanel Orientation="Horizontal" Spacing="8">
+                                  <TextBlock Text="Total Credit:" FontSize="14" Foreground="Gray" FontWeight="SemiBold"/>
+                                  <TextBlock Text="{Binding TotalCredit, StringFormat='{}{0:N2}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                              </StackPanel>
+                              
+                              <!-- Balanced Badge -->
+                              <Border CornerRadius="4" Padding="8,4" VerticalAlignment="Center" IsVisible="{Binding IsBalanced}" Background="#2E7D32">
+                                  <TextBlock Text="Balanced" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                              </Border>
+                              <Border CornerRadius="4" Padding="8,4" VerticalAlignment="Center" IsVisible="{Binding !IsBalanced}" Background="#D32F2F">
+                                  <StackPanel Orientation="Horizontal" Spacing="4">
+                                      <TextBlock Text="Unbalanced (Diff:" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                      <TextBlock Text="{Binding BalanceDifference, StringFormat='{}{0:N2}'}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                      <TextBlock Text=" " Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                      <TextBlock Text="{Binding CurrencySymbol}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                      <TextBlock Text=")" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                  </StackPanel>
+                              </Border>
+                          </StackPanel>
+
+                          <!-- Close Button -->
+                          <Button Grid.Column="1" Content="Close" Command="{Binding CloseJournalModalCommand}" Width="100" HorizontalContentAlignment="Center"/>
+                      </Grid>
+                  </Grid>
              </Border>
         </Border>
     </Grid>

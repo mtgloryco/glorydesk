@@ -178,6 +178,7 @@ namespace InventoryManagementSystem.Services
 
             foreach (var line in allLines)
             {
+                bool hasComps = allComputations.Any(c => c.ReportLineId == line.Id);
                 try
                 {
                     decimal balance = ComputeLineBalance(line, allLines, allComputations, memo, visiting, allAccounts, accountBalances);
@@ -192,7 +193,8 @@ namespace InventoryManagementSystem.Services
                         GroupBy = line.GroupBy,
                         PrintOnNewPage = line.PrintOnNewPage,
                         HideIfZero = line.HideIfZero,
-                        Balance = balance
+                        Balance = balance,
+                        HasComputations = hasComps
                     });
                 }
                 catch (Exception)
@@ -207,7 +209,8 @@ namespace InventoryManagementSystem.Services
                         GroupBy = line.GroupBy,
                         PrintOnNewPage = line.PrintOnNewPage,
                         HideIfZero = line.HideIfZero,
-                        Balance = 0
+                        Balance = 0,
+                        HasComputations = hasComps
                     });
                 }
             }
@@ -458,6 +461,142 @@ namespace InventoryManagementSystem.Services
             }
         }
 
+        public async Task<List<JournalEntryDetailRow>> GetJournalLinesForReportLineAsync(int reportLineId)
+        {
+            var db = _databaseService.Connection;
+            
+            var allLines = await db.Table<ReportLine>().ToListAsync();
+            var allComputations = await db.Table<ReportLineComputation>().ToListAsync();
+            var allAccounts = await db.Table<Account>().ToListAsync();
+            
+            var accountIds = new HashSet<int>();
+            var visiting = new HashSet<int>();
+
+            void CollectAccountIds(int lineId)
+            {
+                if (visiting.Contains(lineId)) return;
+                visiting.Add(lineId);
+
+                var line = allLines.FirstOrDefault(l => l.Id == lineId);
+                if (line == null) return;
+
+                var comps = allComputations.Where(c => c.ReportLineId == lineId).ToList();
+                foreach (var comp in comps)
+                {
+                    if (comp.ComputationEngine == "Prefix of Account Codes")
+                    {
+                        var matchingAccounts = GetAccountsMatchingFormula(allAccounts, comp.Formula);
+                        foreach (var acc in matchingAccounts)
+                        {
+                            accountIds.Add(acc.Id);
+                        }
+                    }
+                    else if (comp.ComputationEngine == "Sum of other lines")
+                    {
+                        if (string.IsNullOrWhiteSpace(comp.Formula)) continue;
+                        var tokens = Tokenize(comp.Formula);
+                        foreach (var t in tokens)
+                        {
+                            if (t.Type == TokenType.Identifier)
+                            {
+                                var refLine = allLines.FirstOrDefault(l => string.Equals(l.Code, t.Value, StringComparison.OrdinalIgnoreCase));
+                                if (refLine != null)
+                                {
+                                    CollectAccountIds(refLine.Id);
+                                }
+                            }
+                        }
+                    }
+                }
+                visiting.Remove(lineId);
+            }
+
+            CollectAccountIds(reportLineId);
+
+            var result = new List<JournalEntryDetailRow>();
+            if (accountIds.Count == 0) return result;
+
+            var matchingLines = await db.Table<JournalLine>()
+                .Where(l => accountIds.Contains(l.AccountId))
+                .ToListAsync();
+
+            if (matchingLines.Count == 0) return result;
+
+            var entryIds = matchingLines.Select(l => l.JournalEntryId).Distinct().ToList();
+            var entries = await db.Table<JournalEntry>()
+                .Where(e => entryIds.Contains(e.Id))
+                .ToListAsync();
+
+            var journalLines = await db.Table<JournalLine>()
+                .Where(l => entryIds.Contains(l.JournalEntryId))
+                .ToListAsync();
+
+            var suppliers = await db.Table<Supplier>().ToListAsync();
+            var salesOrders = await db.Table<SalesOrder>().ToListAsync();
+            var purchaseOrders = await db.Table<PurchaseOrder>().ToListAsync();
+
+            foreach (var line in journalLines)
+            {
+                var entry = entries.FirstOrDefault(e => e.Id == line.JournalEntryId);
+                var account = allAccounts.FirstOrDefault(a => a.Id == line.AccountId);
+                
+                string partnerName = "N/A";
+                string matchingRef = "-";
+
+                if (entry != null)
+                {
+                    var refStr = entry.Reference ?? string.Empty;
+                    if (refStr.StartsWith("Sales Delivery:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var soNumber = refStr.Substring("Sales Delivery:".Length).Trim();
+                        var so = salesOrders.FirstOrDefault(s => string.Equals(s.SONumber, soNumber, StringComparison.OrdinalIgnoreCase));
+                        if (so != null)
+                        {
+                            var cust = suppliers.FirstOrDefault(s => s.Id == so.CustomerId);
+                            if (cust != null)
+                            {
+                                partnerName = cust.Name;
+                            }
+                            matchingRef = so.SONumber;
+                        }
+                    }
+                    else if (refStr.StartsWith("PO Receipt:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var poNumber = refStr.Substring("PO Receipt:".Length).Trim();
+                        var po = purchaseOrders.FirstOrDefault(p => string.Equals(p.PONumber, poNumber, StringComparison.OrdinalIgnoreCase));
+                        if (po != null)
+                        {
+                            var supp = suppliers.FirstOrDefault(s => s.Id == po.SupplierId);
+                            if (supp != null)
+                            {
+                                partnerName = supp.Name;
+                            }
+                            matchingRef = po.PONumber;
+                        }
+                    }
+                    else if (refStr.StartsWith("POS Sale -", StringComparison.OrdinalIgnoreCase))
+                    {
+                        partnerName = "Retail Customer";
+                        matchingRef = refStr;
+                    }
+                }
+
+                result.Add(new JournalEntryDetailRow
+                {
+                    Date = entry?.Date ?? DateTime.Now,
+                    EntryNumber = entry?.EntryNumber ?? "N/A",
+                    AccountDisplay = account != null ? $"{account.Code} {account.Name}" : $"Account ID: {line.AccountId}",
+                    PartnerName = partnerName,
+                    Label = line.Label,
+                    Debit = line.Debit,
+                    Credit = line.Credit,
+                    Matching = matchingRef
+                });
+            }
+
+            return result.OrderByDescending(r => r.Date).ToList();
+        }
+
         #endregion
         #endregion
     }
@@ -473,7 +612,20 @@ namespace InventoryManagementSystem.Services
         public bool PrintOnNewPage { get; set; }
         public bool HideIfZero { get; set; }
         public decimal Balance { get; set; }
+        public bool HasComputations { get; set; }
 
         public double Indentation => (Level - 1) * 20;
+    }
+
+    public class JournalEntryDetailRow
+    {
+        public DateTime Date { get; set; }
+        public string EntryNumber { get; set; } = string.Empty;
+        public string AccountDisplay { get; set; } = string.Empty;
+        public string PartnerName { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        public decimal Debit { get; set; }
+        public decimal Credit { get; set; }
+        public string Matching { get; set; } = "-";
     }
 }

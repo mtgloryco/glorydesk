@@ -12,6 +12,7 @@ namespace InventoryManagementSystem.Services
         public decimal DefaultTaxRate { get; set; } = 0.18m;
         public string PrinterName { get; set; } = "";
         public bool IsDarkTheme { get; set; } = true;
+        public bool IsSudoModeEnabled { get; set; } = false;
     }
 
     public class SettingsService

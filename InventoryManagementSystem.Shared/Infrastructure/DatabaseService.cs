@@ -59,6 +59,9 @@ namespace InventoryManagementSystem.Infrastructure
             await _connection.CreateTableAsync<PurchaseOrder>();
             await _connection.CreateTableAsync<PurchaseOrderItem>();
             await _connection.CreateTableAsync<ReorderRule>();
+            await _connection.CreateTableAsync<SalesOrder>();
+            await _connection.CreateTableAsync<SalesOrderItem>();
+            await _connection.CreateTableAsync<PaymentTerm>();
             await _connection.CreateTableAsync<Location>();
             await _connection.CreateTableAsync<LocationStock>();
             await _connection.CreateTableAsync<StockTransfer>();
@@ -155,6 +158,7 @@ namespace InventoryManagementSystem.Infrastructure
                     new Account { Code = "102000", Name = "Bank Account", Type = "Asset: Bank and Cash", Currency = "RWF", IsActive = true, Description = "Main operating bank account", PaymentReconciliation = true },
                     new Account { Code = "111000", Name = "Accounts Receivable", Type = "Asset: Receivable", Currency = "RWF", IsActive = true, Description = "Unpaid customer invoices", PaymentReconciliation = true },
                     new Account { Code = "120000", Name = "Inventory Asset", Type = "Asset: Current Asset", Currency = "RWF", IsActive = true, Description = "Asset value of products in stock" },
+                    new Account { Code = "125000", Name = "VAT Receivable (Input Tax)", Type = "Asset: Current Asset", Currency = "RWF", IsActive = true, Description = "VAT paid on purchases, reclaimable from tax authority" },
                     new Account { Code = "130000", Name = "Prepayments", Type = "Asset: Pre Payments", Currency = "RWF", IsActive = true, Description = "Prepaid vendor expenses" },
                     new Account { Code = "140000", Name = "Fixed Assets", Type = "Asset: Fixed Asset", Currency = "RWF", IsActive = true, Description = "Long-term tangible assets" },
                     
@@ -284,8 +288,9 @@ namespace InventoryManagementSystem.Infrastructure
                     await _connection.InsertAsync(totalEquityLine);
                     await _connection.InsertAsync(new ReportLineComputation { ReportLineId = totalEquityLine.Id, Label = "balance", ComputationEngine = "Sum of other lines", Formula = "retained_earnings" });
                 }
+            } // Close if (reportCount == 0)
 
-                // Seed Profit and Loss default configuration
+            // Seed Profit and Loss default configuration
                 var pnlReport = await _connection.Table<AccountingReport>().Where(r => r.Name == "Profit and Loss").FirstOrDefaultAsync();
                 if (pnlReport != null)
                 {
@@ -380,9 +385,20 @@ namespace InventoryManagementSystem.Infrastructure
                         await _connection.InsertAsync(new ReportLineComputation { ReportLineId = netProfitYearLine.Id, Label = "balance", ComputationEngine = "Sum of other lines", Formula = "pnl_continuing_ops_profit-pnl_discontinued_ops_loss" });
                     }
                 }
-            }
-        }
 
-        public SQLiteAsyncConnection Connection => _connection;
+                var termCount = await _connection.Table<PaymentTerm>().CountAsync();
+                if (termCount == 0)
+                {
+                    await _connection.InsertAllAsync(new PaymentTerm[]
+                    {
+                        new() { Name = "Immediate Payment", Description = "Payment is due immediately" },
+                        new() { Name = "15 days", Description = "Payment is due within 15 days of invoice date" },
+                        new() { Name = "21 days", Description = "Payment is due within 21 days of invoice date" },
+                        new() { Name = "30 days", Description = "Payment is due within 30 days of invoice date" }
+                    });
+                }
+            }
+
+            public SQLiteAsyncConnection Connection => _connection;
+        }
     }
-}

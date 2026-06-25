@@ -18,6 +18,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly SettingsService _settingsService;
     private readonly SupplierService _supplierService;
     private readonly PurchaseOrderService _purchaseOrderService;
+    private readonly SalesOrderService _salesOrderService;
     private readonly ForecastingService _forecastingService;
     private readonly ExpiryService _expiryService;
     private readonly LocationService _locationService;
@@ -81,6 +82,7 @@ public partial class MainViewModel : ViewModelBase
         SettingsService settingsService,
         SupplierService supplierService,
         PurchaseOrderService purchaseOrderService,
+        SalesOrderService salesOrderService,
         ForecastingService forecastingService,
         ExpiryService expiryService,
         LocationService locationService,
@@ -107,6 +109,7 @@ public partial class MainViewModel : ViewModelBase
         _settingsService = settingsService;
         _supplierService = supplierService;
         _purchaseOrderService = purchaseOrderService;
+        _salesOrderService = salesOrderService;
         _forecastingService = forecastingService;
         _expiryService = expiryService;
         _locationService = locationService;
@@ -254,7 +257,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers));
+    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers));
 
     [RelayCommand]
     public void GoToRfq()
@@ -281,6 +284,24 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    public void GoToSalesQuotations()
+    {
+        NavigateTo(new SalesViewModel(_salesOrderService, _supplierService, _inventoryService, _taxService, _settingsService, Language, initialTab: 0));
+    }
+
+    [RelayCommand]
+    public void GoToSalesOrders()
+    {
+        NavigateTo(new SalesViewModel(_salesOrderService, _supplierService, _inventoryService, _taxService, _settingsService, Language, initialTab: 1));
+    }
+
+    [RelayCommand]
+    public void GoToCustomers()
+    {
+        GoToSuppliers();
+    }
+
+    [RelayCommand]
     public void GoToReports()
     {
         if (!_licenseService.CanAccessAdvancedReports())
@@ -289,7 +310,7 @@ public partial class MainViewModel : ViewModelBase
             GoToLicense(); 
             return;
         }
-        NavigateTo(new ReportsViewModel(_inventoryService, _licenseService, _settingsService, Language));
+        NavigateTo(new ReportsViewModel(_inventoryService, _licenseService, _settingsService, Language, _accountingReportService));
     }
 
     [RelayCommand]

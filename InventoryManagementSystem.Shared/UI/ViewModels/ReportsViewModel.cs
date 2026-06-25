@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,29 +15,131 @@ namespace InventoryManagementSystem.UI.ViewModels
     {
         private readonly InventoryService _inventoryService;
         private readonly LicenseService _licenseService;
+        private readonly SettingsService _settingsService;
+        private readonly AccountingReportService _accountingReportService;
+
+        [ObservableProperty] private int _selectedTabIndex; // 0 = Balance Sheet, 1 = Profit & Loss, 2 = Stock Status, 3 = Stock History
+        [ObservableProperty] private ObservableCollection<ReportLineWrapper> _balanceSheetLines = new();
+        [ObservableProperty] private ObservableCollection<ReportLineWrapper> _profitAndLossLines = new();
+        [ObservableProperty] private bool _isLoadingReport;
 
         [ObservableProperty] private ObservableCollection<Product> _reportData = new();
         [ObservableProperty] private ObservableCollection<StockMovement> _stockHistoryData = new();
         [ObservableProperty] private ObservableCollection<MonthlyProfitReport> _monthlyProfitData = new();
-        [ObservableProperty] private string _reportTitle = "Current Stock Report";
+        [ObservableProperty] private string _reportTitle = "Balance Sheet";
         [ObservableProperty] private bool _isLowStockReport;
         [ObservableProperty] private bool _isHistoryReport;
         [ObservableProperty] private bool _isProfitReport;
 
         public bool IsStockReport => !IsHistoryReport && !IsProfitReport;
 
+        public bool IsBalanceSheetSelected => SelectedTabIndex == 0;
+        public bool IsProfitAndLossSelected => SelectedTabIndex == 1;
+        public bool IsStockStatusSelected => SelectedTabIndex == 2;
+        public bool IsStockHistorySelected => SelectedTabIndex == 3;
+
+        partial void OnSelectedTabIndexChanged(int value)
+        {
+            OnPropertyChanged(nameof(IsBalanceSheetSelected));
+            OnPropertyChanged(nameof(IsProfitAndLossSelected));
+            OnPropertyChanged(nameof(IsStockStatusSelected));
+            OnPropertyChanged(nameof(IsStockHistorySelected));
+            _ = LoadSelectedReportAsync();
+        }
+
         public string CurrencySymbol => _settingsService.CurrentSettings.CurrencySymbol;
         public LanguageService Language { get; }
 
-        private readonly SettingsService _settingsService;
-
-        public ReportsViewModel(InventoryService inventoryService, LicenseService licenseService, SettingsService settingsService, LanguageService languageService)
+        public ReportsViewModel(
+            InventoryService inventoryService, 
+            LicenseService licenseService, 
+            SettingsService settingsService, 
+            LanguageService languageService,
+            AccountingReportService accountingReportService)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
             _settingsService = settingsService;
             Language = languageService;
-            LoadStockReportCommand.Execute(null);
+            _accountingReportService = accountingReportService;
+            
+            SelectedTabIndex = 0; // Default to Balance Sheet
+            _ = LoadSelectedReportAsync();
+        }
+
+        public async Task LoadSelectedReportAsync()
+        {
+            IsLoadingReport = true;
+            try
+            {
+                if (SelectedTabIndex == 0)
+                {
+                    await LoadBalanceSheetAsync();
+                }
+                else if (SelectedTabIndex == 1)
+                {
+                    await LoadProfitAndLossAsync();
+                }
+                else if (SelectedTabIndex == 2)
+                {
+                    if (IsLowStockReport)
+                        await LoadLowStockReport();
+                    else
+                        await LoadStockReport();
+                }
+                else if (SelectedTabIndex == 3)
+                {
+                    await LoadStockHistoryReport();
+                }
+            }
+            catch (Exception ex)
+            {
+                ReportTitle = $"Error loading report: {ex.Message}";
+            }
+            finally
+            {
+                IsLoadingReport = false;
+            }
+        }
+
+        [RelayCommand]
+        public async Task LoadBalanceSheetAsync()
+        {
+            ReportTitle = "Balance Sheet";
+            var reports = await _accountingReportService.GetAllReportsAsync();
+            var bsReport = reports.FirstOrDefault(r => r.Name == "Balance Sheet");
+            if (bsReport == null)
+            {
+                ReportTitle = "Balance Sheet Config Not Found";
+                return;
+            }
+
+            var results = await _accountingReportService.ComputeReportBalancesAsync(bsReport.Id);
+            BalanceSheetLines.Clear();
+            foreach (var r in results)
+            {
+                BalanceSheetLines.Add(new ReportLineWrapper(r, CurrencySymbol));
+            }
+        }
+
+        [RelayCommand]
+        public async Task LoadProfitAndLossAsync()
+        {
+            ReportTitle = "Profit and Loss Statement";
+            var reports = await _accountingReportService.GetAllReportsAsync();
+            var pnlReport = reports.FirstOrDefault(r => r.Name == "Profit and Loss");
+            if (pnlReport == null)
+            {
+                ReportTitle = "Profit & Loss Config Not Found";
+                return;
+            }
+
+            var results = await _accountingReportService.ComputeReportBalancesAsync(pnlReport.Id);
+            ProfitAndLossLines.Clear();
+            foreach (var r in results)
+            {
+                ProfitAndLossLines.Add(new ReportLineWrapper(r, CurrencySymbol));
+            }
         }
 
         [RelayCommand]
@@ -175,6 +278,82 @@ namespace InventoryManagementSystem.UI.ViewModels
             {
                 await topLevel.Clipboard.SetTextAsync(text);
             }
+        }
+
+        // --- Journal Entries drill-down logic ---
+        [ObservableProperty] private ObservableCollection<JournalEntryDetailRow> _detailedJournalLines = new();
+        [ObservableProperty] private bool _isJournalModalOpen;
+        [ObservableProperty] private string _detailedJournalTitle = string.Empty;
+        [ObservableProperty] private decimal _totalDebit;
+        [ObservableProperty] private decimal _totalCredit;
+        [ObservableProperty] private bool _isBalanced;
+        [ObservableProperty] private decimal _balanceDifference;
+
+        [RelayCommand]
+        private async Task OpenJournalEntries(ReportLineWrapper wrapper)
+        {
+            if (wrapper == null || !wrapper.Result.HasComputations) return;
+
+            DetailedJournalTitle = $"Journal Entries - {wrapper.Name}";
+            IsLoadingReport = true;
+            try
+            {
+                var lines = await _accountingReportService.GetJournalLinesForReportLineAsync(wrapper.Result.LineId);
+                DetailedJournalLines = new ObservableCollection<JournalEntryDetailRow>(lines);
+                
+                TotalDebit = lines.Sum(l => l.Debit);
+                TotalCredit = lines.Sum(l => l.Credit);
+                BalanceDifference = Math.Abs(TotalDebit - TotalCredit);
+                IsBalanced = BalanceDifference < 0.01m;
+
+                IsJournalModalOpen = true;
+            }
+            catch (Exception ex)
+            {
+                ReportTitle = $"Error loading journal entries: {ex.Message}";
+            }
+            finally
+            {
+                IsLoadingReport = false;
+            }
+        }
+
+        [RelayCommand]
+        private void CloseJournalModal()
+        {
+            IsJournalModalOpen = false;
+        }
+    }
+
+    public class ReportLineWrapper
+    {
+        public ReportLineResult Result { get; }
+        public string CurrencySymbol { get; }
+        
+        public Avalonia.Thickness Margin => new Avalonia.Thickness((Result.Level - 1) * 20, 6, 10, 6);
+        public bool IsHeader => Result.Level == 1;
+        public bool IsSubHeader => Result.Level == 2;
+        public string Name => Result.Name;
+        public string FormattedBalance
+        {
+            get
+            {
+                if (!Result.HasComputations)
+                {
+                    return string.Empty;
+                }
+                if (Result.Balance < 0)
+                {
+                    return $"({Math.Abs(Result.Balance):N0}) {CurrencySymbol}";
+                }
+                return $"{Result.Balance:N0} {CurrencySymbol}";
+            }
+        }
+
+        public ReportLineWrapper(ReportLineResult result, string currencySymbol)
+        {
+            Result = result;
+            CurrencySymbol = currencySymbol;
         }
     }
 }

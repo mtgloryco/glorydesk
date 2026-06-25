@@ -30,9 +30,12 @@ public partial class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsTaxesTabActive));
         OnPropertyChanged(nameof(IsAccountingTabActive));
 
-        if (value == "Accounting")
+        if (value == "Accounting" || value == "Taxes")
         {
             _ = LoadAccountsAsync();
+        }
+        if (value == "Accounting")
+        {
             _ = LoadAvailableTaxesAsync();
         }
     }
@@ -296,9 +299,15 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusMessage;
 
+    [ObservableProperty]
+    private bool _isSudoModeEnabled;
+
     // Taxes Properties
     [ObservableProperty]
     private ObservableCollection<Tax> _taxes = new();
+
+    [ObservableProperty]
+    private ObservableCollection<Account> _taxAccounts = new();
 
     [ObservableProperty]
     private Tax? _selectedTax;
@@ -312,6 +321,9 @@ public partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _taxName = string.Empty;
+
+    [ObservableProperty]
+    private Account? _taxSelectedAccount;
 
     [ObservableProperty]
     private string _taxComputation = "Percentage"; // Percentage, Fixed
@@ -361,6 +373,7 @@ public partial class SettingsViewModel : ViewModelBase
         _storeAddress = s.StoreAddress;
         _currencySymbol = s.CurrencySymbol;
         _printerName = s.PrinterName;
+        _isSudoModeEnabled = s.IsSudoModeEnabled;
         _statusMessage = "";
 
         // Load taxes
@@ -383,6 +396,7 @@ public partial class SettingsViewModel : ViewModelBase
             s.StoreAddress = StoreAddress;
             s.CurrencySymbol = CurrencySymbol;
             s.PrinterName = PrinterName;
+            s.IsSudoModeEnabled = IsSudoModeEnabled;
 
             _settingsService.SaveSettings();
             StatusMessage = "Settings saved successfully!";
@@ -390,6 +404,20 @@ public partial class SettingsViewModel : ViewModelBase
         catch
         {
             StatusMessage = "Failed to save settings.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearTransactionData()
+    {
+        try
+        {
+            await _accountService.ClearAllTransactionsAndStockAsync();
+            StatusMessage = "All transaction and stock data cleared successfully!";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to clear data: {ex.Message}";
         }
     }
 
@@ -425,6 +453,7 @@ public partial class SettingsViewModel : ViewModelBase
         IncludedInPrice = "Exclude";
         TaxErrorMessage = string.Empty;
         TaxIsActive = true;
+        TaxSelectedAccount = null;
         IsTaxFormVisible = true;
     }
 
@@ -443,6 +472,7 @@ public partial class SettingsViewModel : ViewModelBase
         IncludedInPrice = tax.IncludedInPrice;
         TaxErrorMessage = string.Empty;
         TaxIsActive = tax.IsActive;
+        TaxSelectedAccount = _allAccounts.FirstOrDefault(a => a.Id == tax.AccountId);
         IsTaxFormVisible = true;
     }
 
@@ -480,7 +510,8 @@ public partial class SettingsViewModel : ViewModelBase
                 LabelOnInvoice = string.IsNullOrWhiteSpace(TaxLabelOnInvoice) ? TaxName : TaxLabelOnInvoice,
                 Scope = TaxScope,
                 IncludedInPrice = IncludedInPrice,
-                IsActive = TaxIsActive
+                IsActive = TaxIsActive,
+                AccountId = TaxSelectedAccount?.Id
             };
 
             if (TaxId == 0)
@@ -539,6 +570,13 @@ public partial class SettingsViewModel : ViewModelBase
         {
             var list = await _accountService.GetAllAccountsAsync();
             _allAccounts = list ?? new List<Account>();
+            
+            TaxAccounts.Clear();
+            foreach (var acc in _allAccounts)
+            {
+                TaxAccounts.Add(acc);
+            }
+            
             FilterAccounts();
         }
         catch (Exception ex)
