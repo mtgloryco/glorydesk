@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             xmlns:domain="clr-namespace:InventoryManagementSystem.Domain"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
              x:Class="InventoryManagementSystem.UI.Views.SettingsView"
              x:DataType="vm:SettingsViewModel"
@@ -45,6 +46,8 @@
                     Classes="tab-btn" Classes.active-tab="{Binding IsTaxesTabActive}" />
             <Button Content="Accounting" Command="{Binding SelectTabCommand}" CommandParameter="Accounting"
                     Classes="tab-btn" Classes.active-tab="{Binding IsAccountingTabActive}" />
+            <Button Content="Payments Setup" Command="{Binding SelectTabCommand}" CommandParameter="Payments"
+                    Classes="tab-btn" Classes.active-tab="{Binding IsPaymentsTabActive}" />
         </StackPanel>
 
         <!-- Content Area -->
@@ -368,6 +371,8 @@
                                     <DataGridTextColumn Header="Type" Binding="{Binding Journal.Type}" Width="*" />
                                     <DataGridTextColumn Header="Sequence Prefix" Binding="{Binding Journal.SequencePrefix}" Width="*" />
                                     <DataGridTextColumn Header="Default Account" Binding="{Binding DefaultAccountDisplay}" Width="2*" />
+                                    <DataGridTextColumn Header="Bank Name" Binding="{Binding LinkedBankName}" Width="*" />
+                                    <DataGridTextColumn Header="Bank Account" Binding="{Binding LinkedBankAccountNumber}" Width="*" />
                                     <DataGridTemplateColumn Header="Actions" Width="140">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
@@ -485,15 +490,290 @@
                                             </Border>
                                         </Grid>
 
-                                        <TextBlock Text="{Binding JournalErrorMessage}" Foreground="#D32F2F" FontSize="12" Margin="0,5,0,0" IsVisible="{Binding JournalErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                         <!-- Bank Journal specific configurations -->
+                                         <Border IsVisible="{Binding IsJournalTypeBank}" 
+                                                 BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" 
+                                                 CornerRadius="8" Padding="15" Margin="0,15,0,0">
+                                             <StackPanel Spacing="15">
+                                                 <TextBlock Text="Bank Account &amp; Clearing Configuration" FontWeight="SemiBold" FontSize="14" Foreground="#007ACC" />
+                                                 
+                                                 <Border Background="#05007ACC" BorderBrush="#20007ACC" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,5">
+                                                     <StackPanel Spacing="6">
+                                                         <TextBlock Text="Clearing Zone Operations" FontWeight="Bold" FontSize="11" Foreground="#007ACC"/>
+                                                         <TextBlock Text="Bank statements import transactions that aren't matched yet. These intermediate accounts act as temporary holding zones to ensure your balance sheet is accurate in real-time." FontSize="11" Foreground="Gray" TextWrapping="Wrap"/>
+                                                     </StackPanel>
+                                                 </Border>
 
-                                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,15,0,0">
-                                            <Button Content="Cancel" Command="{Binding CloseJournalFormCommand}" Padding="15,8" />
-                                            <Button Content="Save Journal" Command="{Binding SaveJournalCommand}" Background="#2E7D32" Foreground="White" Padding="15,8" FontWeight="SemiBold" />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </ScrollViewer>
-                            </Border>
+                                                 <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" HorizontalAlignment="Stretch">
+                                                     <!-- Bank Account -->
+                                                     <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,12" Spacing="5">
+                                                         <TextBlock Text="1. Bank Account (CoA Asset)" FontWeight="Medium" FontSize="12" />
+                                                         <TextBox Text="{Binding JournalBankAccountSearch}" Watermark="Search bank account in CoA..." />
+                                                         <Border IsVisible="{Binding IsJournalBankAccountResultsVisible}"
+                                                                 BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                                                 CornerRadius="0,0,6,6" Background="{DynamicResource ContentBackgroundColor}"
+                                                                 MaxHeight="150" ZIndex="10">
+                                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                                 <ItemsControl ItemsSource="{Binding JournalBankAccountResults}">
+                                                                     <ItemsControl.ItemTemplate>
+                                                                         <DataTemplate>
+                                                                             <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                                     Background="Transparent" CornerRadius="0" Padding="10,7"
+                                                                                     Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).SelectJournalBankAccountCommand}"
+                                                                                     CommandParameter="{Binding .}"
+                                                                                     Cursor="Hand">
+                                                                                 <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                     <TextBlock Text="{Binding Code}" FontSize="11" Foreground="Gray" VerticalAlignment="Center" MinWidth="60"/>
+                                                                                     <TextBlock Text="{Binding Name}" FontWeight="Medium" VerticalAlignment="Center"/>
+                                                                                 </StackPanel>
+                                                                             </Button>
+                                                                         </DataTemplate>
+                                                                     </ItemsControl.ItemTemplate>
+                                                                 </ItemsControl>
+                                                             </ScrollViewer>
+                                                         </Border>
+                                                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding JournalBankAccount, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                             <Border Background="#10007ACC" CornerRadius="4" Padding="8,4">
+                                                                 <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                     <TextBlock Text="{Binding JournalBankAccount.Code}" FontSize="11" Foreground="#007ACC" FontWeight="SemiBold"/>
+                                                                     <TextBlock Text="{Binding JournalBankAccount.Name}" FontSize="11" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                                                 </StackPanel>
+                                                             </Border>
+                                                             <Button Content="✕" FontSize="10" Padding="4,2" VerticalAlignment="Center"
+                                                                     Background="Transparent" Foreground="Gray" Cursor="Hand"
+                                                                     Command="{Binding SelectJournalBankAccountCommand}" CommandParameter="{x:Null}" />
+                                                         </StackPanel>
+                                                     </StackPanel>
+
+                                                     <!-- Suspense Account -->
+                                                     <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,12" Spacing="5">
+                                                         <TextBlock Text="2. Suspense Account (Clearing zone)" FontWeight="Medium" FontSize="12" />
+                                                         <TextBox Text="{Binding JournalSuspenseAccountSearch}" Watermark="Search suspense account..." />
+                                                         <Border IsVisible="{Binding IsJournalSuspenseAccountResultsVisible}"
+                                                                 BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                                                 CornerRadius="0,0,6,6" Background="{DynamicResource ContentBackgroundColor}"
+                                                                 MaxHeight="150" ZIndex="10">
+                                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                                 <ItemsControl ItemsSource="{Binding JournalSuspenseAccountResults}">
+                                                                     <ItemsControl.ItemTemplate>
+                                                                         <DataTemplate>
+                                                                             <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                                     Background="Transparent" CornerRadius="0" Padding="10,7"
+                                                                                     Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).SelectJournalSuspenseAccountCommand}"
+                                                                                     CommandParameter="{Binding .}"
+                                                                                     Cursor="Hand">
+                                                                                 <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                     <TextBlock Text="{Binding Code}" FontSize="11" Foreground="Gray" VerticalAlignment="Center" MinWidth="60"/>
+                                                                                     <TextBlock Text="{Binding Name}" FontWeight="Medium" VerticalAlignment="Center"/>
+                                                                                 </StackPanel>
+                                                                             </Button>
+                                                                         </DataTemplate>
+                                                                     </ItemsControl.ItemTemplate>
+                                                                 </ItemsControl>
+                                                             </ScrollViewer>
+                                                         </Border>
+                                                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding JournalSuspenseAccount, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                             <Border Background="#10007ACC" CornerRadius="4" Padding="8,4">
+                                                                 <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                     <TextBlock Text="{Binding JournalSuspenseAccount.Code}" FontSize="11" Foreground="#007ACC" FontWeight="SemiBold"/>
+                                                                     <TextBlock Text="{Binding JournalSuspenseAccount.Name}" FontSize="11" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                                                 </StackPanel>
+                                                             </Border>
+                                                             <Button Content="✕" FontSize="10" Padding="4,2" VerticalAlignment="Center"
+                                                                     Background="Transparent" Foreground="Gray" Cursor="Hand"
+                                                                     Command="{Binding SelectJournalSuspenseAccountCommand}" CommandParameter="{x:Null}" />
+                                                         </StackPanel>
+                                                     </StackPanel>
+
+                                                     <!-- Profit Account -->
+                                                     <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,12" Spacing="5">
+                                                         <TextBlock Text="3. Profit Account (Exchange/Rounding Gain)" FontWeight="Medium" FontSize="12" />
+                                                         <TextBox Text="{Binding JournalProfitAccountSearch}" Watermark="Search profit account..." />
+                                                         <Border IsVisible="{Binding IsJournalProfitAccountResultsVisible}"
+                                                                 BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                                                 CornerRadius="0,0,6,6" Background="{DynamicResource ContentBackgroundColor}"
+                                                                 MaxHeight="150" ZIndex="10">
+                                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                                 <ItemsControl ItemsSource="{Binding JournalProfitAccountResults}">
+                                                                     <ItemsControl.ItemTemplate>
+                                                                         <DataTemplate>
+                                                                             <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                                     Background="Transparent" CornerRadius="0" Padding="10,7"
+                                                                                     Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).SelectJournalProfitAccountCommand}"
+                                                                                     CommandParameter="{Binding .}"
+                                                                                     Cursor="Hand">
+                                                                                 <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                     <TextBlock Text="{Binding Code}" FontSize="11" Foreground="Gray" VerticalAlignment="Center" MinWidth="60"/>
+                                                                                     <TextBlock Text="{Binding Name}" FontWeight="Medium" VerticalAlignment="Center"/>
+                                                                                 </StackPanel>
+                                                                             </Button>
+                                                                         </DataTemplate>
+                                                                     </ItemsControl.ItemTemplate>
+                                                                 </ItemsControl>
+                                                             </ScrollViewer>
+                                                         </Border>
+                                                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding JournalProfitAccount, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                             <Border Background="#10007ACC" CornerRadius="4" Padding="8,4">
+                                                                 <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                     <TextBlock Text="{Binding JournalProfitAccount.Code}" FontSize="11" Foreground="#007ACC" FontWeight="SemiBold"/>
+                                                                     <TextBlock Text="{Binding JournalProfitAccount.Name}" FontSize="11" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                                                 </StackPanel>
+                                                             </Border>
+                                                             <Button Content="✕" FontSize="10" Padding="4,2" VerticalAlignment="Center"
+                                                                     Background="Transparent" Foreground="Gray" Cursor="Hand"
+                                                                     Command="{Binding SelectJournalProfitAccountCommand}" CommandParameter="{x:Null}" />
+                                                         </StackPanel>
+                                                     </StackPanel>
+
+                                                     <!-- Loss Account -->
+                                                     <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,12" Spacing="5">
+                                                         <TextBlock Text="4. Loss Account (Exchange/Rounding Loss)" FontWeight="Medium" FontSize="12" />
+                                                         <TextBox Text="{Binding JournalLossAccountSearch}" Watermark="Search loss account..." />
+                                                         <Border IsVisible="{Binding IsJournalLossAccountResultsVisible}"
+                                                                 BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                                                 CornerRadius="0,0,6,6" Background="{DynamicResource ContentBackgroundColor}"
+                                                                 MaxHeight="150" ZIndex="10">
+                                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                                 <ItemsControl ItemsSource="{Binding JournalLossAccountResults}">
+                                                                     <ItemsControl.ItemTemplate>
+                                                                         <DataTemplate>
+                                                                             <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                                     Background="Transparent" CornerRadius="0" Padding="10,7"
+                                                                                     Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).SelectJournalLossAccountCommand}"
+                                                                                     CommandParameter="{Binding .}"
+                                                                                     Cursor="Hand">
+                                                                                 <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                     <TextBlock Text="{Binding Code}" FontSize="11" Foreground="Gray" VerticalAlignment="Center" MinWidth="60"/>
+                                                                                     <TextBlock Text="{Binding Name}" FontWeight="Medium" VerticalAlignment="Center"/>
+                                                                                 </StackPanel>
+                                                                             </Button>
+                                                                         </DataTemplate>
+                                                                     </ItemsControl.ItemTemplate>
+                                                                 </ItemsControl>
+                                                             </ScrollViewer>
+                                                         </Border>
+                                                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding JournalLossAccount, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                             <Border Background="#10007ACC" CornerRadius="4" Padding="8,4">
+                                                                 <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                     <TextBlock Text="{Binding JournalLossAccount.Code}" FontSize="11" Foreground="#007ACC" FontWeight="SemiBold"/>
+                                                                     <TextBlock Text="{Binding JournalLossAccount.Name}" FontSize="11" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                                                 </StackPanel>
+                                                             </Border>
+                                                             <Button Content="✕" FontSize="10" Padding="4,2" VerticalAlignment="Center"
+                                                                     Background="Transparent" Foreground="Gray" Cursor="Hand"
+                                                                     Command="{Binding SelectJournalLossAccountCommand}" CommandParameter="{x:Null}" />
+                                                         </StackPanel>
+                                                     </StackPanel>
+
+                                                     <!-- Outstanding Receipts Account -->
+                                                     <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,12" Spacing="5">
+                                                         <TextBlock Text="5. Outstanding Receipts Account" FontWeight="Medium" FontSize="12" />
+                                                         <TextBox Text="{Binding JournalOutstandingReceiptsAccountSearch}" Watermark="Search outstanding receipts..." />
+                                                         <Border IsVisible="{Binding IsJournalOutstandingReceiptsAccountResultsVisible}"
+                                                                 BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                                                 CornerRadius="0,0,6,6" Background="{DynamicResource ContentBackgroundColor}"
+                                                                 MaxHeight="150" ZIndex="10">
+                                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                                 <ItemsControl ItemsSource="{Binding JournalOutstandingReceiptsAccountResults}">
+                                                                     <ItemsControl.ItemTemplate>
+                                                                         <DataTemplate>
+                                                                             <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                                     Background="Transparent" CornerRadius="0" Padding="10,7"
+                                                                                     Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).SelectJournalOutstandingReceiptsAccountCommand}"
+                                                                                     CommandParameter="{Binding .}"
+                                                                                     Cursor="Hand">
+                                                                                 <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                     <TextBlock Text="{Binding Code}" FontSize="11" Foreground="Gray" VerticalAlignment="Center" MinWidth="60"/>
+                                                                                     <TextBlock Text="{Binding Name}" FontWeight="Medium" VerticalAlignment="Center"/>
+                                                                                 </StackPanel>
+                                                                             </Button>
+                                                                         </DataTemplate>
+                                                                     </ItemsControl.ItemTemplate>
+                                                                 </ItemsControl>
+                                                             </ScrollViewer>
+                                                         </Border>
+                                                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding JournalOutstandingReceiptsAccount, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                             <Border Background="#10007ACC" CornerRadius="4" Padding="8,4">
+                                                                 <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                     <TextBlock Text="{Binding JournalOutstandingReceiptsAccount.Code}" FontSize="11" Foreground="#007ACC" FontWeight="SemiBold"/>
+                                                                     <TextBlock Text="{Binding JournalOutstandingReceiptsAccount.Name}" FontSize="11" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                                                 </StackPanel>
+                                                             </Border>
+                                                             <Button Content="✕" FontSize="10" Padding="4,2" VerticalAlignment="Center"
+                                                                     Background="Transparent" Foreground="Gray" Cursor="Hand"
+                                                                     Command="{Binding SelectJournalOutstandingReceiptsAccountCommand}" CommandParameter="{x:Null}" />
+                                                         </StackPanel>
+                                                     </StackPanel>
+
+                                                     <!-- Outstanding Payments Account -->
+                                                     <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,12" Spacing="5">
+                                                         <TextBlock Text="6. Outstanding Payments Account" FontWeight="Medium" FontSize="12" />
+                                                         <TextBox Text="{Binding JournalOutstandingPaymentsAccountSearch}" Watermark="Search outstanding payments..." />
+                                                         <Border IsVisible="{Binding IsJournalOutstandingPaymentsAccountResultsVisible}"
+                                                                 BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                                                 CornerRadius="0,0,6,6" Background="{DynamicResource ContentBackgroundColor}"
+                                                                 MaxHeight="150" ZIndex="10">
+                                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                                 <ItemsControl ItemsSource="{Binding JournalOutstandingPaymentsAccountResults}">
+                                                                     <ItemsControl.ItemTemplate>
+                                                                         <DataTemplate>
+                                                                             <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                                     Background="Transparent" CornerRadius="0" Padding="10,7"
+                                                                                     Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).SelectJournalOutstandingPaymentsAccountCommand}"
+                                                                                     CommandParameter="{Binding .}"
+                                                                                     Cursor="Hand">
+                                                                                 <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                     <TextBlock Text="{Binding Code}" FontSize="11" Foreground="Gray" VerticalAlignment="Center" MinWidth="60"/>
+                                                                                     <TextBlock Text="{Binding Name}" FontWeight="Medium" VerticalAlignment="Center"/>
+                                                                                 </StackPanel>
+                                                                             </Button>
+                                                                         </DataTemplate>
+                                                                     </ItemsControl.ItemTemplate>
+                                                                 </ItemsControl>
+                                                             </ScrollViewer>
+                                                         </Border>
+                                                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding JournalOutstandingPaymentsAccount, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                             <Border Background="#10007ACC" CornerRadius="4" Padding="8,4">
+                                                                 <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                     <TextBlock Text="{Binding JournalOutstandingPaymentsAccount.Code}" FontSize="11" Foreground="#007ACC" FontWeight="SemiBold"/>
+                                                                     <TextBlock Text="{Binding JournalOutstandingPaymentsAccount.Name}" FontSize="11" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                                                 </StackPanel>
+                                                             </Border>
+                                                             <Button Content="✕" FontSize="10" Padding="4,2" VerticalAlignment="Center"
+                                                                     Background="Transparent" Foreground="Gray" Cursor="Hand"
+                                                                     Command="{Binding SelectJournalOutstandingPaymentsAccountCommand}" CommandParameter="{x:Null}" />
+                                                         </StackPanel>
+                                                     </StackPanel>
+                                                 </Grid>
+
+                                                 <!-- Linked Real-World Bank Account Dropdown -->
+                                                 <StackPanel Spacing="5" Margin="0,5,0,0">
+                                                     <TextBlock Text="7. Linked Bank Account (Company's Real-World Bank Account)" FontWeight="Medium" FontSize="12" />
+                                                     <ComboBox ItemsSource="{Binding BankAccounts}" SelectedItem="{Binding JournalSelectedLinkedBankAccount}" HorizontalAlignment="Stretch">
+                                                         <ComboBox.ItemTemplate>
+                                                             <DataTemplate>
+                                                                 <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                     <TextBlock Text="{Binding AccountNumber}" FontWeight="SemiBold"/>
+                                                                     <TextBlock Text="-" Foreground="Gray"/>
+                                                                     <TextBlock Text="{Binding BankName}" Foreground="Gray"/>
+                                                                     <TextBlock Text="(Send Money Enabled)" Foreground="Green" FontSize="11" IsVisible="{Binding SendMoney}"/>
+                                                                 </StackPanel>
+                                                             </DataTemplate>
+                                                         </ComboBox.ItemTemplate>
+                                                     </ComboBox>
+                                                     <TextBlock Text="Linking this connects incoming bank transactions directly to this double-entry accounting journal." FontSize="11" Foreground="Gray" Margin="2,2,0,0"/>
+                                                 </StackPanel>
+                                             </StackPanel>
+                                             </Border>
+                                             <TextBlock Text="{Binding JournalErrorMessage}" Foreground="#D32F2F" FontSize="12" Margin="0,5,0,0" IsVisible="{Binding JournalErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                                             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,15,0,0">
+                                                 <Button Content="Cancel" Command="{Binding CloseJournalFormCommand}" Padding="15,8" />
+                                                 <Button Content="Save Journal" Command="{Binding SaveJournalCommand}" Background="#2E7D32" Foreground="White" Padding="15,8" FontWeight="SemiBold" />
+                                             </StackPanel>
+                                         </StackPanel>
+                                     </ScrollViewer>
+                                 </Border>
 
                             <!-- ══ ACCOUNTING REPORTS ══ -->
                             <Grid RowDefinitions="Auto, *" IsVisible="{Binding IsAccountingReportsVisible}">
@@ -605,9 +885,192 @@
                                 </Grid>
                              </Grid>
 
+                          </Panel>
+                     </Grid>
+
+                     <!-- TAB 4: PAYMENTS SETUP -->
+                     <Grid RowDefinitions="Auto, *" IsVisible="{Binding IsPaymentsTabActive}" Margin="0,10,0,0">
+                         <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,15">
+                             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
+                                 <TextBlock Text="Manage:" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                 <ComboBox ItemsSource="{Binding PaymentsManagementTypes}" SelectedItem="{Binding SelectedPaymentsManagementType}" Width="220" VerticalAlignment="Center"/>
+                             </StackPanel>
+                             <Panel Grid.Column="2">
+                                 <Button Content="+ Create Bank" Command="{Binding OpenAddBankFormCommand}" Background="#007ACC" Foreground="White" Padding="15,8" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding IsBanksSubTabActive}" />
+                                 <Button Content="+ Create Bank Account" Command="{Binding OpenAddBankAccountFormCommand}" Background="#007ACC" Foreground="White" Padding="15,8" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding IsBankAccountsSubTabActive}" />
+                             </Panel>
+                         </Grid>
+
+                         <Panel Grid.Row="1">
+                             <!-- SUB-TAB 1: BANKS LIST & FORM -->
+                             <Grid RowDefinitions="*, Auto" IsVisible="{Binding IsBanksSubTabActive}">
+                                 <Panel>
+                                     <!-- Banks Grid -->
+                                     <Grid RowDefinitions="*, Auto" IsVisible="{Binding !IsBankFormVisible}">
+                                         <DataGrid ItemsSource="{Binding Banks}" AutoGenerateColumns="False" CanUserResizeColumns="True" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" GridLinesVisibility="All">
+                                             <DataGrid.Columns>
+                                                 <DataGridTextColumn Header="Bank Name" Binding="{Binding Name}" Width="1.5*" />
+                                                 <DataGridTextColumn Header="City" Binding="{Binding City}" Width="*" />
+                                                 <DataGridTextColumn Header="Country" Binding="{Binding Country}" Width="*" />
+                                                 <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="*" />
+                                                 <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="1.5*" />
+                                                 <DataGridTemplateColumn Header="Actions" Width="140">
+                                                     <DataGridTemplateColumn.CellTemplate>
+                                                         <DataTemplate x:DataType="domain:Bank">
+                                                             <StackPanel Orientation="Horizontal" Spacing="5" Margin="5,0">
+                                                                 <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditBankFormCommand}" CommandParameter="{Binding .}" FontSize="11" Padding="6,3" />
+                                                                 <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteBankCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="11" Padding="6,3" />
+                                                             </StackPanel>
+                                                         </DataTemplate>
+                                                     </DataGridTemplateColumn.CellTemplate>
+                                                 </DataGridTemplateColumn>
+                                             </DataGrid.Columns>
+                                         </DataGrid>
+                                     </Grid>
+
+                                     <!-- Bank Create/Edit Form -->
+                                     <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="20" CornerRadius="8" IsVisible="{Binding IsBankFormVisible}">
+                                         <StackPanel Spacing="15" MaxWidth="600" HorizontalAlignment="Left">
+                                             <TextBlock Text="Bank Information" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                             
+                                             <Grid ColumnDefinitions="*, 15, *">
+                                                 <StackPanel Grid.Column="0" Spacing="5">
+                                                     <TextBlock Text="Bank Name" FontSize="12" FontWeight="SemiBold"/>
+                                                     <TextBox Text="{Binding BankName}" Watermark="e.g. Bank of Kigali"/>
+                                                 </StackPanel>
+                                                 <StackPanel Grid.Column="2" Spacing="5">
+                                                     <TextBlock Text="Phone" FontSize="12" FontWeight="SemiBold"/>
+                                                     <TextBox Text="{Binding BankPhone}" Watermark="e.g. +250..."/>
+                                                 </StackPanel>
+                                             </Grid>
+
+                                             <Grid ColumnDefinitions="*, 15, *">
+                                                 <StackPanel Grid.Column="0" Spacing="5">
+                                                     <TextBlock Text="Email" FontSize="12" FontWeight="SemiBold"/>
+                                                     <TextBox Text="{Binding BankEmail}" Watermark="e.g. contact@bank.com"/>
+                                                 </StackPanel>
+                                                 <StackPanel Grid.Column="2" Spacing="5">
+                                                     <TextBlock Text="Street Address" FontSize="12" FontWeight="SemiBold"/>
+                                                     <TextBox Text="{Binding BankStreet}" Watermark="e.g. 12 KN 82 St"/>
+                                                 </StackPanel>
+                                             </Grid>
+
+                                             <Grid ColumnDefinitions="*, 15, *">
+                                                 <StackPanel Grid.Column="0" Spacing="5">
+                                                     <TextBlock Text="City" FontSize="12" FontWeight="SemiBold"/>
+                                                     <TextBox Text="{Binding BankCity}" Watermark="e.g. Kigali"/>
+                                                 </StackPanel>
+                                                 <StackPanel Grid.Column="2" Spacing="5">
+                                                     <TextBlock Text="Country" FontSize="12" FontWeight="SemiBold"/>
+                                                     <TextBox Text="{Binding BankCountry}" Watermark="e.g. Rwanda"/>
+                                                 </StackPanel>
+                                             </Grid>
+
+                                             <TextBlock Text="{Binding BankErrorMessage}" Foreground="#D32F2F" FontSize="12" IsVisible="{Binding BankErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                                             <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                                                 <Button Content="Save" Command="{Binding SaveBankCommand}" Background="#007ACC" Foreground="White" Padding="20,8" FontWeight="SemiBold"/>
+                                                 <Button Content="Cancel" Command="{Binding CancelBankFormCommand}" Background="#3A3F4C" Foreground="White" Padding="15,8"/>
+                                             </StackPanel>
+                                         </StackPanel>
+                                     </Border>
+                                 </Panel>
+                             </Grid>
+
+                             <!-- SUB-TAB 2: BANK ACCOUNTS LIST & FORM -->
+                             <Grid RowDefinitions="*, Auto" IsVisible="{Binding IsBankAccountsSubTabActive}">
+                                 <Panel>
+                                     <!-- Bank Accounts Grid -->
+                                     <Grid RowDefinitions="*, Auto" IsVisible="{Binding !IsBankAccountFormVisible}">
+                                         <DataGrid ItemsSource="{Binding BankAccounts}" AutoGenerateColumns="False" CanUserResizeColumns="True" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" GridLinesVisibility="All">
+                                             <DataGrid.Columns>
+                                                 <DataGridTextColumn Header="Account Number" Binding="{Binding AccountNumber}" Width="1.5*" />
+                                                 <DataGridTextColumn Header="Account Holder" Binding="{Binding AccountHolder}" Width="1.5*" />
+                                                 <DataGridTextColumn Header="Bank" Binding="{Binding BankName}" Width="1.5*" />
+                                                 <DataGridTextColumn Header="Currency" Binding="{Binding Currency}" Width="0.8*" />
+                                                 <DataGridTemplateColumn Header="Send Money" Width="120">
+                                                     <DataGridTemplateColumn.CellTemplate>
+                                                         <DataTemplate x:DataType="vm:BankAccountDisplayRow">
+                                                             <ToggleSwitch IsChecked="{Binding SendMoney, Mode=OneWay}" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).ToggleSendMoneyCommand}" CommandParameter="{Binding .}" OnContent="On" OffContent="Off" HorizontalAlignment="Center"/>
+                                                         </DataTemplate>
+                                                     </DataGridTemplateColumn.CellTemplate>
+                                                 </DataGridTemplateColumn>
+                                                 <DataGridTemplateColumn Header="Actions" Width="140">
+                                                     <DataGridTemplateColumn.CellTemplate>
+                                                         <DataTemplate x:DataType="vm:BankAccountDisplayRow">
+                                                             <StackPanel Orientation="Horizontal" Spacing="5" Margin="5,0">
+                                                                 <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditBankAccountFormCommand}" CommandParameter="{Binding .}" FontSize="11" Padding="6,3" />
+                                                                 <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteBankAccountCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="11" Padding="6,3" />
+                                                             </StackPanel>
+                                                         </DataTemplate>
+                                                     </DataGridTemplateColumn.CellTemplate>
+                                                 </DataGridTemplateColumn>
+                                             </DataGrid.Columns>
+                                         </DataGrid>
+                                     </Grid>
+
+                                     <!-- Bank Account Create/Edit Form -->
+                                     <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="20" CornerRadius="8" IsVisible="{Binding IsBankAccountFormVisible}">
+                                         <StackPanel Spacing="15" MaxWidth="600" HorizontalAlignment="Left">
+                                             <TextBlock Text="Bank Account Information" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                             
+                                             <Grid ColumnDefinitions="*, 15, *">
+                                                 <StackPanel Grid.Column="0" Spacing="5">
+                                                     <TextBlock Text="Account Number" FontSize="12" FontWeight="SemiBold"/>
+                                                     <TextBox Text="{Binding BankAccountNumber}" Watermark="e.g. 100012345678"/>
+                                                 </StackPanel>
+                                                 <StackPanel Grid.Column="2" Spacing="5">
+                                                     <TextBlock Text="Account Holder" FontSize="12" FontWeight="SemiBold"/>
+                                                     <TextBox Text="{Binding BankAccountHolder}" Watermark="e.g. My Company Name"/>
+                                                 </StackPanel>
+                                             </Grid>
+
+                                             <Grid ColumnDefinitions="*, 15, *">
+                                                 <!-- Bank Search and Autocomplete selection -->
+                                                 <StackPanel Grid.Column="0" Spacing="5">
+                                                     <TextBlock Text="Bank Link" FontSize="12" FontWeight="SemiBold"/>
+                                                     <Panel>
+                                                         <TextBox Text="{Binding BankSearchText}" Watermark="Search bank name..."/>
+                                                         <Popup IsOpen="{Binding IsBankDropdownVisible}" Placement="Bottom">
+                                                             <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" Width="280" MaxHeight="200" BoxShadow="0 4 6 -1 #1A000000">
+                                                                 <ScrollViewer>
+                                                                     <ItemsControl ItemsSource="{Binding MatchedBanks}">
+                                                                         <ItemsControl.ItemTemplate>
+                                                                             <DataTemplate x:DataType="domain:Bank">
+                                                                                 <Button Content="{Binding Name}" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).SelectSearchBankCommand}" CommandParameter="{Binding .}" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="10,8" Cursor="Hand"/>
+                                                                             </DataTemplate>
+                                                                         </ItemsControl.ItemTemplate>
+                                                                     </ItemsControl>
+                                                                 </ScrollViewer>
+                                                             </Border>
+                                                         </Popup>
+                                                     </Panel>
+                                                 </StackPanel>
+                                                 
+                                                 <StackPanel Grid.Column="2" Spacing="5">
+                                                     <TextBlock Text="Currency" FontSize="12" FontWeight="SemiBold"/>
+                                                     <TextBox Text="{Binding BankAccountCurrency}" Watermark="e.g. RWF, USD"/>
+                                                 </StackPanel>
+                                             </Grid>
+
+                                             <!-- Send Money Switch -->
+                                             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                 <ToggleSwitch IsChecked="{Binding BankAccountSendMoney}" OnContent="Send Money Enabled" OffContent="Send Money Disabled"/>
+                                             </StackPanel>
+
+                                             <TextBlock Text="{Binding BankAccountErrorMessage}" Foreground="#D32F2F" FontSize="12" IsVisible="{Binding BankAccountErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                                             <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                                                 <Button Content="Save" Command="{Binding SaveBankAccountCommand}" Background="#007ACC" Foreground="White" Padding="20,8" FontWeight="SemiBold"/>
+                                                 <Button Content="Cancel" Command="{Binding CancelBankAccountFormCommand}" Background="#3A3F4C" Foreground="White" Padding="15,8"/>
+                                             </StackPanel>
+                                         </StackPanel>
+                                     </Border>
+                                 </Panel>
+                             </Grid>
                          </Panel>
-                    </Grid>
-                </Panel>
+                     </Grid>
+                 </Panel>
             </ScrollViewer>
         </Border>
 

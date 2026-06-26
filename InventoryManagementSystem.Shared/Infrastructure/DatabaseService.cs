@@ -78,6 +78,13 @@ namespace InventoryManagementSystem.Infrastructure
             await _connection.CreateTableAsync<AccountingReport>();
             await _connection.CreateTableAsync<ReportLine>();
             await _connection.CreateTableAsync<ReportLineComputation>();
+            await _connection.CreateTableAsync<BillOfMaterial>();
+            await _connection.CreateTableAsync<BillOfMaterialLine>();
+            await _connection.CreateTableAsync<ManufacturingOrder>();
+            await _connection.CreateTableAsync<ManufacturingOrderLine>();
+            await _connection.CreateTableAsync<Bank>();
+            await _connection.CreateTableAsync<BankAccount>();
+            await _connection.CreateTableAsync<PosPaymentMethod>();
 
             // 3. Perform Schema Migrations
             await PerformMigrationsAsync();
@@ -139,12 +146,12 @@ namespace InventoryManagementSystem.Infrastructure
             {
                 await _connection.InsertAllAsync(new[]
                 {
-                    new ProductUnit { Name = "Per Unit", Quantity = 1.0, GroupInPOS = false },
-                    new ProductUnit { Name = "Pcs", Quantity = 1.0, GroupInPOS = false },
-                    new ProductUnit { Name = "Box", Quantity = 1.0, GroupInPOS = false },
-                    new ProductUnit { Name = "g", Quantity = 1.0, GroupInPOS = false },
-                    new ProductUnit { Name = "kg", Quantity = 1.0, GroupInPOS = false },
-                    new ProductUnit { Name = "l", Quantity = 1.0, GroupInPOS = false }
+                    new ProductUnit { Name = "Per Unit", Quantity = 1.0, GroupInPOS = false, ReferenceUnit = "" },
+                    new ProductUnit { Name = "Pcs", Quantity = 1.0, GroupInPOS = false, ReferenceUnit = "" },
+                    new ProductUnit { Name = "Box", Quantity = 12.0, GroupInPOS = false, ReferenceUnit = "Pcs" },
+                    new ProductUnit { Name = "g", Quantity = 0.001, GroupInPOS = false, ReferenceUnit = "kg" },
+                    new ProductUnit { Name = "kg", Quantity = 1.0, GroupInPOS = false, ReferenceUnit = "" },
+                    new ProductUnit { Name = "l", Quantity = 1.0, GroupInPOS = false, ReferenceUnit = "" }
                 });
             }
 

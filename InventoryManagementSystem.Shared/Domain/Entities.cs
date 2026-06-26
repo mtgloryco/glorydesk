@@ -323,6 +323,7 @@ namespace InventoryManagementSystem.Domain
         public string Name { get; set; } = string.Empty;
         public double Quantity { get; set; } = 1.0;
         public bool GroupInPOS { get; set; } = false;
+        public string ReferenceUnit { get; set; } = string.Empty;
     }
 
     public class Account
@@ -360,6 +361,17 @@ namespace InventoryManagementSystem.Domain
         public string SequencePrefix { get; set; } = string.Empty;
 
         public int? DefaultAccountId { get; set; }
+        
+        // Bank Journal specific clearing accounts (linked to CoA Accounts)
+        public int? BankAccountId { get; set; }
+        public int? SuspenseAccountId { get; set; }
+        public int? ProfitAccountId { get; set; }
+        public int? LossAccountId { get; set; }
+        public int? OutstandingReceiptsAccountId { get; set; }
+        public int? OutstandingPaymentsAccountId { get; set; }
+
+        // Linked real-world Bank Account (from settings)
+        public int? LinkedBankAccountId { get; set; }
 
         public string Currency { get; set; } = "RWF";
 
@@ -372,6 +384,8 @@ namespace InventoryManagementSystem.Domain
     {
         public Journal Journal { get; set; } = new();
         public string DefaultAccountDisplay { get; set; } = string.Empty;
+        public string LinkedBankName { get; set; } = string.Empty;
+        public string LinkedBankAccountNumber { get; set; } = string.Empty;
     }
 
     public class JournalEntry
@@ -447,10 +461,12 @@ namespace InventoryManagementSystem.Domain
         public decimal TotalAmount { get; set; }
         public bool IsTaxInclusive { get; set; } = false;
         public string BillingStatus { get; set; } = "Waiting Invoice"; // Waiting Invoice, Invoiced
-        public string DeliveryStatus { get; set; } = "Pending"; // Pending, Delivered, Partially Delivered
         public bool IsArchived { get; set; } = false;
         public string Company { get; set; } = "My Company";
         public string Currency { get; set; } = "RWF";
+        public string DeliveryStatus { get; set; } = "Pending"; // Pending, Delivered, Partially Delivered
+        public bool IsPosSale { get; set; } = false;
+        public int? PosPaymentMethodId { get; set; }
     }
 
     public class SalesOrderItem
@@ -482,6 +498,109 @@ namespace InventoryManagementSystem.Domain
         [Unique]
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+    }
+
+    public class BillOfMaterial
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public int ProductId { get; set; }
+        public double Quantity { get; set; } = 1.0;
+        public string Reference { get; set; } = string.Empty;
+        public string BomType { get; set; } = "Manufacture this product";
+        public string Company { get; set; } = "My Company";
+    }
+
+    public class BillOfMaterialLine
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public int BillOfMaterialId { get; set; }
+        public int ProductId { get; set; }
+        public double Quantity { get; set; } = 1.0;
+        public string Unit { get; set; } = "Pcs";
+    }
+
+    public class BillOfMaterialListItem
+    {
+        public BillOfMaterial BillOfMaterial { get; set; } = new();
+        public string ProductName { get; set; } = string.Empty;
+        public string Reference => BillOfMaterial.Reference;
+        public string BomType => BillOfMaterial.BomType;
+        public string Company => BillOfMaterial.Company;
+    }
+
+    public class ManufacturingOrder
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public string MONumber { get; set; } = string.Empty;
+        public int BomId { get; set; }
+        public int ProductId { get; set; }
+        public double TargetQuantity { get; set; } = 1.0;
+        public double ActualQuantity { get; set; } = 0.0;
+        public string Status { get; set; } = "Draft"; // Draft, Confirmed, Done
+        public DateTime OrderDate { get; set; } = DateTime.Now;
+        public DateTime? ProduceDate { get; set; }
+        public decimal TotalCost { get; set; } = 0m;
+        public string Company { get; set; } = "My Company";
+    }
+
+    public class ManufacturingOrderLine
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public int ManufacturingOrderId { get; set; }
+        public int ProductId { get; set; }
+        public double ExpectedQuantity { get; set; }
+        public double ActualQuantity { get; set; }
+        public string Unit { get; set; } = "Pcs";
+        public decimal UnitCost { get; set; } = 0m;
+    }
+
+    public class ManufacturingOrderListItem
+    {
+        public ManufacturingOrder ManufacturingOrder { get; set; } = new();
+        public string ProductName { get; set; } = string.Empty;
+        
+        public string MONumber => ManufacturingOrder.MONumber;
+        public string TargetQuantityDisplay => $"{ManufacturingOrder.TargetQuantity:F2}";
+        public string ActualQuantityDisplay => ManufacturingOrder.Status == "Done" ? $"{ManufacturingOrder.ActualQuantity:F2}" : "-";
+        public string Status => ManufacturingOrder.Status;
+        public string OrderDateDisplay => ManufacturingOrder.OrderDate.ToString("yyyy-MM-dd HH:mm");
+        public string TotalCostDisplay => ManufacturingOrder.Status == "Done" ? $"{ManufacturingOrder.TotalCost:N2}" : "-";
+        public string Company => ManufacturingOrder.Company;
+    }
+
+    public class Bank
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Street { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class BankAccount
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public string AccountNumber { get; set; } = string.Empty;
+        public string AccountHolder { get; set; } = string.Empty;
+        public int BankId { get; set; }
+        public string Currency { get; set; } = "RWF";
+        public bool SendMoney { get; set; } = false;
+    }
+
+    public class PosPaymentMethod
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int JournalId { get; set; }
     }
 }
 

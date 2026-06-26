@@ -38,7 +38,7 @@ namespace InventoryManagementSystem.Services
         public async Task CreateRfqAsync(PurchaseOrder po, List<PurchaseOrderItem> items)
         {
             po.OrderDate = DateTime.Now;
-            po.Status = "Draft";
+            if (po.Status != "Sent") po.Status = "Draft";
             po.PONumber = await GenerateRfqNumberAsync();
             po.TotalAmount = items.Sum(i => i.QuantityOrdered * i.UnitCost);
 

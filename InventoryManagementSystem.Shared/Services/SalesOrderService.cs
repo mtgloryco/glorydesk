@@ -473,5 +473,36 @@ namespace InventoryManagementSystem.Services
             var count = await _databaseService.Connection.Table<SalesOrder>().Where(s => s.SONumber.StartsWith("SO-")).CountAsync();
             return $"{prefix}{(count + 1):D4}";
         }
+
+        // --- POS OPERATIONS ---
+        public async Task<List<SalesOrderListItem>> GetPosSalesOrdersAsync()
+        {
+            var posOrders = await _databaseService.Connection.Table<SalesOrder>()
+                .Where(so => so.IsPosSale)
+                .OrderByDescending(so => so.OrderDate)
+                .ToListAsync();
+
+            var suppliers = await _databaseService.Connection.Table<Supplier>().ToListAsync();
+            
+            var items = new List<SalesOrderListItem>();
+            foreach (var so in posOrders)
+            {
+                var customer = suppliers.Find(s => s.Id == so.CustomerId);
+                items.Add(new SalesOrderListItem 
+                { 
+                    SalesOrder = so, 
+                    CustomerName = customer?.Name ?? "Walk-in Customer" 
+                });
+            }
+            return items;
+        }
+
+        public async Task<string> GeneratePosNumberAsync()
+        {
+            var year = DateTime.Now.Year;
+            var prefix = $"POS-{year}-";
+            var count = await _databaseService.Connection.Table<SalesOrder>().Where(s => s.IsPosSale).CountAsync();
+            return $"{prefix}{(count + 1):D4}";
+        }
     }
 }

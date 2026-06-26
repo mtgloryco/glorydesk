@@ -213,22 +213,7 @@ namespace InventoryManagementSystem.Services
                 }
                 else if (type == "OUT")
                 {
-                    if (product.StockQuantity < quantity)
-                        throw new InvalidOperationException($"Insufficient stock for {product.Name}. Available: {product.StockQuantity}, Requested: {quantity}");
-
-                    newStock -= quantity;
-
-                    int remainingToDeduct = quantity;
-                    var batches = conn.Table<PurchaseBatch>()
-                                      .Where(b => b.ProductId == productId && b.QuantityRemaining > 0)
-                                      .OrderBy(b => b.PurchaseDate)
-                                      .ToList();
-
-                    if (batches.Count == 0 && quantity > 0)
-                    {
-                        throw new InvalidOperationException("No purchase batches found. Batch tracking is required.");
-                    }
-
+                    decimal cogsAmount = 0;
                     var movement = new StockMovement
                     {
                         ProductId = productId,
@@ -241,33 +226,76 @@ namespace InventoryManagementSystem.Services
                     };
                     conn.Insert(movement);
 
-                    decimal cogsAmount = 0;
-                    foreach (var batch in batches)
+                    if (product.ProductType == "Good")
                     {
-                        if (remainingToDeduct <= 0) break;
+                        if (product.StockQuantity < quantity)
+                            throw new InvalidOperationException($"Insufficient stock for {product.Name}. Available: {product.StockQuantity}, Requested: {quantity}");
 
-                        int deductFromThisBatch = Math.Min(batch.QuantityRemaining, remainingToDeduct);
+                        newStock -= quantity;
 
-                        var usage = new SaleBatchUsage
+                        int remainingToDeduct = quantity;
+                        var batches = conn.Table<PurchaseBatch>()
+                                          .Where(b => b.ProductId == productId && b.QuantityRemaining > 0)
+                                          .OrderBy(b => b.PurchaseDate)
+                                          .ToList();
+
+                        if (batches.Count == 0 && quantity > 0)
                         {
-                            StockMovementId = movement.Id,
-                            PurchaseBatchId = batch.Id,
-                            QuantityUsed = deductFromThisBatch,
-                            CostPerUnit = batch.CostPerUnit
-                        };
-                        conn.Insert(usage);
+                            // AUTO-HEAL: If the product has physical stock in the database but no purchase batches,
+                            // generate a recovery batch to reconcile the stock discrepancy instead of failing the checkout.
+                            if (product.StockQuantity > 0)
+                            {
+                                var recoveryBatch = new PurchaseBatch
+                                {
+                                    ProductId = productId,
+                                    QuantityPurchased = product.StockQuantity,
+                                    QuantityRemaining = product.StockQuantity,
+                                    CostPerUnit = product.Cost,
+                                    PurchaseDate = DateTime.Now.AddDays(-1), // prioritize recovery batch in FIFO
+                                    BatchNumber = $"RECOVERY-{DateTime.Now:yyyyMMddHHmmss}-{Guid.NewGuid():N}",
+                                    QualityStatus = "Good"
+                                };
+                                conn.Insert(recoveryBatch);
 
-                        cogsAmount += deductFromThisBatch * batch.CostPerUnit;
+                                // Reload the batches list now that the recovery batch exists
+                                batches = conn.Table<PurchaseBatch>()
+                                              .Where(b => b.ProductId == productId && b.QuantityRemaining > 0)
+                                              .OrderBy(b => b.PurchaseDate)
+                                              .ToList();
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException("No purchase batches found. Batch tracking is required.");
+                            }
+                        }
 
-                        batch.QuantityRemaining -= deductFromThisBatch;
-                        conn.Update(batch);
+                        foreach (var batch in batches)
+                        {
+                            if (remainingToDeduct <= 0) break;
 
-                        remainingToDeduct -= deductFromThisBatch;
-                    }
+                            int deductFromThisBatch = Math.Min(batch.QuantityRemaining, remainingToDeduct);
 
-                    if (remainingToDeduct > 0)
-                    {
-                        throw new InvalidOperationException("Insufficient batch stock.");
+                            var usage = new SaleBatchUsage
+                            {
+                                StockMovementId = movement.Id,
+                                PurchaseBatchId = batch.Id,
+                                QuantityUsed = deductFromThisBatch,
+                                CostPerUnit = batch.CostPerUnit
+                            };
+                            conn.Insert(usage);
+
+                            cogsAmount += deductFromThisBatch * batch.CostPerUnit;
+
+                            batch.QuantityRemaining -= deductFromThisBatch;
+                            conn.Update(batch);
+
+                            remainingToDeduct -= deductFromThisBatch;
+                        }
+
+                        if (remainingToDeduct > 0)
+                        {
+                            throw new InvalidOperationException("Insufficient batch stock.");
+                        }
                     }
 
                     // --- Post Journal Entry for Sales ---
@@ -359,6 +387,48 @@ namespace InventoryManagementSystem.Services
                 else if (type == "ADJUST")
                 {
                     newStock += quantity;
+
+                    if (product.ProductType == "Good")
+                    {
+                        if (quantity > 0)
+                        {
+                            // Adjusting upward: Create a new purchase batch for the added quantity
+                            var batch = new PurchaseBatch
+                            {
+                                ProductId = productId,
+                                QuantityPurchased = quantity,
+                                QuantityRemaining = quantity,
+                                CostPerUnit = customCost ?? product.Cost,
+                                PurchaseDate = DateTime.Now,
+                                BatchNumber = string.IsNullOrWhiteSpace(batchNumber)
+                                    ? $"BATCH-{DateTime.Now:yyyyMMddHHmmss}-{Guid.NewGuid():N}"
+                                    : batchNumber,
+                                ExpiryDate = expiryDate,
+                                QualityStatus = string.IsNullOrWhiteSpace(qualityStatus) ? "Good" : qualityStatus
+                            };
+                            conn.Insert(batch);
+                        }
+                        else if (quantity < 0)
+                        {
+                            // Adjusting downward: Deduct from existing purchase batches using FIFO
+                            int remainingToDeduct = Math.Abs(quantity);
+                            var batches = conn.Table<PurchaseBatch>()
+                                              .Where(b => b.ProductId == productId && b.QuantityRemaining > 0)
+                                              .OrderBy(b => b.PurchaseDate)
+                                              .ToList();
+
+                            foreach (var batch in batches)
+                            {
+                                if (remainingToDeduct <= 0) break;
+
+                                int deductFromThisBatch = Math.Min(batch.QuantityRemaining, remainingToDeduct);
+                                batch.QuantityRemaining -= deductFromThisBatch;
+                                conn.Update(batch);
+
+                                remainingToDeduct -= deductFromThisBatch;
+                            }
+                        }
+                    }
                 }
 
                 if (newStock < 0) throw new InvalidOperationException("Negative stock detected.");

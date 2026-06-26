@@ -101,7 +101,12 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private string _newUnitName = string.Empty;
         [ObservableProperty] private double _newUnitQuantity = 1.0;
         [ObservableProperty] private bool _newUnitGroupInPOS = false;
+        [ObservableProperty] private string _newUnitReferenceUnit = string.Empty;
         [ObservableProperty] private string _newUnitErrorMessage = string.Empty;
+
+        // Searchable Unit properties
+        [ObservableProperty] private string _unitSearchText = string.Empty;
+        [ObservableProperty] private ObservableCollection<ProductUnit> _matchedUnits = new();
 
         // Category form inputs
         [ObservableProperty] private string _newCategoryName = string.Empty;
@@ -118,9 +123,49 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private string _newTaxIncludedInPrice = "Exclude";
         [ObservableProperty] private string _newTaxErrorMessage = string.Empty;
 
+        public bool IsUnitSelected => !string.IsNullOrWhiteSpace(SelectedUnitName) && UnitSearchText == SelectedUnitName;
+        public List<string> CleanUnitNames => AllProductUnits.Select(u => u.Name).ToList();
+
+        // Intercept selection updates
+        partial void OnUnitSearchTextChanged(string value)
+        {
+            OnPropertyChanged(nameof(IsUnitSelected));
+            if (string.IsNullOrWhiteSpace(value) || value == SelectedUnitName)
+            {
+                MatchedUnits.Clear();
+                return;
+            }
+
+            var query = value.ToLower();
+            var matches = AllProductUnits.Where(u => u.Name.ToLower().Contains(query)).Take(5).ToList();
+            MatchedUnits = new ObservableCollection<ProductUnit>(matches);
+        }
+
+        [RelayCommand]
+        public void SelectUnit(ProductUnit unit)
+        {
+            SelectedUnitName = unit.Name;
+            UnitSearchText = unit.Name;
+            MatchedUnits.Clear();
+            CurrentProduct.Unit = unit.Name;
+            OnPropertyChanged(nameof(IsUnitSelected));
+        }
+
+        [RelayCommand]
+        public void OpenCreateUnitFromSearchText()
+        {
+            NewUnitName = UnitSearchText;
+            NewUnitQuantity = 1.0;
+            NewUnitGroupInPOS = false;
+            NewUnitReferenceUnit = string.Empty;
+            NewUnitErrorMessage = string.Empty;
+            IsCreateUnitModalOpen = true;
+        }
+
         // Intercept selection updates
         partial void OnSelectedUnitNameChanged(string value)
         {
+            OnPropertyChanged(nameof(IsUnitSelected));
             if (value == "Search More...")
             {
                 // Revert selection so it does not persist in control
@@ -130,6 +175,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             else if (!string.IsNullOrEmpty(value))
             {
                 CurrentProduct.Unit = value;
+                UnitSearchText = value;
             }
         }
 
@@ -402,6 +448,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             {
                 SelectedCategoryName = string.IsNullOrEmpty(CurrentProduct.Category) ? "General" : CurrentProduct.Category;
                 SelectedUnitName = string.IsNullOrEmpty(CurrentProduct.Unit) ? "Pcs" : CurrentProduct.Unit;
+                UnitSearchText = SelectedUnitName;
                 SelectedSalesTax = SalesTaxes.FirstOrDefault(t => t.Id == CurrentProduct.SalesTaxId);
             }
         }
@@ -580,17 +627,20 @@ namespace InventoryManagementSystem.UI.ViewModels
                 {
                     Name = NewUnitName,
                     Quantity = NewUnitQuantity,
-                    GroupInPOS = NewUnitGroupInPOS
+                    GroupInPOS = NewUnitGroupInPOS,
+                    ReferenceUnit = NewUnitReferenceUnit ?? string.Empty
                 };
                 await _inventoryService.AddProductUnitAsync(unit);
                 await LoadFormDataAsync();
                 
                 SelectedUnitName = unit.Name;
+                UnitSearchText = unit.Name;
                 IsCreateUnitModalOpen = false;
                 
                 NewUnitName = string.Empty;
                 NewUnitQuantity = 1.0;
                 NewUnitGroupInPOS = false;
+                NewUnitReferenceUnit = string.Empty;
             }
             catch (Exception ex)
             {

@@ -194,8 +194,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             {
                 var list = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
                 
-                // Exclude Draft status (RFQs) since they are handled in the RFQ tab
-                var posOnly = list.Where(po => po.PurchaseOrder.Status != "Draft");
+                // Exclude Draft and Sent statuses (RFQs) since they are handled in the RFQ tab
+                var posOnly = list.Where(po => po.PurchaseOrder.Status != "Draft" && po.PurchaseOrder.Status != "Sent");
 
                 // Update unique companies list
                 var uniqueCompanies = posOnly

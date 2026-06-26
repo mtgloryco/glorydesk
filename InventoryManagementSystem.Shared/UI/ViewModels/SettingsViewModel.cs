@@ -15,20 +15,23 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly AccountService _accountService;
     private readonly JournalService _journalService;
     private readonly AccountingReportService _accountingReportService;
+    private readonly PaymentService _paymentService;
 
     // Tabs
     [ObservableProperty]
-    private string _selectedTab = "General"; // "General", "Taxes", "Accounting"
+    private string _selectedTab = "General"; // "General", "Taxes", "Accounting", "Payments"
 
     public bool IsGeneralTabActive => SelectedTab == "General";
     public bool IsTaxesTabActive => SelectedTab == "Taxes";
     public bool IsAccountingTabActive => SelectedTab == "Accounting";
+    public bool IsPaymentsTabActive => SelectedTab == "Payments";
 
     partial void OnSelectedTabChanged(string value)
     {
         OnPropertyChanged(nameof(IsGeneralTabActive));
         OnPropertyChanged(nameof(IsTaxesTabActive));
         OnPropertyChanged(nameof(IsAccountingTabActive));
+        OnPropertyChanged(nameof(IsPaymentsTabActive));
 
         if (value == "Accounting" || value == "Taxes")
         {
@@ -37,6 +40,10 @@ public partial class SettingsViewModel : ViewModelBase
         if (value == "Accounting")
         {
             _ = LoadAvailableTaxesAsync();
+        }
+        if (value == "Payments")
+        {
+            _ = LoadPaymentsDataAsync();
         }
     }
 
@@ -214,6 +221,13 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _journalType = "Miscellaneous";
 
+    public bool IsJournalTypeBank => JournalType == "Bank";
+
+    partial void OnJournalTypeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsJournalTypeBank));
+    }
+
     [ObservableProperty]
     private string _journalSequencePrefix = string.Empty;
 
@@ -229,6 +243,64 @@ public partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isJournalAccountResultsVisible;
+
+    // Bank Journal Clearing Accounts
+    [ObservableProperty]
+    private Account? _journalBankAccount;
+    [ObservableProperty]
+    private string _journalBankAccountSearch = string.Empty;
+    [ObservableProperty]
+    private ObservableCollection<Account> _journalBankAccountResults = new();
+    [ObservableProperty]
+    private bool _isJournalBankAccountResultsVisible;
+
+    [ObservableProperty]
+    private Account? _journalSuspenseAccount;
+    [ObservableProperty]
+    private string _journalSuspenseAccountSearch = string.Empty;
+    [ObservableProperty]
+    private ObservableCollection<Account> _journalSuspenseAccountResults = new();
+    [ObservableProperty]
+    private bool _isJournalSuspenseAccountResultsVisible;
+
+    [ObservableProperty]
+    private Account? _journalProfitAccount;
+    [ObservableProperty]
+    private string _journalProfitAccountSearch = string.Empty;
+    [ObservableProperty]
+    private ObservableCollection<Account> _journalProfitAccountResults = new();
+    [ObservableProperty]
+    private bool _isJournalProfitAccountResultsVisible;
+
+    [ObservableProperty]
+    private Account? _journalLossAccount;
+    [ObservableProperty]
+    private string _journalLossAccountSearch = string.Empty;
+    [ObservableProperty]
+    private ObservableCollection<Account> _journalLossAccountResults = new();
+    [ObservableProperty]
+    private bool _isJournalLossAccountResultsVisible;
+
+    [ObservableProperty]
+    private Account? _journalOutstandingReceiptsAccount;
+    [ObservableProperty]
+    private string _journalOutstandingReceiptsAccountSearch = string.Empty;
+    [ObservableProperty]
+    private ObservableCollection<Account> _journalOutstandingReceiptsAccountResults = new();
+    [ObservableProperty]
+    private bool _isJournalOutstandingReceiptsAccountResultsVisible;
+
+    [ObservableProperty]
+    private Account? _journalOutstandingPaymentsAccount;
+    [ObservableProperty]
+    private string _journalOutstandingPaymentsAccountSearch = string.Empty;
+    [ObservableProperty]
+    private ObservableCollection<Account> _journalOutstandingPaymentsAccountResults = new();
+    [ObservableProperty]
+    private bool _isJournalOutstandingPaymentsAccountResultsVisible;
+
+    [ObservableProperty]
+    private BankAccountDisplayRow? _journalSelectedLinkedBankAccount;
 
     partial void OnJournalAccountSearchChanged(string value)
     {
@@ -259,6 +331,192 @@ public partial class SettingsViewModel : ViewModelBase
         JournalAccountSearch = account != null ? $"{account.Code} {account.Name}" : string.Empty;
         JournalAccountResults.Clear();
         IsJournalAccountResultsVisible = false;
+    }
+
+    partial void OnJournalBankAccountSearchChanged(string value)
+    {
+        JournalBankAccountResults.Clear();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            IsJournalBankAccountResultsVisible = false;
+            return;
+        }
+
+        var lower = value.ToLower();
+        foreach (var acc in _allAccounts)
+        {
+            if ((acc.Code?.ToLower().Contains(lower) == true) ||
+                (acc.Name?.ToLower().Contains(lower) == true))
+            {
+                JournalBankAccountResults.Add(acc);
+                if (JournalBankAccountResults.Count >= 10) break;
+            }
+        }
+        IsJournalBankAccountResultsVisible = JournalBankAccountResults.Count > 0;
+    }
+
+    [RelayCommand]
+    private void SelectJournalBankAccount(Account? account)
+    {
+        JournalBankAccount = account;
+        JournalBankAccountSearch = account != null ? $"{account.Code} {account.Name}" : string.Empty;
+        JournalBankAccountResults.Clear();
+        IsJournalBankAccountResultsVisible = false;
+    }
+
+    partial void OnJournalSuspenseAccountSearchChanged(string value)
+    {
+        JournalSuspenseAccountResults.Clear();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            IsJournalSuspenseAccountResultsVisible = false;
+            return;
+        }
+
+        var lower = value.ToLower();
+        foreach (var acc in _allAccounts)
+        {
+            if ((acc.Code?.ToLower().Contains(lower) == true) ||
+                (acc.Name?.ToLower().Contains(lower) == true))
+            {
+                JournalSuspenseAccountResults.Add(acc);
+                if (JournalSuspenseAccountResults.Count >= 10) break;
+            }
+        }
+        IsJournalSuspenseAccountResultsVisible = JournalSuspenseAccountResults.Count > 0;
+    }
+
+    [RelayCommand]
+    private void SelectJournalSuspenseAccount(Account? account)
+    {
+        JournalSuspenseAccount = account;
+        JournalSuspenseAccountSearch = account != null ? $"{account.Code} {account.Name}" : string.Empty;
+        JournalSuspenseAccountResults.Clear();
+        IsJournalSuspenseAccountResultsVisible = false;
+    }
+
+    partial void OnJournalProfitAccountSearchChanged(string value)
+    {
+        JournalProfitAccountResults.Clear();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            IsJournalProfitAccountResultsVisible = false;
+            return;
+        }
+
+        var lower = value.ToLower();
+        foreach (var acc in _allAccounts)
+        {
+            if ((acc.Code?.ToLower().Contains(lower) == true) ||
+                (acc.Name?.ToLower().Contains(lower) == true))
+            {
+                JournalProfitAccountResults.Add(acc);
+                if (JournalProfitAccountResults.Count >= 10) break;
+            }
+        }
+        IsJournalProfitAccountResultsVisible = JournalProfitAccountResults.Count > 0;
+    }
+
+    [RelayCommand]
+    private void SelectJournalProfitAccount(Account? account)
+    {
+        JournalProfitAccount = account;
+        JournalProfitAccountSearch = account != null ? $"{account.Code} {account.Name}" : string.Empty;
+        JournalProfitAccountResults.Clear();
+        IsJournalProfitAccountResultsVisible = false;
+    }
+
+    partial void OnJournalLossAccountSearchChanged(string value)
+    {
+        JournalLossAccountResults.Clear();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            IsJournalLossAccountResultsVisible = false;
+            return;
+        }
+
+        var lower = value.ToLower();
+        foreach (var acc in _allAccounts)
+        {
+            if ((acc.Code?.ToLower().Contains(lower) == true) ||
+                (acc.Name?.ToLower().Contains(lower) == true))
+            {
+                JournalLossAccountResults.Add(acc);
+                if (JournalLossAccountResults.Count >= 10) break;
+            }
+        }
+        IsJournalLossAccountResultsVisible = JournalLossAccountResults.Count > 0;
+    }
+
+    [RelayCommand]
+    private void SelectJournalLossAccount(Account? account)
+    {
+        JournalLossAccount = account;
+        JournalLossAccountSearch = account != null ? $"{account.Code} {account.Name}" : string.Empty;
+        JournalLossAccountResults.Clear();
+        IsJournalLossAccountResultsVisible = false;
+    }
+
+    partial void OnJournalOutstandingReceiptsAccountSearchChanged(string value)
+    {
+        JournalOutstandingReceiptsAccountResults.Clear();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            IsJournalOutstandingReceiptsAccountResultsVisible = false;
+            return;
+        }
+
+        var lower = value.ToLower();
+        foreach (var acc in _allAccounts)
+        {
+            if ((acc.Code?.ToLower().Contains(lower) == true) ||
+                (acc.Name?.ToLower().Contains(lower) == true))
+            {
+                JournalOutstandingReceiptsAccountResults.Add(acc);
+                if (JournalOutstandingReceiptsAccountResults.Count >= 10) break;
+            }
+        }
+        IsJournalOutstandingReceiptsAccountResultsVisible = JournalOutstandingReceiptsAccountResults.Count > 0;
+    }
+
+    [RelayCommand]
+    private void SelectJournalOutstandingReceiptsAccount(Account? account)
+    {
+        JournalOutstandingReceiptsAccount = account;
+        JournalOutstandingReceiptsAccountSearch = account != null ? $"{account.Code} {account.Name}" : string.Empty;
+        JournalOutstandingReceiptsAccountResults.Clear();
+        IsJournalOutstandingReceiptsAccountResultsVisible = false;
+    }
+
+    partial void OnJournalOutstandingPaymentsAccountSearchChanged(string value)
+    {
+        JournalOutstandingPaymentsAccountResults.Clear();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            IsJournalOutstandingPaymentsAccountResultsVisible = false;
+            return;
+        }
+
+        var lower = value.ToLower();
+        foreach (var acc in _allAccounts)
+        {
+            if ((acc.Code?.ToLower().Contains(lower) == true) ||
+                (acc.Name?.ToLower().Contains(lower) == true))
+            {
+                JournalOutstandingPaymentsAccountResults.Add(acc);
+                if (JournalOutstandingPaymentsAccountResults.Count >= 10) break;
+            }
+        }
+        IsJournalOutstandingPaymentsAccountResultsVisible = JournalOutstandingPaymentsAccountResults.Count > 0;
+    }
+
+    [RelayCommand]
+    private void SelectJournalOutstandingPaymentsAccount(Account? account)
+    {
+        JournalOutstandingPaymentsAccount = account;
+        JournalOutstandingPaymentsAccountSearch = account != null ? $"{account.Code} {account.Name}" : string.Empty;
+        JournalOutstandingPaymentsAccountResults.Clear();
+        IsJournalOutstandingPaymentsAccountResultsVisible = false;
     }
 
     [ObservableProperty]
@@ -359,7 +617,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     public LanguageService Language { get; }
 
-    public SettingsViewModel(SettingsService settingsService, LanguageService languageService, TaxService taxService, AccountService accountService, JournalService journalService, AccountingReportService accountingReportService)
+    public SettingsViewModel(SettingsService settingsService, LanguageService languageService, TaxService taxService, AccountService accountService, JournalService journalService, AccountingReportService accountingReportService, PaymentService paymentService)
     {
         _settingsService = settingsService;
         Language = languageService;
@@ -367,6 +625,7 @@ public partial class SettingsViewModel : ViewModelBase
         _accountService = accountService;
         _journalService = journalService;
         _accountingReportService = accountingReportService;
+        _paymentService = paymentService;
 
         var s = _settingsService.CurrentSettings;
         _storeName = s.StoreName;
@@ -378,6 +637,8 @@ public partial class SettingsViewModel : ViewModelBase
 
         // Load taxes
         _ = LoadTaxesAsync();
+        // Load payments
+        _ = LoadPaymentsDataAsync();
     }
 
     [RelayCommand]
@@ -832,6 +1093,8 @@ public partial class SettingsViewModel : ViewModelBase
         if (_allAccounts.Count == 0)
             await LoadAccountsAsync();
 
+        await LoadPaymentsDataAsync();
+
         JournalId = 0;
         JournalName = string.Empty;
         JournalType = "Miscellaneous";
@@ -843,6 +1106,39 @@ public partial class SettingsViewModel : ViewModelBase
         JournalCurrency = "RWF";
         JournalPaymentCommunicationType = "Based on Invoice";
         JournalPaymentCommunicationStandard = string.Empty;
+
+        JournalBankAccount = null;
+        JournalBankAccountSearch = string.Empty;
+        JournalBankAccountResults.Clear();
+        IsJournalBankAccountResultsVisible = false;
+
+        JournalSuspenseAccount = null;
+        JournalSuspenseAccountSearch = string.Empty;
+        JournalSuspenseAccountResults.Clear();
+        IsJournalSuspenseAccountResultsVisible = false;
+
+        JournalProfitAccount = null;
+        JournalProfitAccountSearch = string.Empty;
+        JournalProfitAccountResults.Clear();
+        IsJournalProfitAccountResultsVisible = false;
+
+        JournalLossAccount = null;
+        JournalLossAccountSearch = string.Empty;
+        JournalLossAccountResults.Clear();
+        IsJournalLossAccountResultsVisible = false;
+
+        JournalOutstandingReceiptsAccount = null;
+        JournalOutstandingReceiptsAccountSearch = string.Empty;
+        JournalOutstandingReceiptsAccountResults.Clear();
+        IsJournalOutstandingReceiptsAccountResultsVisible = false;
+
+        JournalOutstandingPaymentsAccount = null;
+        JournalOutstandingPaymentsAccountSearch = string.Empty;
+        JournalOutstandingPaymentsAccountResults.Clear();
+        IsJournalOutstandingPaymentsAccountResultsVisible = false;
+
+        JournalSelectedLinkedBankAccount = null;
+
         JournalErrorMessage = string.Empty;
         IsJournalFormVisible = true;
     }
@@ -854,6 +1150,8 @@ public partial class SettingsViewModel : ViewModelBase
 
         if (_allAccounts.Count == 0)
             await LoadAccountsAsync();
+
+        await LoadPaymentsDataAsync();
 
         var journal = item.Journal;
         JournalId = journal.Id;
@@ -881,6 +1179,103 @@ public partial class SettingsViewModel : ViewModelBase
                     break;
                 }
             }
+        }
+
+        // Bank Account
+        JournalBankAccount = null;
+        JournalBankAccountSearch = string.Empty;
+        JournalBankAccountResults.Clear();
+        IsJournalBankAccountResultsVisible = false;
+        if (journal.BankAccountId.HasValue)
+        {
+            var acc = _allAccounts.FirstOrDefault(a => a.Id == journal.BankAccountId.Value);
+            if (acc != null)
+            {
+                JournalBankAccount = acc;
+                JournalBankAccountSearch = $"{acc.Code} {acc.Name}";
+            }
+        }
+
+        // Suspense Account
+        JournalSuspenseAccount = null;
+        JournalSuspenseAccountSearch = string.Empty;
+        JournalSuspenseAccountResults.Clear();
+        IsJournalSuspenseAccountResultsVisible = false;
+        if (journal.SuspenseAccountId.HasValue)
+        {
+            var acc = _allAccounts.FirstOrDefault(a => a.Id == journal.SuspenseAccountId.Value);
+            if (acc != null)
+            {
+                JournalSuspenseAccount = acc;
+                JournalSuspenseAccountSearch = $"{acc.Code} {acc.Name}";
+            }
+        }
+
+        // Profit Account
+        JournalProfitAccount = null;
+        JournalProfitAccountSearch = string.Empty;
+        JournalProfitAccountResults.Clear();
+        IsJournalProfitAccountResultsVisible = false;
+        if (journal.ProfitAccountId.HasValue)
+        {
+            var acc = _allAccounts.FirstOrDefault(a => a.Id == journal.ProfitAccountId.Value);
+            if (acc != null)
+            {
+                JournalProfitAccount = acc;
+                JournalProfitAccountSearch = $"{acc.Code} {acc.Name}";
+            }
+        }
+
+        // Loss Account
+        JournalLossAccount = null;
+        JournalLossAccountSearch = string.Empty;
+        JournalLossAccountResults.Clear();
+        IsJournalLossAccountResultsVisible = false;
+        if (journal.LossAccountId.HasValue)
+        {
+            var acc = _allAccounts.FirstOrDefault(a => a.Id == journal.LossAccountId.Value);
+            if (acc != null)
+            {
+                JournalLossAccount = acc;
+                JournalLossAccountSearch = $"{acc.Code} {acc.Name}";
+            }
+        }
+
+        // Outstanding Receipts Account
+        JournalOutstandingReceiptsAccount = null;
+        JournalOutstandingReceiptsAccountSearch = string.Empty;
+        JournalOutstandingReceiptsAccountResults.Clear();
+        IsJournalOutstandingReceiptsAccountResultsVisible = false;
+        if (journal.OutstandingReceiptsAccountId.HasValue)
+        {
+            var acc = _allAccounts.FirstOrDefault(a => a.Id == journal.OutstandingReceiptsAccountId.Value);
+            if (acc != null)
+            {
+                JournalOutstandingReceiptsAccount = acc;
+                JournalOutstandingReceiptsAccountSearch = $"{acc.Code} {acc.Name}";
+            }
+        }
+
+        // Outstanding Payments Account
+        JournalOutstandingPaymentsAccount = null;
+        JournalOutstandingPaymentsAccountSearch = string.Empty;
+        JournalOutstandingPaymentsAccountResults.Clear();
+        IsJournalOutstandingPaymentsAccountResultsVisible = false;
+        if (journal.OutstandingPaymentsAccountId.HasValue)
+        {
+            var acc = _allAccounts.FirstOrDefault(a => a.Id == journal.OutstandingPaymentsAccountId.Value);
+            if (acc != null)
+            {
+                JournalOutstandingPaymentsAccount = acc;
+                JournalOutstandingPaymentsAccountSearch = $"{acc.Code} {acc.Name}";
+            }
+        }
+
+        // Linked Bank Account
+        JournalSelectedLinkedBankAccount = null;
+        if (journal.LinkedBankAccountId.HasValue)
+        {
+            JournalSelectedLinkedBankAccount = BankAccounts.FirstOrDefault(b => b.Id == journal.LinkedBankAccountId.Value);
         }
 
         IsJournalFormVisible = true;
@@ -920,6 +1315,17 @@ public partial class SettingsViewModel : ViewModelBase
                 PaymentCommunicationType = JournalPaymentCommunicationType,
                 PaymentCommunicationStandard = JournalPaymentCommunicationStandard?.Trim() ?? string.Empty
             };
+
+            if (JournalType == "Bank")
+            {
+                journal.BankAccountId = JournalBankAccount?.Id;
+                journal.SuspenseAccountId = JournalSuspenseAccount?.Id;
+                journal.ProfitAccountId = JournalProfitAccount?.Id;
+                journal.LossAccountId = JournalLossAccount?.Id;
+                journal.OutstandingReceiptsAccountId = JournalOutstandingReceiptsAccount?.Id;
+                journal.OutstandingPaymentsAccountId = JournalOutstandingPaymentsAccount?.Id;
+                journal.LinkedBankAccountId = JournalSelectedLinkedBankAccount?.Id;
+            }
 
             if (JournalId == 0)
                 await _journalService.AddJournalAsync(journal);
@@ -1219,6 +1625,381 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     #endregion
+
+    #region Payments Management
+
+    // Payments Properties
+    [ObservableProperty]
+    private string _selectedPaymentsManagementType = "Banks"; // "Banks" or "Bank Accounts"
+
+    public bool IsBanksSubTabActive => SelectedPaymentsManagementType == "Banks";
+    public bool IsBankAccountsSubTabActive => SelectedPaymentsManagementType == "Bank Accounts";
+
+    partial void OnSelectedPaymentsManagementTypeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsBanksSubTabActive));
+        OnPropertyChanged(nameof(IsBankAccountsSubTabActive));
+    }
+
+    public ObservableCollection<string> PaymentsManagementTypes { get; } = new() { "Banks", "Bank Accounts" };
+
+    // Banks
+    [ObservableProperty]
+    private ObservableCollection<Bank> _banks = new();
+
+    [ObservableProperty]
+    private Bank? _selectedBank;
+
+    [ObservableProperty]
+    private bool _isBankFormVisible;
+
+    [ObservableProperty]
+    private int _bankId;
+
+    [ObservableProperty]
+    private string _bankName = string.Empty;
+
+    [ObservableProperty]
+    private string _bankStreet = string.Empty;
+
+    [ObservableProperty]
+    private string _bankCity = string.Empty;
+
+    [ObservableProperty]
+    private string _bankCountry = string.Empty;
+
+    [ObservableProperty]
+    private string _bankPhone = string.Empty;
+
+    [ObservableProperty]
+    private string _bankEmail = string.Empty;
+
+    [ObservableProperty]
+    private string _bankErrorMessage = string.Empty;
+
+    // Bank Accounts
+    [ObservableProperty]
+    private ObservableCollection<BankAccountDisplayRow> _bankAccounts = new();
+
+    [ObservableProperty]
+    private BankAccount? _selectedBankAccount;
+
+    [ObservableProperty]
+    private bool _isBankAccountFormVisible;
+
+    [ObservableProperty]
+    private int _bankAccountId;
+
+    [ObservableProperty]
+    private string _bankAccountNumber = string.Empty;
+
+    [ObservableProperty]
+    private string _bankAccountHolder = string.Empty;
+
+    [ObservableProperty]
+    private string _bankSearchText = string.Empty;
+
+    [ObservableProperty]
+    private ObservableCollection<Bank> _matchedBanks = new();
+
+    [ObservableProperty]
+    private Bank? _bankAccountSelectedBank;
+
+    [ObservableProperty]
+    private string _bankAccountCurrency = "RWF";
+
+    [ObservableProperty]
+    private bool _bankAccountSendMoney = false;
+
+    [ObservableProperty]
+    private string _bankAccountErrorMessage = string.Empty;
+
+    private List<Bank> _allBanksForSearch = new();
+
+    public bool IsBankDropdownVisible => BankAccountSelectedBank == null && !string.IsNullOrWhiteSpace(BankSearchText) && MatchedBanks.Count > 0;
+
+    partial void OnBankSearchTextChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || (BankAccountSelectedBank != null && value == BankAccountSelectedBank.Name))
+        {
+            MatchedBanks.Clear();
+            OnPropertyChanged(nameof(IsBankDropdownVisible));
+            return;
+        }
+
+        var query = value.ToLower();
+        var matches = _allBanksForSearch.Where(b => b.Name.ToLower().Contains(query)).Take(5).ToList();
+        MatchedBanks.Clear();
+        foreach (var m in matches)
+        {
+            MatchedBanks.Add(m);
+        }
+        OnPropertyChanged(nameof(IsBankDropdownVisible));
+    }
+
+    partial void OnBankAccountSelectedBankChanged(Bank? value)
+    {
+        if (value != null)
+        {
+            BankSearchText = value.Name;
+        }
+        OnPropertyChanged(nameof(IsBankDropdownVisible));
+    }
+
+    public async Task LoadPaymentsDataAsync()
+    {
+        try
+        {
+            var banksList = await _paymentService.GetAllBanksAsync();
+            _allBanksForSearch = banksList;
+            Banks = new ObservableCollection<Bank>(banksList);
+
+            var accountsList = await _paymentService.GetAllBankAccountsAsync();
+            var displayList = new List<BankAccountDisplayRow>();
+            foreach (var acc in accountsList)
+            {
+                var bank = banksList.FirstOrDefault(b => b.Id == acc.BankId);
+                displayList.Add(new BankAccountDisplayRow
+                {
+                    Account = acc,
+                    BankName = bank?.Name ?? "Unknown Bank"
+                });
+            }
+            BankAccounts = new ObservableCollection<BankAccountDisplayRow>(displayList);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load payments data: {ex.Message}");
+        }
+    }
+
+    // Bank Actions
+    [RelayCommand]
+    private void OpenAddBankForm()
+    {
+        BankId = 0;
+        BankName = string.Empty;
+        BankStreet = string.Empty;
+        BankCity = string.Empty;
+        BankCountry = string.Empty;
+        BankPhone = string.Empty;
+        BankEmail = string.Empty;
+        BankErrorMessage = string.Empty;
+        IsBankFormVisible = true;
+    }
+
+    [RelayCommand]
+    private void OpenEditBankForm(Bank bank)
+    {
+        if (bank == null) return;
+        BankId = bank.Id;
+        BankName = bank.Name;
+        BankStreet = bank.Street;
+        BankCity = bank.City;
+        BankCountry = bank.Country;
+        BankPhone = bank.Phone;
+        BankEmail = bank.Email;
+        BankErrorMessage = string.Empty;
+        IsBankFormVisible = true;
+    }
+
+    [RelayCommand]
+    private void CancelBankForm()
+    {
+        IsBankFormVisible = false;
+    }
+
+    [RelayCommand]
+    private async Task SaveBankAsync()
+    {
+        if (string.IsNullOrWhiteSpace(BankName))
+        {
+            BankErrorMessage = "Bank Name is required.";
+            return;
+        }
+
+        try
+        {
+            var bank = new Bank
+            {
+                Id = BankId,
+                Name = BankName,
+                Street = BankStreet,
+                City = BankCity,
+                Country = BankCountry,
+                Phone = BankPhone,
+                Email = BankEmail
+            };
+
+            if (BankId == 0)
+            {
+                await _paymentService.AddBankAsync(bank);
+            }
+            else
+            {
+                await _paymentService.UpdateBankAsync(bank);
+            }
+
+            IsBankFormVisible = false;
+            await LoadPaymentsDataAsync();
+        }
+        catch (Exception ex)
+        {
+            BankErrorMessage = $"Error saving bank: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteBankAsync(Bank bank)
+    {
+        if (bank == null) return;
+        try
+        {
+            await _paymentService.DeleteBankAsync(bank.Id);
+            await LoadPaymentsDataAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to delete bank: {ex.Message}");
+        }
+    }
+
+    // Bank Account Actions
+    [RelayCommand]
+    private void OpenAddBankAccountForm()
+    {
+        BankAccountId = 0;
+        BankAccountNumber = string.Empty;
+        BankAccountHolder = StoreName; // Default to company name using it
+        BankAccountSelectedBank = null;
+        BankSearchText = string.Empty;
+        BankAccountCurrency = "RWF";
+        BankAccountSendMoney = false;
+        BankAccountErrorMessage = string.Empty;
+        IsBankAccountFormVisible = true;
+    }
+
+    [RelayCommand]
+    private void OpenEditBankAccountForm(BankAccountDisplayRow row)
+    {
+        if (row == null) return;
+        var acc = row.Account;
+        BankAccountId = acc.Id;
+        BankAccountNumber = acc.AccountNumber;
+        BankAccountHolder = acc.AccountHolder;
+        BankAccountCurrency = acc.Currency;
+        BankAccountSendMoney = acc.SendMoney;
+        BankAccountErrorMessage = string.Empty;
+
+        var bank = _allBanksForSearch.FirstOrDefault(b => b.Id == acc.BankId);
+        BankAccountSelectedBank = bank;
+        BankSearchText = bank?.Name ?? string.Empty;
+
+        IsBankAccountFormVisible = true;
+    }
+
+    [RelayCommand]
+    private void CancelBankAccountForm()
+    {
+        IsBankAccountFormVisible = false;
+    }
+
+    [RelayCommand]
+    private void SelectSearchBank(Bank bank)
+    {
+        BankAccountSelectedBank = bank;
+        MatchedBanks.Clear();
+        OnPropertyChanged(nameof(IsBankDropdownVisible));
+    }
+
+    [RelayCommand]
+    private async Task SaveBankAccountAsync()
+    {
+        if (string.IsNullOrWhiteSpace(BankAccountNumber))
+        {
+            BankAccountErrorMessage = "Account Number is required.";
+            return;
+        }
+
+        if (BankAccountSelectedBank == null)
+        {
+            BankAccountErrorMessage = "Please select a valid linked Bank.";
+            return;
+        }
+
+        try
+        {
+            var acc = new BankAccount
+            {
+                Id = BankAccountId,
+                AccountNumber = BankAccountNumber,
+                AccountHolder = BankAccountHolder,
+                BankId = BankAccountSelectedBank.Id,
+                Currency = BankAccountCurrency,
+                SendMoney = BankAccountSendMoney
+            };
+
+            if (BankAccountId == 0)
+            {
+                await _paymentService.AddBankAccountAsync(acc);
+            }
+            else
+            {
+                await _paymentService.UpdateBankAccountAsync(acc);
+            }
+
+            IsBankAccountFormVisible = false;
+            await LoadPaymentsDataAsync();
+        }
+        catch (Exception ex)
+        {
+            BankAccountErrorMessage = $"Error saving bank account: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleSendMoneyAsync(BankAccountDisplayRow row)
+    {
+        if (row == null) return;
+        try
+        {
+            row.Account.SendMoney = !row.Account.SendMoney;
+            await _paymentService.UpdateBankAccountAsync(row.Account);
+            await LoadPaymentsDataAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to toggle Send Money: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteBankAccountAsync(BankAccountDisplayRow row)
+    {
+        if (row == null) return;
+        try
+        {
+            await _paymentService.DeleteBankAccountAsync(row.Id);
+            await LoadPaymentsDataAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to delete bank account: {ex.Message}");
+        }
+    }
+
+    #endregion
+}
+
+public class BankAccountDisplayRow
+{
+    public BankAccount Account { get; set; } = new();
+    public string BankName { get; set; } = string.Empty;
+    public int Id => Account.Id;
+    public string AccountNumber => Account.AccountNumber;
+    public string AccountHolder => Account.AccountHolder;
+    public string Currency => Account.Currency;
+    public bool SendMoney => Account.SendMoney;
 }
 
 public class AccountingReportWrapper : ObservableObject

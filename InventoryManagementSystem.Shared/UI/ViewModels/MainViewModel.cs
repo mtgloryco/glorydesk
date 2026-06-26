@@ -33,6 +33,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly AccountService _accountService;
     private readonly JournalService _journalService;
     private readonly AccountingReportService _accountingReportService;
+    private readonly ManufacturingService _manufacturingService;
+    private readonly PaymentService _paymentService;
 
     // Navigation Stack
     private readonly System.Collections.Generic.Stack<ViewModelBase> _navigationStack = new();
@@ -96,7 +98,9 @@ public partial class MainViewModel : ViewModelBase
         TaxService taxService,
         AccountService accountService,
         JournalService journalService,
-        AccountingReportService accountingReportService)
+        AccountingReportService accountingReportService,
+        ManufacturingService manufacturingService,
+        PaymentService paymentService)
     {
         _inventoryService = inventoryService;
         _userService = userService;
@@ -124,6 +128,8 @@ public partial class MainViewModel : ViewModelBase
         _accountService = accountService;
         _journalService = journalService;
         _accountingReportService = accountingReportService;
+        _manufacturingService = manufacturingService;
+        _paymentService = paymentService;
 
         // Check for updates on startup (fire and forget, silent)
         _ = CheckForUpdatesInternal(false);
@@ -219,6 +225,7 @@ public partial class MainViewModel : ViewModelBase
     public bool CanAccessAudit => _licenseService.CanAccessAuditTrail();
     public bool CanAccessAdvancedAnalytics => _licenseService.CanAccessAdvancedAnalytics();
     public bool CanAccessAnalytics => _licenseService.CanAccessAnalytics();
+    public bool CanAccessManufacturing => true;
 
     private void NavigateTo(ViewModelBase newPage)
     {
@@ -258,6 +265,9 @@ public partial class MainViewModel : ViewModelBase
 
     [RelayCommand]
     public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers));
+
+    [RelayCommand]
+    public void GoToManufacturing() => NavigateTo(new ManufacturingViewModel(_manufacturingService, _inventoryService, Language));
 
     [RelayCommand]
     public void GoToRfq()
@@ -322,7 +332,7 @@ public partial class MainViewModel : ViewModelBase
             GoToLicense();
             return;
         }
-        NavigateTo(new POSViewModel(_inventoryService, _licenseService, _receiptService, _settingsService, Language));
+        NavigateTo(new POSViewModel(_inventoryService, _licenseService, _receiptService, _settingsService, Language, _salesOrderService, _supplierService, _journalService, _taxService));
     }
 
     [RelayCommand]
@@ -349,7 +359,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToSettings()
     {
-        NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService));
+        NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService, _paymentService));
     }
 
     [RelayCommand]

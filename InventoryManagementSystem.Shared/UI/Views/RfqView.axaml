@@ -270,8 +270,9 @@
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Bottom">
                                 <Button Content="Cancel" Command="{Binding CancelFormCommand}"/>
                                 <Button Content="Preview PDF" Command="{Binding PreviewCurrentRfqPdfCommand}" Background="#007ACC" Foreground="White"/>
-                                <Button Content="Save Draft" Command="{Binding SaveRfqCommand}" Background="#F57C00" Foreground="White"/>
-                                <Button Content="Confirm Order" Command="{Binding ConfirmAsPurchaseOrderCommand}" Background="#2E7D32" Foreground="White" IsVisible="{Binding CurrentRfq.Id}"/>
+                                <Button Content="{Binding SaveButtonText}" Command="{Binding SaveRfqCommand}" Background="#F57C00" Foreground="White" IsVisible="{Binding IsSaveButtonVisible}"/>
+                                <Button Content="Send RFQ" Command="{Binding SendRfqCommand}" Background="#007ACC" Foreground="White" IsVisible="{Binding IsSendButtonVisible}"/>
+                                <Button Content="Confirm Order" Command="{Binding ConfirmAsPurchaseOrderCommand}" Background="#2E7D32" Foreground="White" IsVisible="{Binding IsConfirmButtonVisible}"/>
                             </StackPanel>
                         </Grid>
                     </Border>

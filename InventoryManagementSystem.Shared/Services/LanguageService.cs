@@ -118,7 +118,8 @@ namespace InventoryManagementSystem.Services
                 ["Bundles"] = "Bundles & Kits",
                 ["AuditTrail"] = "Audit Trail",
                 ["AdvancedInsights"] = "Advanced Insights",
-                ["Settings"] = "Settings"
+                ["Settings"] = "Settings",
+                ["Manufacturing"] = "Manufacturing"
             },
             ["fr"] = new()
             {
@@ -212,7 +213,8 @@ namespace InventoryManagementSystem.Services
                 ["Bundles"] = "Kitting & Bundles",
                 ["AuditTrail"] = "Audit System",
                 ["AdvancedInsights"] = "Analyses Avancees",
-                ["Settings"] = "Parametres"
+                ["Settings"] = "Parametres",
+                ["Manufacturing"] = "Fabrication"
             },
             ["rw"] = new()
             {
@@ -306,7 +308,8 @@ namespace InventoryManagementSystem.Services
                 ["Bundles"] = "Ibicuruzwa Bivanzwe",
                 ["AuditTrail"] = "Imicungire y'Ububiko",
                 ["AdvancedInsights"] = "Isesengura Ryimbitse",
-                ["Settings"] = "Igenamiterere"
+                ["Settings"] = "Igenamiterere",
+                ["Manufacturing"] = "Gukora (Mfg)"
             }
         };
 

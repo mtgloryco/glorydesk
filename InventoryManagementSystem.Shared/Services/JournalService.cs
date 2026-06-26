@@ -14,6 +14,8 @@ namespace InventoryManagementSystem.Services
             _databaseService = databaseService;
         }
 
+        public DatabaseService Database => _databaseService;
+
         public async Task<List<Journal>> GetAllJournalsAsync()
         {
             return await _databaseService.Connection.Table<Journal>()
@@ -25,6 +27,8 @@ namespace InventoryManagementSystem.Services
         {
             var journals = await GetAllJournalsAsync();
             var accounts = await _databaseService.Connection.Table<Account>().ToListAsync();
+            var bankAccounts = await _databaseService.Connection.Table<BankAccount>().ToListAsync();
+            var banks = await _databaseService.Connection.Table<Bank>().ToListAsync();
 
             var items = new List<JournalListItem>();
             foreach (var journal in journals)
@@ -36,7 +40,30 @@ namespace InventoryManagementSystem.Services
                     if (account != null)
                         accountDisplay = $"{account.Code} {account.Name}";
                 }
-                items.Add(new JournalListItem { Journal = journal, DefaultAccountDisplay = accountDisplay });
+
+                var linkedBankName = string.Empty;
+                var linkedBankAccountNumber = string.Empty;
+                if (journal.LinkedBankAccountId.HasValue)
+                {
+                    var bankAcc = bankAccounts.Find(ba => ba.Id == journal.LinkedBankAccountId.Value);
+                    if (bankAcc != null)
+                    {
+                        linkedBankAccountNumber = bankAcc.AccountNumber;
+                        var bank = banks.Find(b => b.Id == bankAcc.BankId);
+                        if (bank != null)
+                        {
+                            linkedBankName = bank.Name;
+                        }
+                    }
+                }
+
+                items.Add(new JournalListItem 
+                { 
+                    Journal = journal, 
+                    DefaultAccountDisplay = accountDisplay,
+                    LinkedBankName = linkedBankName,
+                    LinkedBankAccountNumber = linkedBankAccountNumber
+                });
             }
             return items;
         }

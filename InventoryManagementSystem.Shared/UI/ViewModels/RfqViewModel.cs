@@ -30,6 +30,20 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private bool _isFormOpen;
         [ObservableProperty] private bool _isNew;
         [ObservableProperty] private PurchaseOrder _currentRfq = new();
+        
+        public bool IsConfirmButtonVisible => CurrentRfq != null && CurrentRfq.Id > 0;
+        public bool IsSendButtonVisible => CurrentRfq != null && CurrentRfq.Status == "Draft";
+        public bool IsSaveButtonVisible => CurrentRfq != null && (CurrentRfq.Status == "Draft" || CurrentRfq.Status == "Sent" || string.IsNullOrEmpty(CurrentRfq.Status));
+        public string SaveButtonText => CurrentRfq != null && CurrentRfq.Status == "Sent" ? "Save Changes" : "Save Draft";
+
+        private void UpdateRfqButtonVisibility()
+        {
+            OnPropertyChanged(nameof(IsConfirmButtonVisible));
+            OnPropertyChanged(nameof(IsSendButtonVisible));
+            OnPropertyChanged(nameof(IsSaveButtonVisible));
+            OnPropertyChanged(nameof(SaveButtonText));
+        }
+
         [ObservableProperty] private string _vendorSearchText = string.Empty;
         [ObservableProperty] private Supplier? _selectedSupplier;
         [ObservableProperty] private decimal _rfqTotalAmount;
@@ -87,8 +101,8 @@ namespace InventoryManagementSystem.UI.ViewModels
         {
             var list = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
             
-            // Filter to only display Draft (RFQ) or orders matching search text
-            var filtered = list.Where(po => po.PurchaseOrder.Status == "Draft" || po.PurchaseOrder.Status == "Pending");
+            // Filter to display Draft (RFQ), Sent, or Pending
+            var filtered = list.Where(po => po.PurchaseOrder.Status == "Draft" || po.PurchaseOrder.Status == "Sent" || po.PurchaseOrder.Status == "Pending");
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 var query = SearchText.ToLower();
@@ -144,6 +158,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             await LoadFormDataAsync();
             AddItemRow(); // Start with one row
             IsFormOpen = true;
+            UpdateRfqButtonVisibility();
         }
 
         [RelayCommand]
@@ -203,6 +218,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             IsNew = false;
             UpdateRfqTotal();
             IsFormOpen = true;
+            UpdateRfqButtonVisibility();
         }
 
         [RelayCommand]
@@ -304,6 +320,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
                 IsFormOpen = false;
                 await LoadRfqs();
+                UpdateRfqButtonVisibility();
             }
             catch (Exception ex)
             {
@@ -325,11 +342,19 @@ namespace InventoryManagementSystem.UI.ViewModels
                 await _purchaseOrderService.ConvertRfqToPoAsync(CurrentRfq.Id, UserSession.CurrentUser?.Username ?? "System");
                 IsFormOpen = false;
                 await LoadRfqs();
+                UpdateRfqButtonVisibility();
             }
             catch (Exception ex)
             {
                 ErrorMessage = ex.Message;
             }
+        }
+
+        [RelayCommand]
+        private async Task SendRfq()
+        {
+            CurrentRfq.Status = "Sent";
+            await SaveRfq();
         }
 
         [RelayCommand]

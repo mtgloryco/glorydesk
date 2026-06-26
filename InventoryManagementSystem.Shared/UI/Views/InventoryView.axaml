@@ -351,6 +351,11 @@
                         <TextBox Watermark="1.0" Text="{Binding NewUnitQuantity}"/>
                     </StackPanel>
                     
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Reference Unit (Optional)" FontSize="12"/>
+                        <ComboBox ItemsSource="{Binding CleanUnitNames}" SelectedItem="{Binding NewUnitReferenceUnit}" HorizontalAlignment="Stretch" PlaceholderText="Select reference unit..."/>
+                    </StackPanel>
+                    
                     <CheckBox Content="Group products in POS" IsChecked="{Binding NewUnitGroupInPOS}"/>
                     
                     <TextBlock Text="{Binding NewUnitErrorMessage}" Foreground="#FF5252" TextWrapping="Wrap" IsVisible="{Binding NewUnitErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>

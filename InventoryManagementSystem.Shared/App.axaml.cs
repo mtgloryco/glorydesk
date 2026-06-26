@@ -35,7 +35,8 @@ public partial class App : Application
                     services.settings, services.supplier, services.purchaseOrder, services.salesOrder, services.forecasting,
                     services.expiry, services.location, services.returns, services.advancedAnalytics,
                     services.bundle, services.audit, services.reporting, services.cloudSync,
-                    services.briefing, services.tax, services.account, services.journal, services.accountingReport),
+                    services.briefing, services.tax, services.account, services.journal, services.accountingReport,
+                    services.manufacturing, services.payment),
             };
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
@@ -48,7 +49,8 @@ public partial class App : Application
                     services.settings, services.supplier, services.purchaseOrder, services.salesOrder, services.forecasting,
                     services.expiry, services.location, services.returns, services.advancedAnalytics,
                     services.bundle, services.audit, services.reporting, services.cloudSync,
-                    services.briefing, services.tax, services.account, services.journal, services.accountingReport),
+                    services.briefing, services.tax, services.account, services.journal, services.accountingReport,
+                    services.manufacturing, services.payment),
             };
         }
 
@@ -62,7 +64,8 @@ public partial class App : Application
         ForecastingService forecasting, ExpiryService expiry, LocationService location, ReturnsService returns,
         AdvancedAnalyticsService advancedAnalytics, BundleService bundle, AuditService audit,
         ReportingService reporting, CloudSyncService cloudSync, DailyBriefingService briefing,
-        TaxService tax, AccountService account, JournalService journal, AccountingReportService accountingReport) InitializeServices()
+        TaxService tax, AccountService account, JournalService journal, AccountingReportService accountingReport,
+        ManufacturingService manufacturing, PaymentService payment) InitializeServices()
     {
         // Initialize Database
         var dbService = new DatabaseService();
@@ -94,6 +97,8 @@ public partial class App : Application
         var accountService = new AccountService(dbService);
         var journalService = new JournalService(dbService);
         var accountingReportService = new AccountingReportService(dbService);
+        var manufacturingService = new ManufacturingService(dbService);
+        var paymentService = new PaymentService(dbService);
 
         // Initialize services on a background thread to prevent UI thread deadlock
         Task.Run(async () =>
@@ -118,7 +123,7 @@ public partial class App : Application
             settingsService, supplierService, purchaseOrderService, salesOrderService, forecastingService,
             expiryService, locationService, returnsService, advancedAnalyticsService,
             bundleService, auditService, reportingService, cloudSyncService, dailyBriefingService,
-            taxService, accountService, journalService, accountingReportService);
+            taxService, accountService, journalService, accountingReportService, manufacturingService, paymentService);
     }
 
     private void DisableAvaloniaDataAnnotationValidation()
