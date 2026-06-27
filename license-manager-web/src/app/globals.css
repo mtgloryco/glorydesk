@@ -1,3 +1,45 @@
+@font-face {
+  font-family: 'Opulenza';
+  src: url('/fonts/opulenza-regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+h1, h2, h3, h4, .logo, .title, .font-display {
+  font-family: 'Opulenza', system-ui, -apple-system, sans-serif !important;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.card-3d {
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease;
+  transform-style: preserve-3d;
+}
+
+.card-3d:hover {
+  transform: translateY(-10px) rotateX(6deg) rotateY(-6deg);
+  box-shadow: 0 25px 50px -12px rgba(245, 158, 11, 0.15), 0 8px 16px -8px rgba(0, 0, 0, 0.1);
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
 @import "tailwindcss";
 @config "../../tailwind.config.js";
 

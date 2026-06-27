@@ -195,7 +195,7 @@ export default function LandingPage() {
                     </h1>
 
                     <p className="text-lg text-slate-600 max-w-2xl leading-relaxed mb-10">
-                        The ultimate offline-first tool to track supplies, materials, tools, and assets. Fast machine-bound RSA keys, advanced barcode scanner support, and real-time cloud sync.
+                        The ultimate offline-first tool to track supplies, materials, tools, and assets. Secure hardware-locked activation keys, advanced barcode scanner support, and real-time cloud sync.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto mb-16">
@@ -211,7 +211,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Dashboard Mockup Video Player Frame */}
-                    <div className="w-full max-w-5xl rounded-2xl bg-slate-950 p-3 shadow-2xl shadow-slate-900/30 border border-slate-800/80 group relative">
+                    <div className="w-full max-w-5xl rounded-2xl bg-slate-950 p-3 shadow-2xl shadow-slate-900/30 border border-slate-800/80 group relative animate-float">
                         <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
 
                         <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-slate-900 flex flex-col">
@@ -373,8 +373,8 @@ export default function LandingPage() {
                         </div>
 
                         {/* Visual Mockup Column */}
-                        <div className="lg:col-span-7 order-1 lg:order-2">
-                            <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center">
+                        <div className="lg:col-span-7 order-1 lg:order-2 perspective-1000">
+                            <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center card-3d">
                                 <img
                                     src="/images/mockup-organizing.png"
                                     alt="Organizing Mockup"
@@ -425,8 +425,8 @@ export default function LandingPage() {
                     {/* FEATURE ROW 2 - MANAGING & SCANNING */}
                     <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center mb-24 lg:mb-32">
                         {/* Visual Mockup Column First */}
-                        <div className="lg:col-span-7">
-                            <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center">
+                        <div className="lg:col-span-7 perspective-1000">
+                            <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center card-3d">
                                 <img
                                     src="/images/mockup-tracking.png"
                                     alt="Tracking Mockup"
@@ -565,8 +565,8 @@ export default function LandingPage() {
                         </div>
 
                         {/* Visual Mockup Column */}
-                        <div className="lg:col-span-7 order-1 lg:order-2">
-                            <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center">
+                        <div className="lg:col-span-7 order-1 lg:order-2 perspective-1000">
+                            <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center card-3d">
                                 <img
                                     src="/images/mockup-reporting.png"
                                     alt="Reporting Mockup"
@@ -623,8 +623,8 @@ export default function LandingPage() {
                     {/* FEATURE ROW 4 - SYNC & SECURITY */}
                     <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
                         {/* Visual Mockup Column First */}
-                        <div className="lg:col-span-7">
-                            <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center">
+                        <div className="lg:col-span-7 perspective-1000">
+                            <div className="bg-slate-100 border border-slate-200/80 rounded-2xl p-4 shadow-xl shadow-slate-100/50 group relative overflow-hidden aspect-[4/3] flex items-center justify-center card-3d">
                                 <img
                                     src="/images/mockup-sync.png"
                                     alt="Sync Mockup"
@@ -707,9 +707,9 @@ export default function LandingPage() {
                         </p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
+                    <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12 perspective-1000">
                         {/* Windows Card */}
-                        <div className="bg-white border border-slate-200 rounded-3xl p-8 hover:border-amber-500 hover:shadow-xl hover:shadow-slate-100/60 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between items-center text-center">
+                        <div className="bg-white border border-slate-200 rounded-3xl p-8 card-3d flex flex-col justify-between items-center text-center">
                             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white flex items-center justify-center shadow-lg shadow-blue-500/10 mb-6">
                                 <Laptop className="w-8 h-8" />
                             </div>
@@ -743,7 +743,7 @@ export default function LandingPage() {
                         </div>
 
                         {/* Linux Card */}
-                        <div className="bg-white border border-slate-200 rounded-3xl p-8 hover:border-amber-500 hover:shadow-xl hover:shadow-slate-100/60 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between items-center text-center">
+                        <div className="bg-white border border-slate-200 rounded-3xl p-8 card-3d flex flex-col justify-between items-center text-center">
                             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 text-white flex items-center justify-center shadow-lg shadow-slate-950/10 mb-6">
                                 <Database className="w-8 h-8" />
                             </div>
@@ -795,7 +795,7 @@ export default function LandingPage() {
                             <div className="bg-white border border-slate-200/60 rounded-2xl p-6 relative">
                                 <span className="absolute top-4 right-6 text-4xl font-black text-amber-500/10">01</span>
                                 <h4 className="font-extrabold text-slate-900 mb-2">Download Client</h4>
-                                <p className="text-slate-500 text-xs leading-relaxed">Download the secure installer above mapped to your machine operating system files.</p>
+                                <p className="text-slate-500 text-xs leading-relaxed">Download the secure installer above for your operating system.</p>
                             </div>
                             <div className="bg-white border border-slate-200/60 rounded-2xl p-6 relative">
                                 <span className="absolute top-4 right-6 text-4xl font-black text-amber-500/10">02</span>
@@ -810,7 +810,7 @@ export default function LandingPage() {
                             <div className="bg-white border border-slate-200/60 rounded-2xl p-6 relative">
                                 <span className="absolute top-4 right-6 text-4xl font-black text-amber-500/10">04</span>
                                 <h4 className="font-extrabold text-slate-900 mb-2">Activate Desktop App</h4>
-                                <p className="text-slate-500 text-xs leading-relaxed">Boot your offline app, enter your activation signature in settings and unlock all features.</p>
+                                <p className="text-slate-500 text-xs leading-relaxed">Launch your offline app, enter your activation key in settings to unlock all features.</p>
                             </div>
                         </div>
                     </div>
@@ -834,13 +834,13 @@ export default function LandingPage() {
                         </p>
                     </div>
 
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch perspective-1000">
                         {displayPlans.map((plan) => {
                             const isPro = plan.id === 'pro';
                             return (
                                 <div
                                     key={plan.id}
-                                    className={`bg-slate-900/60 border rounded-3xl p-8 flex flex-col justify-between relative transition-all duration-300 ${isPro ? 'border-amber-500 shadow-xl shadow-amber-500/10 scale-105 z-10 bg-gradient-to-b from-slate-900 to-slate-950' : 'border-slate-800'}`}
+                                    className={`bg-slate-900/60 border rounded-3xl p-8 flex flex-col justify-between relative card-3d ${isPro ? 'border-amber-500 shadow-xl shadow-amber-500/10 scale-105 z-10 bg-gradient-to-b from-slate-900 to-slate-950' : 'border-slate-800'}`}
                                 >
                                     {isPro && (
                                         <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 text-[10px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full shadow-lg shadow-amber-500/20">
