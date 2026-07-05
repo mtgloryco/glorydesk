@@ -19,6 +19,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly TaxService _taxService;
         private readonly SettingsService _settingsService;
         private readonly SalesOrderPdfService _pdfService;
+        private readonly ReturnsService _returnsService;
 
         public LanguageService Language { get; }
 
@@ -91,6 +92,11 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private ObservableCollection<SalesOrderDeliveryRow> _deliveryRows = new();
         [ObservableProperty] private string _deliveryErrorMessage = string.Empty;
 
+        // Return Modal
+        [ObservableProperty] private bool _isReturnModalOpen;
+        [ObservableProperty] private ObservableCollection<SalesOrderReturnRow> _returnRows = new();
+        [ObservableProperty] private string _returnErrorMessage = string.Empty;
+
         [ObservableProperty] private ObservableCollection<SalesItemRow> _orderItems = new();
         [ObservableProperty] private ObservableCollection<Tax> _salesTaxes = new();
 
@@ -107,6 +113,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         public bool CanCancelDetailedSo => DetailedSo != null && DetailedSo.Status != "Cancelled" && DetailedSo.Status != "Delivered";
         public string ArchiveDetailedSoButtonText => DetailedSoIsArchived ? "Unarchive Order" : "Archive Order";
         public bool CanDeliverDetailedSo => DetailedSo != null && DetailedSo.DeliveryStatus != "Delivered" && DetailedSo.Status != "Cancelled" && DetailedSo.Status != "Draft";
+        public bool CanReturnDetailedSo => DetailedSo != null && DetailedSo.DeliveryStatus != "Pending" && DetailedSo.Status != "Cancelled";
         public bool CanInvoiceDetailedSo => DetailedSo != null && DetailedSo.BillingStatus != "Invoiced" && DetailedSo.Status != "Cancelled" && DetailedSo.Status != "Draft";
         public bool IsDetailedSoInvoiced => DetailedSo?.BillingStatus == "Invoiced";
 
@@ -122,6 +129,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             InventoryService inventoryService,
             TaxService taxService,
             SettingsService settingsService,
+            ReturnsService returnsService,
             LanguageService languageService,
             int initialTab = 0)
         {
@@ -130,6 +138,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             _inventoryService = inventoryService;
             _taxService = taxService;
             _settingsService = settingsService;
+            _returnsService = returnsService;
             Language = languageService;
             _pdfService = new SalesOrderPdfService(_settingsService);
             SelectedTabIndex = initialTab;
@@ -479,6 +488,7 @@ namespace InventoryManagementSystem.UI.ViewModels
                 OnPropertyChanged(nameof(CanCancelDetailedSo));
                 OnPropertyChanged(nameof(ArchiveDetailedSoButtonText));
                 OnPropertyChanged(nameof(CanDeliverDetailedSo));
+                OnPropertyChanged(nameof(CanReturnDetailedSo));
                 OnPropertyChanged(nameof(CanInvoiceDetailedSo));
                 OnPropertyChanged(nameof(IsDetailedSoInvoiced));
 
@@ -1080,6 +1090,98 @@ namespace InventoryManagementSystem.UI.ViewModels
                 OrderTaxBreakdownText = "Taxes breakdown:\n" + string.Join("\n", parts);
             }
         }
+
+        [RelayCommand]
+        private async Task OpenReturnOrder(SalesOrderListItem? item)
+        {
+            var target = item ?? SelectedOrder;
+            if (target == null) return;
+
+            ReturnErrorMessage = string.Empty;
+            var orderItems = await _salesOrderService.GetItemsAsync(target.SalesOrder.Id);
+            
+            ReturnRows.Clear();
+            foreach (var it in orderItems)
+            {
+                if (it.QuantityDelivered <= 0) continue;
+
+                var prod = AllProducts.FirstOrDefault(p => p.Id == it.ProductId);
+                
+                ReturnRows.Add(new SalesOrderReturnRow
+                {
+                    ItemId = it.Id,
+                    ProductId = it.ProductId,
+                    ProductName = prod?.Name ?? "Unknown Product",
+                    QuantityDelivered = it.QuantityDelivered,
+                    QuantityToReturn = it.QuantityDelivered, // Default to full return
+                    RefundAmount = it.QuantityDelivered * it.UnitPrice, // Default full refund
+                    Condition = "Resaleable",
+                    Reason = "Customer Return"
+                });
+            }
+
+            if (ReturnRows.Count == 0)
+            {
+                ErrorMessage = "No delivered items found on this order to return.";
+                return;
+            }
+
+            CurrentOrder = target.SalesOrder;
+            IsReturnModalOpen = true;
+        }
+
+        [RelayCommand]
+        private async Task SubmitReturn()
+        {
+            ReturnErrorMessage = string.Empty;
+            if (ReturnRows.Any(r => r.QuantityToReturn < 0))
+            {
+                ReturnErrorMessage = "Return quantity cannot be negative.";
+                return;
+            }
+            if (ReturnRows.Any(r => r.QuantityToReturn > r.QuantityDelivered))
+            {
+                ReturnErrorMessage = "Return quantity cannot exceed delivered quantity.";
+                return;
+            }
+
+            try
+            {
+                var payload = ReturnRows
+                    .Where(r => r.QuantityToReturn > 0)
+                    .Select(r => (r.ItemId, r.QuantityToReturn, r.Condition, r.Reason, r.RefundAmount))
+                    .ToList();
+
+                if (payload.Count == 0)
+                {
+                    ReturnErrorMessage = "Please specify at least one item and quantity to return.";
+                    return;
+                }
+
+                await _returnsService.ProcessSalesOrderReturnAsync(CurrentOrder.Id, payload, UserSession.CurrentUser?.Username ?? "System");
+                IsReturnModalOpen = false;
+                
+                // Refresh Order Details
+                var updatedOrder = (await _salesOrderService.GetAllSalesOrdersAsync())
+                    .FirstOrDefault(o => o.SalesOrder.Id == CurrentOrder.Id);
+                if (updatedOrder != null)
+                {
+                    await OpenDetails(updatedOrder);
+                }
+                
+                await LoadSalesData();
+            }
+            catch (Exception ex)
+            {
+                ReturnErrorMessage = $"Return failed: {ex.Message}";
+            }
+        }
+
+        [RelayCommand]
+        private void CloseReturnModal()
+        {
+            IsReturnModalOpen = false;
+        }
     }
 
     public partial class SalesItemRow : ViewModelBase
@@ -1263,6 +1365,41 @@ namespace InventoryManagementSystem.UI.ViewModels
         private void SelectProduct(Product product)
         {
             SelectedProduct = product;
+        }    }
+
+    public class SalesOrderReturnRow : ObservableObject
+    {
+        public int ItemId { get; set; }
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public int QuantityDelivered { get; set; }
+        
+        private int _quantityToReturn;
+        public int QuantityToReturn
+        {
+            get => _quantityToReturn;
+            set => SetProperty(ref _quantityToReturn, value);
+        }
+
+        private string _condition = "Resaleable"; // Resaleable, Damaged, Destroyed
+        public string Condition
+        {
+            get => _condition;
+            set => SetProperty(ref _condition, value);
+        }
+
+        private string _reason = "Customer Return";
+        public string Reason
+        {
+            get => _reason;
+            set => SetProperty(ref _reason, value);
+        }
+
+        private decimal _refundAmount;
+        public decimal RefundAmount
+        {
+            get => _refundAmount;
+            set => SetProperty(ref _refundAmount, value);
         }
     }
 

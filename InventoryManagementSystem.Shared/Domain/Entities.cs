@@ -268,6 +268,7 @@ namespace InventoryManagementSystem.Domain
         public string Status { get; set; } = "Pending"; // Pending, Shipped, Credited
         public decimal CreditAmount { get; set; }
         public string ProcessedByUsername { get; set; } = string.Empty;
+        public string OriginalReceiptId { get; set; } = string.Empty;
         public DateTime ReturnDate { get; set; } = DateTime.Now;
     }
 

@@ -22,6 +22,7 @@ public partial class ReturnsViewModel : ViewModelBase
 
     public ObservableCollection<Product> Products { get; } = new();
     public ObservableCollection<CustomerReturn> RecentReturns { get; } = new();
+    public ObservableCollection<SupplierReturn> RecentSupplierReturns { get; } = new();
 
     public ReturnsViewModel(ReturnsService returnsService, InventoryService inventoryService)
     {
@@ -40,6 +41,11 @@ public partial class ReturnsViewModel : ViewModelBase
         RecentReturns.Clear();
         var returns = await _returnsService.GetCustomerReturnsAsync(DateTime.Now.AddDays(-30), DateTime.Now);
         foreach (var r in returns) RecentReturns.Add(r);
+
+        RecentSupplierReturns.Clear();
+        var supplierReturns = await _returnsService.GetSupplierReturnsAsync(DateTime.Now.AddDays(-30), DateTime.Now);
+        foreach (var r in supplierReturns) RecentSupplierReturns.Add(r);
+
         IsLoading = false;
     }
 

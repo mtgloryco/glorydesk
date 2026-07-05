@@ -261,6 +261,7 @@
                                 <Button Content="Print PO (PDF)" Command="{Binding PrintDetailedPoPdfCommand}" Background="#007ACC" Foreground="White" Margin="5"/>
                                 <Button Content="Print Bill (PDF)" Command="{Binding PrintDetailedBillPdfCommand}" IsVisible="{Binding IsBilled}" Background="#2E7D32" Foreground="White" Margin="5"/>
                                 <Button Content="Cancel Order" Command="{Binding CancelDetailedPoCommand}" IsEnabled="{Binding CanCancelDetailedPo}" Background="#E53935" Foreground="White" Margin="5"/>
+                                <Button Content="Return Items" Command="{Binding OpenReturnOrderCommand}" IsEnabled="{Binding CanReturnDetailedPo}" Background="#f44336" Foreground="White" Margin="5"/>
                                 <Button Content="{Binding ArchiveButtonText}" Command="{Binding ToggleArchiveDetailedPoCommand}" Background="#78909C" Foreground="White" Margin="5"/>
                                 <Button Content="Delete Order" Command="{Binding DeleteDetailedPoCommand}" Background="#D32F2F" Foreground="White" Margin="5"/>
                                 <Button Content="Close" Command="{Binding CloseDetailsCommand}" Margin="5"/>
@@ -556,6 +557,54 @@
                         <Button Content="Save" Command="{Binding SaveNewProductCommand}" Background="#007ACC" Foreground="White"/>
                     </StackPanel>
                 </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Return Quantities Modal Overlay (Layer 2) -->
+        <Grid Background="#B0000000" IsVisible="{Binding IsReturnModalOpen}" ZIndex="20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Width="700" Height="450" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <TextBlock Grid.Row="0" Margin="0,0,0,12" Text="Return Purchase Order Items" FontSize="16" FontWeight="Bold" Foreground="#f44336"/>
+                    
+                    <!-- Table Grid of items to return -->
+                    <ScrollViewer Grid.Row="1">
+                        <ItemsControl ItemsSource="{Binding ReturnRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="0,8" Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="*, 80, 100, 200">
+                                            <StackPanel Grid.Column="0" Spacing="2">
+                                                <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold" FontSize="12"/>
+                                                <TextBlock Text="{Binding QuantityReceived, StringFormat='{}Received: {0}'}" FontSize="10" Foreground="Gray"/>
+                                            </StackPanel>
+                                            
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <TextBlock Text="Return Qty" FontSize="9" Foreground="Gray"/>
+                                                <TextBox Text="{Binding QuantityToReturn}" FontSize="12" TextAlignment="Center" Height="28"/>
+                                            </StackPanel>
+                                            
+                                            <StackPanel Grid.Column="2" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="Credit Amt" FontSize="9" Foreground="Gray"/>
+                                                <TextBox Text="{Binding CreditAmount}" FontSize="12" TextAlignment="Center" Height="28"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="3" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="Reason" FontSize="9" Foreground="Gray"/>
+                                                <TextBox Text="{Binding Reason}" FontSize="11" Height="28"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding ReturnErrorMessage}" Foreground="Red" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Button Content="Cancel" Command="{Binding CloseReturnModalCommand}" Background="#757575" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12"/>
+                        <Button Content="Confirm Return" Command="{Binding SubmitReturnCommand}" Background="#f44336" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

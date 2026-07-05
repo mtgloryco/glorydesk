@@ -29,6 +29,12 @@ jobs:
               run: |
                   $tag = "${{ github.event.release.tag_name }}"
                   $version = $tag.TrimStart('v')
+                  if ($version -match '^(\d+\.\d+\.\d+)') {
+                      $version = $Matches[1]
+                  } else {
+                      Write-Error "Release tag must be SemVer2 (e.g. v1.0.0), got: $tag"
+                      exit 1
+                  }
                   echo "VERSION=$version" >> $env:GITHUB_ENV
                   Write-Host "Building version: $version"
 
@@ -65,6 +71,12 @@ jobs:
               run: |
                   TAG="${{ github.event.release.tag_name }}"
                   VERSION="${TAG#v}"
+                  if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+                      VERSION="${BASH_REMATCH[1]}"
+                  else
+                      echo "Release tag must be SemVer2 (e.g. v1.0.0), got: $TAG"
+                      exit 1
+                  fi
                   echo "VERSION=$VERSION" >> $GITHUB_ENV
                   echo "Building version: $VERSION"
 

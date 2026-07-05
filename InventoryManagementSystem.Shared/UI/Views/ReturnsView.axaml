@@ -16,17 +16,34 @@
         <Grid Grid.Row="1" ColumnDefinitions="*, 350" Margin="10">
             <!-- Recent Returns -->
             <Border Grid.Column="0" Margin="5" Padding="15" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" CornerRadius="8">
-                <StackPanel Spacing="10">
-                    <TextBlock Text="Recent Customer Returns" FontSize="18" FontWeight="SemiBold"/>
-                    <DataGrid ItemsSource="{Binding RecentReturns}" AutoGenerateColumns="False" IsReadOnly="True" Height="400">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date" Binding="{Binding ReturnDate, StringFormat='d'}" Width="100"/>
-                            <DataGridTextColumn Header="Return #" Binding="{Binding ReturnNumber}" Width="150"/>
-                            <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*"/>
-                            <DataGridTextColumn Header="Amount" Binding="{Binding RefundAmount}" Width="100"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </StackPanel>
+                <TabControl>
+                    <TabItem Header="Customer Returns">
+                        <StackPanel Spacing="10" Margin="0,10,0,0">
+                            <DataGrid ItemsSource="{Binding RecentReturns}" AutoGenerateColumns="False" IsReadOnly="True" Height="400">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Date" Binding="{Binding ReturnDate, StringFormat='d'}" Width="100"/>
+                                    <DataGridTextColumn Header="Return #" Binding="{Binding ReturnNumber}" Width="150"/>
+                                    <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*"/>
+                                    <DataGridTextColumn Header="Amount" Binding="{Binding RefundAmount}" Width="100"/>
+                                    <DataGridTextColumn Header="Sales Order Ref" Binding="{Binding OriginalReceiptId}" Width="110"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="Supplier Returns">
+                        <StackPanel Spacing="10" Margin="0,10,0,0">
+                            <DataGrid ItemsSource="{Binding RecentSupplierReturns}" AutoGenerateColumns="False" IsReadOnly="True" Height="400">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Date" Binding="{Binding ReturnDate, StringFormat='d'}" Width="100"/>
+                                    <DataGridTextColumn Header="Return #" Binding="{Binding ReturnNumber}" Width="150"/>
+                                    <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*"/>
+                                    <DataGridTextColumn Header="Credit Amount" Binding="{Binding CreditAmount}" Width="100"/>
+                                    <DataGridTextColumn Header="PO Ref" Binding="{Binding OriginalReceiptId}" Width="110"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
             </Border>
 
             <!-- Process Return Form -->

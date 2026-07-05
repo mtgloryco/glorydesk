@@ -90,7 +90,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         public LanguageService Language { get; }
         public string CurrencySymbol => _settingsService.CurrentSettings.CurrencySymbol;
-        public string AppVersion => "v2.0.0"; // Could be pulled from Assembly in future
+        public string AppVersion => "v1.0.0"; // Could be pulled from Assembly in future
 
         private readonly SettingsService _settingsService;
 

@@ -19,6 +19,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly TaxService _taxService;
         private readonly SettingsService _settingsService;
         private readonly PurchaseOrderPdfService _pdfService;
+        private readonly ReturnsService _returnsService;
         private bool _isLoadingOrders;
 
         public LanguageService Language { get; }
@@ -36,6 +37,13 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private string _detailedTaxBreakdownText = string.Empty;
         [ObservableProperty] private decimal _detailedSubtotal;
         [ObservableProperty] private decimal _detailedTotal;
+
+        // Return Modal properties
+        [ObservableProperty] private bool _isReturnModalOpen;
+        [ObservableProperty] private ObservableCollection<PurchaseOrderReturnRow> _returnRows = new();
+        [ObservableProperty] private string _returnErrorMessage = string.Empty;
+
+        public bool CanReturnDetailedPo => DetailedPo != null && DetailedPo.ReceiptStatus != "Pending" && DetailedPo.Status != "Cancelled";
 
         public bool IsBilled => DetailedPo?.BillingStatus == "Billed";
         public bool CanValidate => DetailedPo?.ReceiptStatus != "Received" && DetailedPo?.Status != "Draft";
@@ -135,6 +143,9 @@ namespace InventoryManagementSystem.UI.ViewModels
             }
         }
 
+        public List<Supplier> AllSuppliers { get; private set; } = new();
+        public List<Product> AllProducts { get; private set; } = new();
+
         [ObservableProperty] private ObservableCollection<string> _availableCompanies = new() { "All Companies" };
 
         public List<string> ArchiveFilterOptions { get; } = new() { "Active Orders", "Archived Orders", "All Orders" };
@@ -147,9 +158,6 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         [ObservableProperty] private ObservableCollection<PoItemRow> _poItems = new();
         [ObservableProperty] private ObservableCollection<Tax> _purchaseTaxes = new();
-
-        public List<Supplier> AllSuppliers { get; private set; } = new();
-        public List<Product> AllProducts { get; private set; } = new();
 
         // Sub-creation overlays
         [ObservableProperty] private bool _isCreateSupplierModalOpen;
@@ -171,6 +179,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             InventoryService inventoryService,
             TaxService taxService,
             SettingsService settingsService,
+            ReturnsService returnsService,
             LanguageService languageService)
         {
             _purchaseOrderService = purchaseOrderService;
@@ -178,6 +187,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             _inventoryService = inventoryService;
             _taxService = taxService;
             _settingsService = settingsService;
+            _returnsService = returnsService;
             Language = languageService;
             _pdfService = new PurchaseOrderPdfService(_settingsService);
 
@@ -332,6 +342,7 @@ namespace InventoryManagementSystem.UI.ViewModels
                 OnPropertyChanged(nameof(IsBilled));
                 OnPropertyChanged(nameof(CanValidate));
                 OnPropertyChanged(nameof(CanCreateBill));
+                OnPropertyChanged(nameof(CanReturnDetailedPo));
 
                 IsDetailsOpen = true;
             }
@@ -999,6 +1010,127 @@ namespace InventoryManagementSystem.UI.ViewModels
         private void CancelCreateProduct()
         {
             IsCreateProductModalOpen = false;
+        }
+
+        [RelayCommand]
+        private async Task OpenReturnOrder(PurchaseOrderDisplayItem? item)
+        {
+            var target = item ?? SelectedPurchaseOrder;
+            if (target == null) return;
+
+            ReturnErrorMessage = string.Empty;
+            var orderItems = await _purchaseOrderService.GetItemsAsync(target.PurchaseOrder.Id);
+            
+            ReturnRows.Clear();
+            foreach (var it in orderItems)
+            {
+                if (it.QuantityReceived <= 0) continue;
+
+                var prod = AllProducts.FirstOrDefault(p => p.Id == it.ProductId);
+                
+                ReturnRows.Add(new PurchaseOrderReturnRow
+                {
+                    ItemId = it.Id,
+                    ProductId = it.ProductId,
+                    ProductName = prod?.Name ?? "Unknown Product",
+                    QuantityReceived = it.QuantityReceived,
+                    QuantityToReturn = it.QuantityReceived, // Default to full return
+                    CreditAmount = it.QuantityReceived * it.UnitCost, // Default full refund cost
+                    Reason = "Supplier Return"
+                });
+            }
+
+            if (ReturnRows.Count == 0)
+            {
+                StatusMessage = "No received items found on this order to return.";
+                return;
+            }
+
+            DetailedPo = target.PurchaseOrder;
+            IsReturnModalOpen = true;
+        }
+
+        [RelayCommand]
+        private async Task SubmitReturn()
+        {
+            ReturnErrorMessage = string.Empty;
+            if (ReturnRows.Any(r => r.QuantityToReturn < 0))
+            {
+                ReturnErrorMessage = "Return quantity cannot be negative.";
+                return;
+            }
+            if (ReturnRows.Any(r => r.QuantityToReturn > r.QuantityReceived))
+            {
+                ReturnErrorMessage = "Return quantity cannot exceed received quantity.";
+                return;
+            }
+
+            try
+            {
+                var payload = ReturnRows
+                    .Where(r => r.QuantityToReturn > 0)
+                    .Select(r => (r.ItemId, r.QuantityToReturn, r.Reason, r.CreditAmount))
+                    .ToList();
+
+                if (payload.Count == 0)
+                {
+                    ReturnErrorMessage = "Please specify at least one item and quantity to return.";
+                    return;
+                }
+
+                await _returnsService.ProcessPurchaseOrderReturnAsync(DetailedPo.Id, payload, UserSession.CurrentUser?.Username ?? "System");
+                IsReturnModalOpen = false;
+                
+                // Refresh Order Details
+                var updatedPo = (await _purchaseOrderService.GetAllPurchaseOrdersAsync())
+                    .FirstOrDefault(x => x.PurchaseOrder.Id == DetailedPo.Id);
+                if (updatedPo != null)
+                {
+                    DetailedPo = updatedPo.PurchaseOrder;
+                    await OpenDetails(new PurchaseOrderDisplayItem(updatedPo.PurchaseOrder, updatedPo.SupplierName));
+                }
+
+                await LoadPurchaseOrders();
+            }
+            catch (Exception ex)
+            {
+                ReturnErrorMessage = $"Return failed: {ex.Message}";
+            }
+        }
+
+        [RelayCommand]
+        private void CloseReturnModal()
+        {
+            IsReturnModalOpen = false;
+        }
+    }
+
+    public class PurchaseOrderReturnRow : ObservableObject
+    {
+        public int ItemId { get; set; }
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public int QuantityReceived { get; set; }
+        
+        private int _quantityToReturn;
+        public int QuantityToReturn
+        {
+            get => _quantityToReturn;
+            set => SetProperty(ref _quantityToReturn, value);
+        }
+
+        private string _reason = "Supplier Return";
+        public string Reason
+        {
+            get => _reason;
+            set => SetProperty(ref _reason, value);
+        }
+
+        private decimal _creditAmount;
+        public decimal CreditAmount
+        {
+            get => _creditAmount;
+            set => SetProperty(ref _creditAmount, value);
         }
     }
 

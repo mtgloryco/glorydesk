@@ -290,19 +290,19 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        NavigateTo(new PurchaseOrdersViewModel(_purchaseOrderService, _supplierService, _inventoryService, _taxService, _settingsService, Language));
+        NavigateTo(new PurchaseOrdersViewModel(_purchaseOrderService, _supplierService, _inventoryService, _taxService, _settingsService, _returnsService, Language));
     }
 
     [RelayCommand]
     public void GoToSalesQuotations()
     {
-        NavigateTo(new SalesViewModel(_salesOrderService, _supplierService, _inventoryService, _taxService, _settingsService, Language, initialTab: 0));
+        NavigateTo(new SalesViewModel(_salesOrderService, _supplierService, _inventoryService, _taxService, _settingsService, _returnsService, Language, initialTab: 0));
     }
 
     [RelayCommand]
     public void GoToSalesOrders()
     {
-        NavigateTo(new SalesViewModel(_salesOrderService, _supplierService, _inventoryService, _taxService, _settingsService, Language, initialTab: 1));
+        NavigateTo(new SalesViewModel(_salesOrderService, _supplierService, _inventoryService, _taxService, _settingsService, _returnsService, Language, initialTab: 1));
     }
 
     [RelayCommand]
