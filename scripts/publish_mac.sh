@@ -12,14 +12,16 @@ ARCHIVE_NAME_ARM64="InventoryManagementSystem_macOS_AppleSilicon.zip"
 echo "🚀 Starting macOS builds for $PROJECT_NAME..."
 
 # Build for Intel
+# NOTE: We target the Desktop project explicitly - publishing the whole .sln would try to
+# single-file-publish the Shared/Tests library projects too, which fails (NETSDK1099/1098).
 echo "Building for Intel (x64)..."
 mkdir -p "$OUTPUT_DIR_X64"
-dotnet publish -c Release -r "$RUNTIME_X64" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR_X64"
+dotnet publish "InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj" -c Release -r "$RUNTIME_X64" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR_X64"
 
 # Build for Apple Silicon
 echo "Building for Apple Silicon (arm64)..."
 mkdir -p "$OUTPUT_DIR_ARM64"
-dotnet publish -c Release -r "$RUNTIME_ARM64" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR_ARM64"
+dotnet publish "InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj" -c Release -r "$RUNTIME_ARM64" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR_ARM64"
 
 if [ $? -eq 0 ]; then
     echo "✅ Builds successful!"

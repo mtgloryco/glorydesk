@@ -47,6 +47,30 @@ The scripts use the following flags for `dotnet publish`:
 - `-p:PublishSingleFile=true`: Bundles everything into a single executable.
 - `-p:IncludeNativeLibrariesForSelfExtract=true`: Ensures native dependencies are extracted and loaded correctly.
 
+## Windows: Visual C++ Redistributable
+
+Avalonia renders the UI via SkiaSharp, which relies on native libraries (`libSkiaSharp.dll`, etc.)
+that require the **Microsoft Visual C++ Redistributable (x64) 2015-2022** to be present on the
+target machine. `publish_win.sh` / `publish_win.ps1` automatically download `vc_redist.x64.exe`
+into `InventoryManagementSystem.Shared/redist/` and `IMS_Setup_Script.iss` silently installs it
+(only if not already present) before launching the app.
+
+Without this, a freshly-installed/clean Windows machine will show:
+```
+The application has failed to start because its side-by-side configuration is incorrect. (os error -2147010895)
+```
+right after installation.
+
+## ⚠️ A Note on Cross-Compiling the Windows Build
+
+`publish_win.sh` cross-compiles a self-contained, single-file `win-x64` executable from Linux.
+This works in most cases, but the .NET SDK's cross-platform apphost resource patcher (which embeds
+the icon/manifest into the `.exe`) has known edge cases when running on a non-Windows host, which
+can occasionally produce a broken executable. If a locally cross-compiled installer misbehaves on
+Windows but a build produced by `.github/workflows/release.yml` (built natively on the
+`windows-latest` GitHub Actions runner) does not, prefer that pipeline - or build directly on a
+Windows machine with `publish_win.ps1` - for your distributed releases.
+
 ## How to Install
 
 ### 🐧 Linux
@@ -60,8 +84,8 @@ The scripts use the following flags for `dotnet publish`:
 
 ### 🪟 Windows
 1. Copy the `Releases/Windows` folder to your machine.
-2. Simply double-click `InventoryManagementSystem.exe` to run.
-3. (Optional) Right-click `InventoryManagementSystem.exe` -> **Send to** -> **Desktop (create shortcut)**.
+2. Simply double-click `InventoryManagementSystem.Desktop.exe` to run.
+3. (Optional) Right-click `InventoryManagementSystem.Desktop.exe` -> **Send to** -> **Desktop (create shortcut)**.
 
 ### 🍎 macOS
 1. Unzip the archive for your Mac (Intel or Apple Silicon).

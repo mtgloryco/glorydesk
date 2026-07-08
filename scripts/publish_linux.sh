@@ -15,8 +15,9 @@ mkdir -p "$OUTPUT_DIR"
 cp scripts/install_linux.sh "$OUTPUT_DIR/install.sh"
 chmod +x "$OUTPUT_DIR/install.sh"
 
-# Publish
-dotnet publish -c Release -r "$RUNTIME" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR"
+# Publish (target the Desktop project explicitly - publishing the whole .sln would try to
+# single-file-publish the Shared/Tests library projects too, which fails (NETSDK1099/1098)).
+dotnet publish "InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj" -c Release -r "$RUNTIME" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR"
 
 if [ $? -eq 0 ]; then
     echo "✅ Build successful!"
