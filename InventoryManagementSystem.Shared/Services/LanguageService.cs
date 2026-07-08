@@ -22,8 +22,19 @@ namespace InventoryManagementSystem.Services
             }
         }
 
-        // Expose a dictionary binding for the UI
-        public Dictionary<string, string> Resources => _dictionaries[_currentLanguage];
+        // Expose a dictionary binding for the UI (terminology overrides take precedence over the base language dictionary)
+        public Dictionary<string, string> Resources
+        {
+            get
+            {
+                var merged = new Dictionary<string, string>(_dictionaries[_currentLanguage]);
+                foreach (var kvp in _terminologyOverrides)
+                {
+                    merged[kvp.Key] = kvp.Value;
+                }
+                return merged;
+            }
+        }
 
         private readonly Dictionary<string, Dictionary<string, string>> _dictionaries = new()
         {
@@ -108,6 +119,7 @@ namespace InventoryManagementSystem.Services
                 ["Rep_Generate"] = "Generate Report",
                 ["Rep_ExportPDF"] = "Export PDF",
                 // Sidebar
+                ["Customers"] = "Customers",
                 ["Suppliers"] = "Suppliers",
                 ["PurchaseOrders"] = "Purchase Orders",
                 ["Forecasting"] = "Forecasting",
@@ -119,7 +131,11 @@ namespace InventoryManagementSystem.Services
                 ["AuditTrail"] = "Audit Trail",
                 ["AdvancedInsights"] = "Advanced Insights",
                 ["Settings"] = "Settings",
-                ["Manufacturing"] = "Manufacturing"
+                ["Manufacturing"] = "Manufacturing",
+                // Terminology-overridable generic terms
+                ["Customer"] = "Customer",
+                ["Category"] = "Category",
+                ["Product"] = "Product"
             },
             ["fr"] = new()
             {
@@ -203,6 +219,7 @@ namespace InventoryManagementSystem.Services
                 ["Rep_Generate"] = "Generer Rapport",
                 ["Rep_ExportPDF"] = "Exporter PDF",
                 // Sidebar
+                ["Customers"] = "Clients",
                 ["Suppliers"] = "Fournisseurs",
                 ["PurchaseOrders"] = "Bons de Commande",
                 ["Forecasting"] = "Previsions",
@@ -214,7 +231,11 @@ namespace InventoryManagementSystem.Services
                 ["AuditTrail"] = "Audit System",
                 ["AdvancedInsights"] = "Analyses Avancees",
                 ["Settings"] = "Parametres",
-                ["Manufacturing"] = "Fabrication"
+                ["Manufacturing"] = "Fabrication",
+                // Terminology-overridable generic terms
+                ["Customer"] = "Client",
+                ["Category"] = "Categorie",
+                ["Product"] = "Produit"
             },
             ["rw"] = new()
             {
@@ -298,6 +319,7 @@ namespace InventoryManagementSystem.Services
                 ["Rep_Generate"] = "Kora Raporo",
                 ["Rep_ExportPDF"] = "Bika nka PDF",
                 // Sidebar
+                ["Customers"] = "Abakiriya",
                 ["Suppliers"] = "Abasupplier",
                 ["PurchaseOrders"] = "Bons de Commande",
                 ["Forecasting"] = "Ibibanziriza Igihe",
@@ -309,9 +331,21 @@ namespace InventoryManagementSystem.Services
                 ["AuditTrail"] = "Imicungire y'Ububiko",
                 ["AdvancedInsights"] = "Isesengura Ryimbitse",
                 ["Settings"] = "Igenamiterere",
-                ["Manufacturing"] = "Gukora (Mfg)"
+                ["Manufacturing"] = "Gukora (Mfg)",
+                // Terminology-overridable generic terms
+                ["Customer"] = "Umukiriya",
+                ["Category"] = "Icyiciro",
+                ["Product"] = "Igicuruzwa"
             }
         };
+
+        private Dictionary<string, string> _terminologyOverrides = new();
+
+        public void SetTerminologyOverrides(Dictionary<string, string> overrides)
+        {
+            _terminologyOverrides = overrides ?? new();
+            OnPropertyChanged(nameof(Resources));
+        }
 
         public void SetLanguage(string code)
         {
@@ -323,11 +357,7 @@ namespace InventoryManagementSystem.Services
 
         public string GetString(string key)
         {
-            if (Resources.TryGetValue(key, out var value))
-            {
-                return value;
-            }
-            return key; // Fallback to key itself
+            return Resources.TryGetValue(key, out var value) ? value : key; // Fallback to key itself
         }
         
         // Dynamic property access for Binding: {Binding Language.Res[Key]}

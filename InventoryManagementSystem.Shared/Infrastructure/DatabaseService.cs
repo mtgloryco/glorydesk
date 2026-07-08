@@ -12,7 +12,7 @@ namespace InventoryManagementSystem.Infrastructure
         private readonly string _databasePath;
         private readonly string _legacyDatabasePath;
         private SQLiteAsyncConnection _connection;
-        private const int CurrentDatabaseVersion = 2;
+        private const int CurrentDatabaseVersion = 3;
 
         public DatabaseService()
         {
@@ -34,7 +34,25 @@ namespace InventoryManagementSystem.Infrastructure
             _connection = new SQLiteAsyncConnection(_databasePath);
         }
 
-        public async Task InitializeAsync()
+        /// <summary>
+        /// Testability seam: points the connection at an explicit database file (e.g. a temp file in unit tests)
+        /// instead of the fixed AppData location used by the parameterless constructor. Production code paths
+        /// (App.axaml.cs) continue to use <see cref="DatabaseService()"/> and are unaffected by this overload.
+        /// </summary>
+        public DatabaseService(string customDatabasePath)
+        {
+            _databasePath = customDatabasePath;
+            var folder = Path.GetDirectoryName(_databasePath);
+            if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            _legacyDatabasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "inventory_v1.db");
+            _connection = new SQLiteAsyncConnection(_databasePath);
+        }
+
+        public async Task InitializeAsync(string defaultCurrency = "RWF")
         {
             // 0. Enable WAL journal mode and optimize synchronicity settings for performance
             try
@@ -87,12 +105,15 @@ namespace InventoryManagementSystem.Infrastructure
             await _connection.CreateTableAsync<BankAccount>();
             await _connection.CreateTableAsync<PosPaymentMethod>();
             await _connection.CreateTableAsync<SyncState>();
+            await _connection.CreateTableAsync<CustomFieldDefinition>();
+            await _connection.CreateTableAsync<CustomFieldValue>();
+            await _connection.CreateTableAsync<Customer>();
 
             // 3. Perform Schema Migrations
             await PerformMigrationsAsync();
 
             // 4. Seed Initial Data
-            await SeedDataAsync();
+            await SeedDataAsync(defaultCurrency);
         }
 
         private async Task ImportLegacyDatabaseIfNeeded()
@@ -124,6 +145,11 @@ namespace InventoryManagementSystem.Infrastructure
                     await MigrateToV2Async();
                 }
 
+                if (metaVersion < 3)
+                {
+                    await MigrateToV3Async();
+                }
+
                 await _connection.ExecuteAsync($"PRAGMA user_version = {CurrentDatabaseVersion}");
             }
         }
@@ -153,6 +179,61 @@ namespace InventoryManagementSystem.Infrastructure
                     $"UPDATE {table} SET SyncId = lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6))) WHERE SyncId IS NULL OR SyncId = ''");
                 await _connection.ExecuteAsync(
                     $"UPDATE {table} SET UpdatedAt = datetime('now') WHERE UpdatedAt IS NULL OR UpdatedAt = ''");
+            }
+        }
+
+        private async Task MigrateToV3Async()
+        {
+            // Split Customer out of Supplier: every Supplier referenced by SalesOrder.CustomerId
+            // gets a mirrored Customer row, and SalesOrder.CustomerId is remapped to it.
+            // The Supplier table itself is never mutated or deleted from.
+            var existingCustomerCount = await _connection.Table<Customer>().CountAsync();
+            if (existingCustomerCount > 0)
+            {
+                return; // Already migrated (or a fresh install seeded customers) - guard against double-insert.
+            }
+
+            var salesOrders = await _connection.Table<SalesOrder>().ToListAsync();
+            var supplierIds = salesOrders.Select(so => so.CustomerId).Distinct().ToList();
+            if (supplierIds.Count == 0)
+            {
+                return;
+            }
+
+            var supplierToCustomerId = new System.Collections.Generic.Dictionary<int, int>();
+
+            foreach (var supplierId in supplierIds)
+            {
+                var supplier = await _connection.FindAsync<Supplier>(supplierId);
+                if (supplier == null)
+                {
+                    continue;
+                }
+
+                var customer = new Customer
+                {
+                    Name = supplier.Name,
+                    ContactPerson = supplier.ContactPerson,
+                    Phone = supplier.Phone,
+                    Email = supplier.Email,
+                    Address = supplier.Address,
+                    PaymentTerms = supplier.PaymentTerms,
+                    TinNumber = supplier.TinNumber,
+                    WebsiteUrl = supplier.WebsiteUrl,
+                    IsActive = supplier.IsActive,
+                    CreatedAt = supplier.CreatedAt
+                };
+                await _connection.InsertAsync(customer);
+                supplierToCustomerId[supplierId] = customer.Id;
+            }
+
+            foreach (var salesOrder in salesOrders)
+            {
+                if (supplierToCustomerId.TryGetValue(salesOrder.CustomerId, out var newCustomerId))
+                {
+                    salesOrder.CustomerId = newCustomerId;
+                    await _connection.UpdateAsync(salesOrder);
+                }
             }
         }
 
@@ -208,7 +289,7 @@ namespace InventoryManagementSystem.Infrastructure
             }
         }
 
-        private async Task SeedDataAsync()
+        private async Task SeedDataAsync(string defaultCurrency = "RWF")
         {
             // App starts clean for production. No test categories or products seeded.
             // Check if we need to seed a default admin if none exists
@@ -244,34 +325,34 @@ namespace InventoryManagementSystem.Infrastructure
                 await _connection.InsertAllAsync(new[]
                 {
                     // 1. Assets
-                    new Account { Code = "101000", Name = "Cash on Hand", Type = "Asset: Bank and Cash", Currency = "RWF", IsActive = true, Description = "Cash register and on-hand currency", PaymentReconciliation = true },
-                    new Account { Code = "102000", Name = "Bank Account", Type = "Asset: Bank and Cash", Currency = "RWF", IsActive = true, Description = "Main operating bank account", PaymentReconciliation = true },
-                    new Account { Code = "111000", Name = "Accounts Receivable", Type = "Asset: Receivable", Currency = "RWF", IsActive = true, Description = "Unpaid customer invoices", PaymentReconciliation = true },
-                    new Account { Code = "120000", Name = "Inventory Asset", Type = "Asset: Current Asset", Currency = "RWF", IsActive = true, Description = "Asset value of products in stock" },
-                    new Account { Code = "125000", Name = "VAT Receivable (Input Tax)", Type = "Asset: Current Asset", Currency = "RWF", IsActive = true, Description = "VAT paid on purchases, reclaimable from tax authority" },
-                    new Account { Code = "130000", Name = "Prepayments", Type = "Asset: Pre Payments", Currency = "RWF", IsActive = true, Description = "Prepaid vendor expenses" },
-                    new Account { Code = "140000", Name = "Fixed Assets", Type = "Asset: Fixed Asset", Currency = "RWF", IsActive = true, Description = "Long-term tangible assets" },
+                    new Account { Code = "101000", Name = "Cash on Hand", Type = "Asset: Bank and Cash", Currency = defaultCurrency, IsActive = true, Description = "Cash register and on-hand currency", PaymentReconciliation = true },
+                    new Account { Code = "102000", Name = "Bank Account", Type = "Asset: Bank and Cash", Currency = defaultCurrency, IsActive = true, Description = "Main operating bank account", PaymentReconciliation = true },
+                    new Account { Code = "111000", Name = "Accounts Receivable", Type = "Asset: Receivable", Currency = defaultCurrency, IsActive = true, Description = "Unpaid customer invoices", PaymentReconciliation = true },
+                    new Account { Code = "120000", Name = "Inventory Asset", Type = "Asset: Current Asset", Currency = defaultCurrency, IsActive = true, Description = "Asset value of products in stock" },
+                    new Account { Code = "125000", Name = "VAT Receivable (Input Tax)", Type = "Asset: Current Asset", Currency = defaultCurrency, IsActive = true, Description = "VAT paid on purchases, reclaimable from tax authority" },
+                    new Account { Code = "130000", Name = "Prepayments", Type = "Asset: Pre Payments", Currency = defaultCurrency, IsActive = true, Description = "Prepaid vendor expenses" },
+                    new Account { Code = "140000", Name = "Fixed Assets", Type = "Asset: Fixed Asset", Currency = defaultCurrency, IsActive = true, Description = "Long-term tangible assets" },
                     
                     // 2. Liabilities
-                    new Account { Code = "201000", Name = "Accounts Payable", Type = "Liability: Payable", Currency = "RWF", IsActive = true, Description = "Unpaid vendor bills", PaymentReconciliation = true },
-                    new Account { Code = "211000", Name = "Credit Card", Type = "Liability: Credit Card", Currency = "RWF", IsActive = true, Description = "Corporate credit cards", PaymentReconciliation = true },
-                    new Account { Code = "220000", Name = "VAT Payable", Type = "Liability: Current Liability", Currency = "RWF", IsActive = true, Description = "Collected sales taxes minus paid purchase taxes" },
+                    new Account { Code = "201000", Name = "Accounts Payable", Type = "Liability: Payable", Currency = defaultCurrency, IsActive = true, Description = "Unpaid vendor bills", PaymentReconciliation = true },
+                    new Account { Code = "211000", Name = "Credit Card", Type = "Liability: Credit Card", Currency = defaultCurrency, IsActive = true, Description = "Corporate credit cards", PaymentReconciliation = true },
+                    new Account { Code = "220000", Name = "VAT Payable", Type = "Liability: Current Liability", Currency = defaultCurrency, IsActive = true, Description = "Collected sales taxes minus paid purchase taxes" },
                     
                     // 3. Equity
-                    new Account { Code = "301000", Name = "Share Capital", Type = "Equity: Equity", Currency = "RWF", IsActive = true, Description = "Initial owner contributions" },
-                    new Account { Code = "390000", Name = "Retained Earnings", Type = "Equity: Equity", Currency = "RWF", IsActive = true, Description = "Accumulated earnings from prior periods" },
-                    new Account { Code = "399000", Name = "Current Year Earnings", Type = "Equity: Current Year Earnings", Currency = "RWF", IsActive = true, Description = "Earnings/Profit from current financial year" },
+                    new Account { Code = "301000", Name = "Share Capital", Type = "Equity: Equity", Currency = defaultCurrency, IsActive = true, Description = "Initial owner contributions" },
+                    new Account { Code = "390000", Name = "Retained Earnings", Type = "Equity: Equity", Currency = defaultCurrency, IsActive = true, Description = "Accumulated earnings from prior periods" },
+                    new Account { Code = "399000", Name = "Current Year Earnings", Type = "Equity: Current Year Earnings", Currency = defaultCurrency, IsActive = true, Description = "Earnings/Profit from current financial year" },
                     
                     // 4. Income
-                    new Account { Code = "401000", Name = "Product Sales Revenue", Type = "Income: Income", Currency = "RWF", IsActive = true, Description = "Revenue from product sales" },
-                    new Account { Code = "402000", Name = "Service Revenue", Type = "Income: Income", Currency = "RWF", IsActive = true, Description = "Revenue from service contracts" },
-                    new Account { Code = "490000", Name = "Other Income", Type = "Income: Other Incomes", Currency = "RWF", IsActive = true, Description = "Non-operating revenues" },
+                    new Account { Code = "401000", Name = "Product Sales Revenue", Type = "Income: Income", Currency = defaultCurrency, IsActive = true, Description = "Revenue from product sales" },
+                    new Account { Code = "402000", Name = "Service Revenue", Type = "Income: Income", Currency = defaultCurrency, IsActive = true, Description = "Revenue from service contracts" },
+                    new Account { Code = "490000", Name = "Other Income", Type = "Income: Other Incomes", Currency = defaultCurrency, IsActive = true, Description = "Non-operating revenues" },
                     
                     // 5. Expense
-                    new Account { Code = "501000", Name = "Cost of Goods Sold (COGS)", Type = "Expense: Cost of Revenue", Currency = "RWF", IsActive = true, Description = "Direct costs of goods sold to customers" },
-                    new Account { Code = "511000", Name = "General Expenses", Type = "Expense: Expenses", Currency = "RWF", IsActive = true, Description = "Operational overhead expenses" },
-                    new Account { Code = "520000", Name = "Inventory Adjustment Expense", Type = "Expense: Expenses", Currency = "RWF", IsActive = true, Description = "Expenses from inventory write-offs or adjustments" },
-                    new Account { Code = "590000", Name = "Other Expenses", Type = "Expense: Other Expenses", Currency = "RWF", IsActive = true, Description = "Non-operating expenses" }
+                    new Account { Code = "501000", Name = "Cost of Goods Sold (COGS)", Type = "Expense: Cost of Revenue", Currency = defaultCurrency, IsActive = true, Description = "Direct costs of goods sold to customers" },
+                    new Account { Code = "511000", Name = "General Expenses", Type = "Expense: Expenses", Currency = defaultCurrency, IsActive = true, Description = "Operational overhead expenses" },
+                    new Account { Code = "520000", Name = "Inventory Adjustment Expense", Type = "Expense: Expenses", Currency = defaultCurrency, IsActive = true, Description = "Expenses from inventory write-offs or adjustments" },
+                    new Account { Code = "590000", Name = "Other Expenses", Type = "Expense: Other Expenses", Currency = defaultCurrency, IsActive = true, Description = "Non-operating expenses" }
                 });
             }
 
@@ -285,17 +366,17 @@ namespace InventoryManagementSystem.Infrastructure
 
                 await _connection.InsertAllAsync(new Journal[]
                 {
-                    new() { Name = "Sales",                    Type = "Sales",         SequencePrefix = "INV",  DefaultAccountId = salesAcc?.Id, Currency = "RWF" },
-                    new() { Name = "Purchases",                Type = "Purchase",      SequencePrefix = "BILL", DefaultAccountId = cogsAcc?.Id,  Currency = "RWF" },
-                    new() { Name = "Bank",                     Type = "Bank",          SequencePrefix = "BNK1", DefaultAccountId = bankAcc?.Id,  Currency = "RWF" },
-                    new() { Name = "Miscellaneous Operations", Type = "Miscellaneous", SequencePrefix = "MISC",                                  Currency = "RWF" },
-                    new() { Name = "Exchange Difference",      Type = "Miscellaneous", SequencePrefix = "EXCH",                                  Currency = "RWF" },
-                    new() { Name = "Cash Basis Taxes",         Type = "Miscellaneous", SequencePrefix = "CABA",                                  Currency = "RWF" },
-                    new() { Name = "Tax Returns",              Type = "Miscellaneous", SequencePrefix = "TAX",                                   Currency = "RWF" },
-                    new() { Name = "Inventory Valuation",      Type = "Miscellaneous", SequencePrefix = "STJ",                                   Currency = "RWF" },
-                    new() { Name = "Point of Sale",            Type = "Miscellaneous", SequencePrefix = "POSS",                                  Currency = "RWF" },
-                    new() { Name = "Cash Clothes Shop",        Type = "Cash",          SequencePrefix = "CSH1", DefaultAccountId = cashAcc?.Id,  Currency = "RWF" },
-                    new() { Name = "Salaries",                 Type = "Miscellaneous", SequencePrefix = "SLR",                                   Currency = "RWF" },
+                    new() { Name = "Sales",                    Type = "Sales",         SequencePrefix = "INV",  DefaultAccountId = salesAcc?.Id, Currency = defaultCurrency },
+                    new() { Name = "Purchases",                Type = "Purchase",      SequencePrefix = "BILL", DefaultAccountId = cogsAcc?.Id,  Currency = defaultCurrency },
+                    new() { Name = "Bank",                     Type = "Bank",          SequencePrefix = "BNK1", DefaultAccountId = bankAcc?.Id,  Currency = defaultCurrency },
+                    new() { Name = "Miscellaneous Operations", Type = "Miscellaneous", SequencePrefix = "MISC",                                  Currency = defaultCurrency },
+                    new() { Name = "Exchange Difference",      Type = "Miscellaneous", SequencePrefix = "EXCH",                                  Currency = defaultCurrency },
+                    new() { Name = "Cash Basis Taxes",         Type = "Miscellaneous", SequencePrefix = "CABA",                                  Currency = defaultCurrency },
+                    new() { Name = "Tax Returns",              Type = "Miscellaneous", SequencePrefix = "TAX",                                   Currency = defaultCurrency },
+                    new() { Name = "Inventory Valuation",      Type = "Miscellaneous", SequencePrefix = "STJ",                                   Currency = defaultCurrency },
+                    new() { Name = "Point of Sale",            Type = "Miscellaneous", SequencePrefix = "POSS",                                  Currency = defaultCurrency },
+                    new() { Name = "Cash Register",            Type = "Cash",          SequencePrefix = "CSH1", DefaultAccountId = cashAcc?.Id,  Currency = defaultCurrency },
+                    new() { Name = "Salaries",                 Type = "Miscellaneous", SequencePrefix = "SLR",                                   Currency = defaultCurrency },
                 });
             }
 

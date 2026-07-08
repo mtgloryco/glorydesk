@@ -65,7 +65,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly ReceiptService _receiptService;
         private readonly SettingsService _settingsService;
         private readonly SalesOrderService _salesOrderService;
-        private readonly SupplierService _supplierService;
+        private readonly CustomerService _customerService;
         private readonly JournalService _journalService;
         private readonly TaxService _taxService;
 
@@ -97,8 +97,8 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         // --- POS Checkout Payment Panel ---
         [ObservableProperty] private bool _isPaymentPanelVisible;
-        [ObservableProperty] private ObservableCollection<Supplier> _matchedCustomers = new();
-        [ObservableProperty] private Supplier? _selectedCustomer;
+        [ObservableProperty] private ObservableCollection<Customer> _matchedCustomers = new();
+        [ObservableProperty] private Customer? _selectedCustomer;
         [ObservableProperty] private string _customerSearchText = string.Empty;
         [ObservableProperty] private PosPaymentMethod? _selectedPaymentMethod;
         [ObservableProperty] private bool _autoCreateInvoice = true;
@@ -136,7 +136,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             SettingsService settingsService, 
             LanguageService languageService,
             SalesOrderService salesOrderService,
-            SupplierService supplierService,
+            CustomerService customerService,
             JournalService journalService,
             TaxService taxService)
         {
@@ -146,7 +146,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             _settingsService = settingsService;
             Language = languageService;
             _salesOrderService = salesOrderService;
-            _supplierService = supplierService;
+            _customerService = customerService;
             _journalService = journalService;
             _taxService = taxService;
             LoadProductsCommand.Execute(null);
@@ -258,7 +258,7 @@ namespace InventoryManagementSystem.UI.ViewModels
                 }
 
                 // Initial customers list
-                var allCusts = await _supplierService.GetAllSuppliersAsync();
+                var allCusts = await _customerService.GetAllCustomersAsync();
                 MatchedCustomers.Clear();
                 foreach (var c in allCusts.Take(5))
                 {
@@ -281,13 +281,13 @@ namespace InventoryManagementSystem.UI.ViewModels
             if (string.IsNullOrWhiteSpace(value))
             {
                 MatchedCustomers.Clear();
-                var allCusts = await _supplierService.GetAllSuppliersAsync();
+                var allCusts = await _customerService.GetAllCustomersAsync();
                 foreach (var c in allCusts.Take(5)) MatchedCustomers.Add(c);
                 return;
             }
 
             var query = value.ToLower();
-            var matched = await _supplierService.GetAllSuppliersAsync();
+            var matched = await _customerService.GetAllCustomersAsync();
             var filtered = matched.Where(c => c.Name.ToLower().Contains(query)).Take(5).ToList();
             
             MatchedCustomers.Clear();
@@ -295,7 +295,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         }
 
         [RelayCommand]
-        private void SelectCustomer(Supplier customer)
+        private void SelectCustomer(Customer customer)
         {
             if (customer == null) return;
             SelectedCustomer = customer;
@@ -331,7 +331,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
             try
             {
-                var supplier = new Supplier
+                var customer = new Customer
                 {
                     Name = NewCustomerName.Trim(),
                     Phone = NewCustomerPhone.Trim(),
@@ -339,11 +339,11 @@ namespace InventoryManagementSystem.UI.ViewModels
                     Address = NewCustomerAddress.Trim(),
                     CreatedAt = DateTime.Now
                 };
-                await _supplierService.AddSupplierAsync(supplier);
+                await _customerService.AddCustomerAsync(customer);
                 IsCreateCustomerModalOpen = false;
 
                 // Select the newly created customer
-                SelectCustomer(supplier);
+                SelectCustomer(customer);
             }
             catch (Exception ex)
             {
@@ -460,18 +460,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         {
             try
             {
-                var all = await _supplierService.GetAllSuppliersAsync();
-                if (!all.Any(s => s.Name == "Walk-in Customer"))
-                {
-                    var customer = new Supplier
-                    {
-                        Name = "Walk-in Customer",
-                        Phone = "0000000000",
-                        Email = "walkin@pos.com",
-                        CreatedAt = DateTime.Now
-                    };
-                    await _supplierService.AddSupplierAsync(customer);
-                }
+                await _customerService.EnsureWalkInCustomerAsync();
             }
             catch (Exception ex)
             {
@@ -498,24 +487,13 @@ namespace InventoryManagementSystem.UI.ViewModels
                 var connection = _journalService.Database.Connection;
 
                 // Make sure we have a valid customer
-                Supplier? actualCustomer = SelectedCustomer;
+                Customer? actualCustomer = SelectedCustomer;
                 var customerId = actualCustomer?.Id ?? 0;
                 if (customerId == 0)
                 {
-                    var walkIn = (await _supplierService.GetAllSuppliersAsync())
-                        .FirstOrDefault(s => s.Name == "Walk-in Customer");
-                    if (walkIn != null)
-                    {
-                        customerId = walkIn.Id;
-                        actualCustomer = walkIn;
-                    }
-                    else
-                    {
-                        var newWalkIn = new Supplier { Name = "Walk-in Customer", Phone = "0000000000", Email = "walkin@pos.com" };
-                        await _supplierService.AddSupplierAsync(newWalkIn);
-                        customerId = newWalkIn.Id;
-                        actualCustomer = newWalkIn;
-                    }
+                    var walkIn = await _customerService.EnsureWalkInCustomerAsync();
+                    customerId = walkIn.Id;
+                    actualCustomer = walkIn;
                 }
 
                 // 1. Create SalesOrder record

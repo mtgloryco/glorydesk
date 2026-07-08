@@ -14,7 +14,7 @@ namespace InventoryManagementSystem.UI.ViewModels
     public partial class SalesViewModel : ViewModelBase
     {
         private readonly SalesOrderService _salesOrderService;
-        private readonly SupplierService _supplierService;
+        private readonly CustomerService _customerService;
         private readonly InventoryService _inventoryService;
         private readonly TaxService _taxService;
         private readonly SettingsService _settingsService;
@@ -43,7 +43,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private bool _isNew;
         [ObservableProperty] private SalesOrder _currentOrder = new();
         [ObservableProperty] private string _customerSearchText = string.Empty;
-        [ObservableProperty] private Supplier? _selectedCustomer;
+        [ObservableProperty] private Customer? _selectedCustomer;
         [ObservableProperty] private decimal _orderTotalAmount;
         [ObservableProperty] private decimal _orderSubtotalAmount;
         [ObservableProperty] private string _orderTaxBreakdownText = string.Empty;
@@ -70,7 +70,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private bool _isPaymentTermsListVisible;
 
         // Customer Search / Creation
-        [ObservableProperty] private ObservableCollection<Supplier> _matchedCustomers = new();
+        [ObservableProperty] private ObservableCollection<Customer> _matchedCustomers = new();
         [ObservableProperty] private bool _isCreateCustomerButtonVisible;
         [ObservableProperty] private bool _isCustomerListVisible;
 
@@ -103,7 +103,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         // Details Overlay Properties
         [ObservableProperty] private bool _isDetailsOpen;
         [ObservableProperty] private SalesOrder? _detailedSo;
-        [ObservableProperty] private Supplier? _detailedCustomer;
+        [ObservableProperty] private Customer? _detailedCustomer;
         [ObservableProperty] private ObservableCollection<SalesOrderItemDisplayRow> _detailedItems = new();
         [ObservableProperty] private decimal _detailedSubtotal;
         [ObservableProperty] private decimal _detailedTotal;
@@ -117,7 +117,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         public bool CanInvoiceDetailedSo => DetailedSo != null && DetailedSo.BillingStatus != "Invoiced" && DetailedSo.Status != "Cancelled" && DetailedSo.Status != "Draft";
         public bool IsDetailedSoInvoiced => DetailedSo?.BillingStatus == "Invoiced";
 
-        public List<Supplier> AllCustomers { get; private set; } = new();
+        public List<Customer> AllCustomers { get; private set; } = new();
         public List<Product> AllProducts { get; private set; } = new();
         public List<PaymentTerm> AllPaymentTerms { get; private set; } = new();
 
@@ -125,7 +125,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         public SalesViewModel(
             SalesOrderService salesOrderService,
-            SupplierService supplierService,
+            CustomerService customerService,
             InventoryService inventoryService,
             TaxService taxService,
             SettingsService settingsService,
@@ -134,7 +134,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             int initialTab = 0)
         {
             _salesOrderService = salesOrderService;
-            _supplierService = supplierService;
+            _customerService = customerService;
             _inventoryService = inventoryService;
             _taxService = taxService;
             _settingsService = settingsService;
@@ -167,7 +167,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         public async Task LoadFormDataAsync()
         {
-            AllCustomers = await _supplierService.GetAllSuppliersAsync();
+            AllCustomers = await _customerService.GetAllCustomersAsync();
             AllProducts = await _inventoryService.GetAllProductsAsync();
             AllPaymentTerms = await _salesOrderService.GetAllPaymentTermsAsync();
             
@@ -851,7 +851,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
             if (string.IsNullOrWhiteSpace(value) || (SelectedCustomer != null && value == SelectedCustomer.Name))
             {
-                MatchedCustomers = new ObservableCollection<Supplier>(AllCustomers.Take(5));
+                MatchedCustomers = new ObservableCollection<Customer>(AllCustomers.Take(5));
                 IsCreateCustomerButtonVisible = false;
                 IsCustomerListVisible = false;
                 return;
@@ -859,13 +859,13 @@ namespace InventoryManagementSystem.UI.ViewModels
 
             var query = value.ToLower();
             var matches = AllCustomers.Where(c => c.Name.ToLower().Contains(query)).Take(5).ToList();
-            MatchedCustomers = new ObservableCollection<Supplier>(matches);
+            MatchedCustomers = new ObservableCollection<Customer>(matches);
             IsCreateCustomerButtonVisible = matches.Count == 0;
             IsCustomerListVisible = true;
         }
 
         [RelayCommand]
-        private void SelectCustomer(Supplier customer)
+        private void SelectCustomer(Customer customer)
         {
             if (customer == null) return;
             SelectedCustomer = customer;
@@ -898,7 +898,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
             try
             {
-                var s = new Supplier
+                var s = new Customer
                 {
                     Name = NewCustomerName,
                     Phone = NewCustomerPhone,
@@ -907,10 +907,10 @@ namespace InventoryManagementSystem.UI.ViewModels
                     IsActive = true
                 };
 
-                await _supplierService.AddSupplierAsync(s);
+                await _customerService.AddCustomerAsync(s);
                 
                 // Refresh customer list
-                AllCustomers = await _supplierService.GetAllSuppliersAsync();
+                AllCustomers = await _customerService.GetAllCustomersAsync();
                 var created = AllCustomers.FirstOrDefault(x => x.Name == s.Name);
                 if (created != null)
                 {

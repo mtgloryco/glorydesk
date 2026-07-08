@@ -36,7 +36,8 @@ public partial class App : Application
                     services.expiry, services.location, services.returns, services.advancedAnalytics,
                     services.bundle, services.audit, services.reporting, services.cloudSync,
                     services.briefing, services.tax, services.account, services.journal, services.accountingReport,
-                    services.manufacturing, services.payment),
+                    services.manufacturing, services.payment, services.industryTemplateService,
+                    services.customFieldService, services.customerService),
             };
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
@@ -50,7 +51,8 @@ public partial class App : Application
                     services.expiry, services.location, services.returns, services.advancedAnalytics,
                     services.bundle, services.audit, services.reporting, services.cloudSync,
                     services.briefing, services.tax, services.account, services.journal, services.accountingReport,
-                    services.manufacturing, services.payment),
+                    services.manufacturing, services.payment, services.industryTemplateService,
+                    services.customFieldService, services.customerService),
             };
         }
 
@@ -65,7 +67,8 @@ public partial class App : Application
         AdvancedAnalyticsService advancedAnalytics, BundleService bundle, AuditService audit,
         ReportingService reporting, CloudSyncService cloudSync, DailyBriefingService briefing,
         TaxService tax, AccountService account, JournalService journal, AccountingReportService accountingReport,
-        ManufacturingService manufacturing, PaymentService payment) InitializeServices()
+        ManufacturingService manufacturing, PaymentService payment, IndustryTemplateService industryTemplateService,
+        CustomFieldService customFieldService, CustomerService customerService) InitializeServices()
     {
         // Initialize Database
         var dbService = new DatabaseService();
@@ -100,11 +103,17 @@ public partial class App : Application
         var accountingReportService = new AccountingReportService(dbService);
         var manufacturingService = new ManufacturingService(dbService);
         var paymentService = new PaymentService(dbService);
+        var customFieldService = new CustomFieldService(dbService);
+        var customerService = new CustomerService(dbService);
+        var industryTemplateService = new IndustryTemplateService(dbService);
+
+        // Apply any previously-saved terminology overrides immediately so the UI reflects them from startup
+        languageService.SetTerminologyOverrides(settingsService.CurrentSettings.TerminologyOverrides);
 
         // Initialize services on a background thread to prevent UI thread deadlock
         Task.Run(async () =>
         {
-            await dbService.InitializeAsync();
+            await dbService.InitializeAsync(settingsService.CurrentSettings.CurrencySymbol);
             await userService.InitializeAsync();
             await licenseService.InitializeAsync();
 
@@ -124,7 +133,8 @@ public partial class App : Application
             settingsService, supplierService, purchaseOrderService, salesOrderService, forecastingService,
             expiryService, locationService, returnsService, advancedAnalyticsService,
             bundleService, auditService, reportingService, cloudSyncService, dailyBriefingService,
-            taxService, accountService, journalService, accountingReportService, manufacturingService, paymentService);
+            taxService, accountService, journalService, accountingReportService, manufacturingService, paymentService,
+            industryTemplateService, customFieldService, customerService);
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

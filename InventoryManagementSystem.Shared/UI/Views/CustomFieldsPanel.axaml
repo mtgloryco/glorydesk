@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="300"
+             x:Class="InventoryManagementSystem.UI.Views.CustomFieldsPanel"
+             x:Name="Root">
+    <ItemsControl ItemsSource="{Binding #Root.ItemsSource}">
+        <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CustomFieldInputItem">
+                <StackPanel Spacing="5" Margin="0,0,0,15">
+                    <TextBlock Text="{Binding Definition.FieldLabel}" FontSize="12" FontWeight="SemiBold"/>
+
+                    <TextBox Text="{Binding TextValue}" IsVisible="{Binding IsText}" />
+
+                    <NumericUpDown Value="{Binding NumberValue}" IsVisible="{Binding IsNumber}"
+                                   HorizontalAlignment="Stretch" FormatString="0.####" />
+
+                    <DatePicker SelectedDate="{Binding DateValue}" IsVisible="{Binding IsDate}" />
+
+                    <CheckBox IsChecked="{Binding BoolValue}" IsVisible="{Binding IsBoolean}" Content="Yes" />
+
+                    <ComboBox ItemsSource="{Binding ChoiceOptionsList}" SelectedItem="{Binding TextValue}"
+                              IsVisible="{Binding IsChoice}" HorizontalAlignment="Stretch" />
+                </StackPanel>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

@@ -675,5 +675,51 @@ namespace InventoryManagementSystem.Domain
         public string Name { get; set; } = string.Empty;
         public int JournalId { get; set; }
     }
+
+    // --- CROSS-INDUSTRY CONFIGURABILITY: CUSTOM FIELDS ---
+
+    public class CustomFieldDefinition
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public string EntityType { get; set; } = string.Empty; // Product, Customer, Supplier, SalesOrder, PurchaseOrder
+        public string FieldKey { get; set; } = string.Empty;
+        public string FieldLabel { get; set; } = string.Empty;
+        public string FieldType { get; set; } = "Text"; // Text, Number, Date, Boolean, Choice
+        public string ChoiceOptions { get; set; } = string.Empty; // comma-separated, only for FieldType == "Choice"
+        public bool IsRequired { get; set; } = false;
+        public int DisplayOrder { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class CustomFieldValue
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public int DefinitionId { get; set; }
+        public int EntityId { get; set; }
+        public string ValueText { get; set; } = string.Empty;
+    }
+
+    // --- CROSS-INDUSTRY CONFIGURABILITY: CUSTOMER ENTITY ---
+
+    public class Customer : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string ContactPerson { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string PaymentTerms { get; set; } = "Direct Payment";
+        public string TinNumber { get; set; } = string.Empty;
+        public string WebsiteUrl { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+    }
 }
 

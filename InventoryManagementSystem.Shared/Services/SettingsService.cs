@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
@@ -13,6 +14,10 @@ namespace InventoryManagementSystem.Services
         public string PrinterName { get; set; } = "";
         public bool IsDarkTheme { get; set; } = true;
         public bool IsSudoModeEnabled { get; set; } = false;
+        public string BusinessType { get; set; } = "";
+        public bool SetupCompleted { get; set; } = false;
+        public Dictionary<string, bool> EnabledModules { get; set; } = new();
+        public Dictionary<string, string> TerminologyOverrides { get; set; } = new();
     }
 
     public class SettingsService
@@ -25,6 +30,21 @@ namespace InventoryManagementSystem.Services
             var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "InventoryManagementSystem");
             Directory.CreateDirectory(folder);
             _settingsFilePath = Path.Combine(folder, "settings.json");
+            LoadSettings();
+        }
+
+        /// <summary>
+        /// Testability seam: points settings persistence at an explicit file (e.g. a temp file in unit tests)
+        /// instead of the fixed per-user ApplicationData location used by the parameterless constructor.
+        /// </summary>
+        public SettingsService(string customSettingsFilePath)
+        {
+            var folder = Path.GetDirectoryName(customSettingsFilePath);
+            if (!string.IsNullOrEmpty(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+            _settingsFilePath = customSettingsFilePath;
             LoadSettings();
         }
 
