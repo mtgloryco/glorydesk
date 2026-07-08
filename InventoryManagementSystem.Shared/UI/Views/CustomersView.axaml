@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+             x:Class="InventoryManagementSystem.UI.Views.CustomersView"
+             x:DataType="vm:CustomersViewModel">
+    <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="2*,*" Margin="20">
+        <!-- Header Panel with Add button -->
+        <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="*, Auto" Margin="0,0,0,16">
+            <TextBlock Grid.Column="0" Text="{Binding Language.Resources[Customers]}" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="+ Add Customer" Command="{Binding ShowAddCustomerFormCommand}" Background="#007ACC" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4" />
+        </Grid>
+
+        <!-- Search Bar -->
+        <TextBox Grid.Row="1" Grid.Column="0" Watermark="Search customers by name, contact, phone, email, TIN..." Text="{Binding SearchText}" Margin="0,0,12,12" VerticalAlignment="Center" />
+
+        <DataGrid Grid.Row="2" Grid.Column="0" ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}" AutoGenerateColumns="False" Margin="0,0,12,0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+                <DataGridTextColumn Header="Contact" Binding="{Binding ContactPerson}" Width="*" />
+                <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120" />
+                <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*" />
+                <DataGridTemplateColumn Header="Actions" Width="140">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).EditCustomerCommand}" CommandParameter="{Binding}" Background="#007ACC" Foreground="White" FontSize="10" Padding="8,4"/>
+                                <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).ConfirmDeleteCustomerCommand}" CommandParameter="{Binding}" Background="#D32F2F" Foreground="White" FontSize="10" Padding="8,4"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <ScrollViewer Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10" Margin="0,0,8,0">
+                <!-- Add / Edit Customer Form (Collapsible) -->
+                <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6" IsVisible="{Binding IsFormVisible}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Add / Edit Customer" FontWeight="SemiBold" FontSize="16" />
+                        <TextBox Watermark="Name" Text="{Binding CurrentCustomer.Name}" />
+
+                        <TextBox Watermark="TIN Number" Text="{Binding CurrentCustomer.TinNumber}" />
+                        <TextBox Watermark="Contact Person" Text="{Binding CurrentCustomer.ContactPerson}" />
+                        <TextBox Watermark="Phone" Text="{Binding CurrentCustomer.Phone}" />
+                        <TextBox Watermark="Email" Text="{Binding CurrentCustomer.Email}" />
+                        <TextBox Watermark="Address" Text="{Binding CurrentCustomer.Address}" />
+
+                        <TextBlock Text="Payment Terms" FontSize="11" Foreground="Gray" Margin="0,4,0,0" />
+                        <ComboBox ItemsSource="{Binding PaymentTermsOptions}" SelectedItem="{Binding CurrentCustomer.PaymentTerms}" HorizontalAlignment="Stretch" />
+
+                        <TextBox Watermark="Website Link (e.g. www.customer.com)" Text="{Binding CurrentCustomer.WebsiteUrl}" />
+
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                            <Button Content="Save" Command="{Binding SaveCustomerCommand}" Background="#2E7D32" Foreground="White"/>
+                            <Button Content="Cancel" Command="{Binding CloseFormCommand}" />
+                            <Button Content="Reload" Command="{Binding LoadCustomersCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,12,0,0" IsVisible="{Binding SelectedCustomer, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Customer Details" FontWeight="SemiBold" FontSize="14" />
+
+                        <TextBlock Text="{Binding SelectedCustomer.Name}" FontWeight="Bold" FontSize="15" />
+                        <TextBlock Text="{Binding SelectedCustomer.ContactPerson, StringFormat='Contact: {0}'}" />
+                        <TextBlock Text="{Binding SelectedCustomer.Phone, StringFormat='Phone: {0}'}" />
+                        <TextBlock Text="{Binding SelectedCustomer.Email, StringFormat='Email: {0}'}" />
+                        <TextBlock Text="{Binding SelectedCustomer.Address, StringFormat='Address: {0}'}" TextWrapping="Wrap" />
+                        <Button Content="Visit Website" Command="{Binding OpenWebsiteCommand}" FontSize="10" Padding="6,2" Margin="0,4,0,0" IsVisible="{Binding HasWebsite}" Background="#007ACC" Foreground="White" HorizontalAlignment="Left" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Deletion Confirmation Dialog Overlay -->
+        <Grid Grid.RowSpan="3" Grid.ColumnSpan="2" Background="#80000000" IsVisible="{Binding IsDeleteConfirmationOpen}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" Width="320" BoxShadow="0 10 30 0 #40000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Confirm Deletion" FontSize="18" FontWeight="Bold" Foreground="#D32F2F" />
+                    <TextBlock Text="{Binding CustomerToDelete.Name, StringFormat='Are you sure you want to delete customer \'{0}\'?'}" TextWrapping="Wrap" FontSize="14" />
+                    <TextBlock Text="This action cannot be undone." FontSize="12" Foreground="Gray" />
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Command="{Binding CancelDeleteCommand}" Padding="10,5" />
+                        <Button Content="Delete" Command="{Binding ExecuteDeleteCommand}" Background="#D32F2F" Foreground="White" Padding="10,5" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

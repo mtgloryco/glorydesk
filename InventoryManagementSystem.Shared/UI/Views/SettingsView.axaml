@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
              xmlns:domain="clr-namespace:InventoryManagementSystem.Domain"
+             xmlns:svc="clr-namespace:InventoryManagementSystem.Services"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
              x:Class="InventoryManagementSystem.UI.Views.SettingsView"
              x:DataType="vm:SettingsViewModel"
@@ -48,6 +49,14 @@
                     Classes="tab-btn" Classes.active-tab="{Binding IsAccountingTabActive}" />
             <Button Content="Payments Setup" Command="{Binding SelectTabCommand}" CommandParameter="Payments"
                     Classes="tab-btn" Classes.active-tab="{Binding IsPaymentsTabActive}" />
+            <Button Content="Business Setup" Command="{Binding SelectTabCommand}" CommandParameter="BusinessSetup"
+                    Classes="tab-btn" Classes.active-tab="{Binding IsBusinessSetupTabActive}" />
+            <Button Content="Custom Fields" Command="{Binding SelectTabCommand}" CommandParameter="CustomFields"
+                    Classes="tab-btn" Classes.active-tab="{Binding IsCustomFieldsTabActive}" />
+            <Button Content="Terminology" Command="{Binding SelectTabCommand}" CommandParameter="Terminology"
+                    Classes="tab-btn" Classes.active-tab="{Binding IsTerminologyTabActive}" />
+            <Button Content="Modules" Command="{Binding SelectTabCommand}" CommandParameter="Modules"
+                    Classes="tab-btn" Classes.active-tab="{Binding IsModulesTabActive}" />
         </StackPanel>
 
         <!-- Content Area -->
@@ -1070,6 +1079,164 @@
                              </Grid>
                          </Panel>
                      </Grid>
+
+                    <!-- TAB 5: BUSINESS SETUP -->
+                    <StackPanel Spacing="20" MaxWidth="700" HorizontalAlignment="Left" IsVisible="{Binding IsBusinessSetupTabActive}">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Business Setup" FontSize="20" FontWeight="Bold"/>
+                            <TextBlock Text="Configure the business type that drives default categories, terminology, custom fields and enabled modules." Foreground="Gray" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                        </StackPanel>
+
+                        <Border Background="{DynamicResource PageBackgroundColor}" CornerRadius="8" Padding="20" BorderThickness="1" BorderBrush="{DynamicResource BorderColor}">
+                            <StackPanel Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="Current Business Type:" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding CurrentBusinessTypeDisplay}" Foreground="#007ACC" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="Setup Completed:" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding IsBusinessSetupCompleted}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Available Industry Templates" FontSize="16" FontWeight="SemiBold"/>
+                            <ItemsControl ItemsSource="{Binding AvailableBusinessTemplates}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="svc:IndustryTemplate">
+                                        <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Description}" Foreground="Gray" TextWrapping="Wrap" FontSize="12"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <Button Content="Run / Re-run Setup Wizard" Command="{Binding RunSetupWizardCommand}"
+                                Classes="accent" Background="#2E7D32" Foreground="White" Padding="20,10" FontWeight="SemiBold" HorizontalAlignment="Left"/>
+                        <TextBlock Text="Re-running the wizard is additive: it only adds missing categories, custom fields, terminology and enables modules — it never deletes your existing data." Foreground="Gray" TextWrapping="Wrap" FontSize="12"/>
+                    </StackPanel>
+
+                    <!-- TAB 6: CUSTOM FIELDS -->
+                    <Grid RowDefinitions="Auto, Auto, *" IsVisible="{Binding IsCustomFieldsTabActive}" Margin="0,10,0,0" MaxWidth="800" HorizontalAlignment="Left">
+                        <StackPanel Grid.Row="0" Spacing="5" Margin="0,0,0,15">
+                            <TextBlock Text="Custom Fields" FontSize="20" FontWeight="Bold"/>
+                            <TextBlock Text="Add extra fields per record type without writing code." Foreground="Gray"/>
+                        </StackPanel>
+
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,15">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="Entity Type:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <ComboBox ItemsSource="{Binding CustomFieldEntityTypes}" SelectedItem="{Binding SelectedCustomFieldEntityType}" Width="180"/>
+                            </StackPanel>
+                            <Button Grid.Column="2" Content="+ Add Field" Command="{Binding OpenAddCustomFieldFormCommand}" Background="#007ACC" Foreground="White" Padding="15,8" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding !IsCustomFieldFormVisible}"/>
+                        </Grid>
+
+                        <StackPanel Grid.Row="2" Spacing="15">
+                            <!-- Add/Edit Field Form -->
+                            <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="20" CornerRadius="8" IsVisible="{Binding IsCustomFieldFormVisible}">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="Field Details" FontSize="16" FontWeight="SemiBold"/>
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="Field Label" FontWeight="Medium" FontSize="12"/>
+                                        <TextBox Text="{Binding CustomFieldFormLabel}" Watermark="e.g. Grade, Moisture %, Crop Season"/>
+                                    </StackPanel>
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="Field Type" FontWeight="Medium" FontSize="12"/>
+                                        <ComboBox ItemsSource="{Binding CustomFieldTypeOptions}" SelectedItem="{Binding CustomFieldFormType}" HorizontalAlignment="Stretch"/>
+                                    </StackPanel>
+                                    <StackPanel Spacing="5" IsVisible="{Binding IsCustomFieldChoiceOptionsVisible}">
+                                        <TextBlock Text="Choice Options (comma-separated)" FontWeight="Medium" FontSize="12"/>
+                                        <TextBox Text="{Binding CustomFieldFormChoiceOptions}" Watermark="e.g. A,AA,AB,PB,C"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <TextBlock Text="Required" FontWeight="Medium" FontSize="12" VerticalAlignment="Center"/>
+                                        <ToggleSwitch IsChecked="{Binding CustomFieldFormIsRequired}" OnContent="Yes" OffContent="No"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding CustomFieldErrorMessage}" Foreground="#D32F2F" FontSize="12" IsVisible="{Binding CustomFieldErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                                        <Button Content="Cancel" Command="{Binding CloseCustomFieldFormCommand}" Padding="15,8"/>
+                                        <Button Content="Save Field" Command="{Binding SaveCustomFieldCommand}" Background="#2E7D32" Foreground="White" Padding="15,8" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Fields List -->
+                            <DataGrid ItemsSource="{Binding CustomFieldDefinitions}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="All" BorderThickness="1" BorderBrush="{DynamicResource BorderColor}" MinHeight="200">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Label" Binding="{Binding FieldLabel}" Width="*"/>
+                                    <DataGridTextColumn Header="Key" Binding="{Binding FieldKey}" Width="140"/>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding FieldType}" Width="100"/>
+                                    <DataGridTextColumn Header="Required" Binding="{Binding IsRequired}" Width="90"/>
+                                    <DataGridTextColumn Header="Active" Binding="{Binding IsActive}" Width="80"/>
+                                    <DataGridTemplateColumn Header="Actions" Width="160">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate x:DataType="domain:CustomFieldDefinition">
+                                                <StackPanel Orientation="Horizontal" Spacing="5" Margin="5,0">
+                                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditCustomFieldFormCommand}" CommandParameter="{Binding .}" FontSize="11" Padding="6,3"/>
+                                                    <Button Content="Deactivate" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeactivateCustomFieldCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="11" Padding="6,3"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- TAB 7: TERMINOLOGY -->
+                    <StackPanel Spacing="20" MaxWidth="600" HorizontalAlignment="Left" IsVisible="{Binding IsTerminologyTabActive}">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Terminology" FontSize="20" FontWeight="Bold"/>
+                            <TextBlock Text="Rename common terms to match your business language. Leave blank to use the default label." Foreground="Gray" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <ItemsControl ItemsSource="{Binding TerminologyTerms}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TerminologyTermItem">
+                                    <StackPanel Spacing="5" Margin="0,0,0,12">
+                                        <TextBlock Text="{Binding DefaultLabel}" FontWeight="SemiBold"/>
+                                        <TextBox Text="{Binding OverrideText}" Watermark="{Binding DefaultLabel}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel Orientation="Horizontal" Spacing="15" Margin="0,10,0,0">
+                            <Button Content="Save Terminology" Command="{Binding SaveTerminologyCommand}"
+                                    Classes="accent" Background="#2E7D32" Foreground="White" Padding="20,10" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding TerminologyStatusMessage}" VerticalAlignment="Center" Foreground="#4CAF50" FontWeight="Medium"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- TAB 8: MODULES -->
+                    <StackPanel Spacing="20" MaxWidth="600" HorizontalAlignment="Left" IsVisible="{Binding IsModulesTabActive}">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Modules" FontSize="20" FontWeight="Bold"/>
+                            <TextBlock Text="Turn features on or off based on how your business operates. This is independent of your license tier." Foreground="Gray" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <ItemsControl ItemsSource="{Binding ModuleToggles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ModuleToggleItem">
+                                    <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,12">
+                                        <TextBlock Grid.Column="0" Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsEnabled}" OnContent="Enabled" OffContent="Disabled"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel Orientation="Horizontal" Spacing="15" Margin="0,10,0,0">
+                            <Button Content="Save Modules" Command="{Binding SaveModulesCommand}"
+                                    Classes="accent" Background="#2E7D32" Foreground="White" Padding="20,10" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding ModulesStatusMessage}" VerticalAlignment="Center" Foreground="#4CAF50" FontWeight="Medium"/>
+                        </StackPanel>
+                    </StackPanel>
                  </Panel>
             </ScrollViewer>
         </Border>

@@ -221,7 +221,7 @@
                                     
                                     <!-- Customer Selection Field -->
                                     <StackPanel Spacing="5">
-                                        <TextBlock Text="Customer" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                        <TextBlock Text="{Binding Language.Resources[Customer]}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextSecondaryColor}"/>
                                         <Grid ColumnDefinitions="*, Auto">
                                             <!-- Search textbox -->
                                             <TextBox Text="{Binding CustomerSearchText, Mode=TwoWay}" Watermark="Search or select customer..." Height="40" VerticalContentAlignment="Center"/>
@@ -331,7 +331,7 @@
                     <DataGrid ItemsSource="{Binding PosOrders}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="All">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Order #" Binding="{Binding SalesOrder.SONumber}" Width="1.5*"/>
-                            <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="2*"/>
+                            <DataGridTextColumn Header="{Binding Language.Resources[Customer]}" Binding="{Binding CustomerName}" Width="2*"/>
                             <DataGridTextColumn Header="Date" Binding="{Binding SalesOrder.OrderDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="2*"/>
                             <DataGridTextColumn Header="Total" Binding="{Binding SalesOrder.TotalAmount, StringFormat='{}{0:N0}'}" Width="1.5*"/>
                             <DataGridTextColumn Header="Billing" Binding="{Binding SalesOrder.BillingStatus}" Width="1.5*"/>
@@ -533,7 +533,7 @@
                                 <StackPanel Grid.Column="1" Spacing="5">
                                     <TextBlock Text="Order Date" FontSize="11" Foreground="Gray" FontWeight="SemiBold"/>
                                     <TextBlock Text="{Binding DetailedOrder.OrderDate, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
-                                    <TextBlock Text="Customer" FontSize="11" Foreground="Gray" FontWeight="SemiBold" Margin="0,5,0,0"/>
+                                    <TextBlock Text="{Binding Language.Resources[Customer]}" FontSize="11" Foreground="Gray" FontWeight="SemiBold" Margin="0,5,0,0"/>
                                     <TextBlock Text="{Binding DetailedCustomerName}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
                                 </StackPanel>
                                 <!-- Col 2: Cashier & Billing -->

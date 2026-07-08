@@ -15,6 +15,12 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly InventoryService _inventoryService;
         private readonly LicenseService _licenseService;
         private readonly AccountService _accountService;
+        private readonly CustomFieldService? _customFieldService;
+        private readonly CustomFieldsPanelViewModel _customFieldsPanel = new();
+
+        public CustomFieldService? CustomFieldService => _customFieldService;
+        public ObservableCollection<CustomFieldInputItem> ProductCustomFields => _customFieldsPanel.Items;
+        public bool HasCustomFields => ProductCustomFields.Count > 0;
 
         private List<Account> _allAccounts = new();
 
@@ -241,7 +247,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             Action? goToSuppliers = null,
             Action? goToSalesQuotations = null,
             Action? goToSalesOrders = null,
-            Action? goToCustomers = null)
+            Action? goToCustomers = null,
+            CustomFieldService? customFieldService = null)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
@@ -255,6 +262,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             _goToSalesQuotations = goToSalesQuotations;
             _goToSalesOrders = goToSalesOrders;
             _goToCustomers = goToCustomers;
+            _customFieldService = customFieldService;
+            _customFieldsPanel.Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasCustomFields));
             LoadProductsCommand.Execute(null);
         }
 
@@ -453,6 +462,21 @@ namespace InventoryManagementSystem.UI.ViewModels
             }
         }
 
+        private async Task LoadProductCustomFieldsAsync(int? productId)
+        {
+            if (_customFieldService == null) return;
+            try
+            {
+                await _customFieldsPanel.LoadAsync(_customFieldService, "Product", productId);
+            }
+            catch
+            {
+                // Non-fatal: leave whatever fields were already loaded (possibly none) so
+                // the core product form remains usable even if custom fields fail to load.
+            }
+            OnPropertyChanged(nameof(HasCustomFields));
+        }
+
         [RelayCommand]
         private async Task OpenAddProductPane()
         {
@@ -468,6 +492,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             PaneTitle = Language["Inv_NewProduct"];
             IsStockMode = false;
             await LoadFormDataAsync();
+            await LoadProductCustomFieldsAsync(null);
 
             IncomeAccountSearchText = string.Empty;
             SelectedIncomeAccountName = string.Empty;
@@ -506,6 +531,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             PaneTitle = Language["Inv_PaneTitle"];
             IsStockMode = false;
             await LoadFormDataAsync();
+            await LoadProductCustomFieldsAsync(product.Id);
 
             if (product.IncomeAccountId.HasValue)
             {
@@ -595,6 +621,19 @@ namespace InventoryManagementSystem.UI.ViewModels
                 else
                 {
                     await _inventoryService.UpdateProductAsync(CurrentProduct);
+                }
+
+                if (_customFieldService != null && CurrentProduct.Id != 0)
+                {
+                    try
+                    {
+                        await _customFieldsPanel.SaveAsync(_customFieldService, CurrentProduct.Id);
+                    }
+                    catch
+                    {
+                        // Non-fatal: the core product save already succeeded; don't block on
+                        // custom field persistence failures.
+                    }
                 }
 
                 IsPaneOpen = false;

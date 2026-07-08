@@ -178,7 +178,7 @@
                                         <!-- Table Header -->
                                         <Border Background="{DynamicResource PageBackgroundColor}" Padding="8">
                                             <Grid ColumnDefinitions="2*, *, *, *, Auto">
-                                                <TextBlock Grid.Column="0" Text="Product" FontWeight="SemiBold" FontSize="12"/>
+                                                <TextBlock Grid.Column="0" Text="{Binding Language.Resources[Product]}" FontWeight="SemiBold" FontSize="12"/>
                                                 <TextBlock Grid.Column="1" Text="Quantity" FontWeight="SemiBold" FontSize="12" Margin="5,0"/>
                                                 <TextBlock Grid.Column="2" Text="Unit Cost" FontWeight="SemiBold" FontSize="12" Margin="5,0"/>
                                                 <TextBlock Grid.Column="3" Text="Tax (Purchase)" FontWeight="SemiBold" FontSize="12" Margin="5,0"/>

@@ -1,0 +1,140 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             xmlns:services="clr-namespace:InventoryManagementSystem.Services"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
+             x:Class="InventoryManagementSystem.UI.Views.SetupWizardView"
+             x:DataType="vm:SetupWizardViewModel"
+             Background="{DynamicResource PageBackgroundColor}">
+
+    <UserControl.Styles>
+        <Style Selector="Border.step-dot">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Background" Value="{DynamicResource BorderColor}"/>
+        </Style>
+        <Style Selector="Border.step-dot.active">
+            <Setter Property="Background" Value="#007ACC"/>
+        </Style>
+        <Style Selector="TextBlock.step-number">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid RowDefinitions="Auto, Auto, Auto, Auto" Margin="40,30" MaxWidth="760" HorizontalAlignment="Center">
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,20">
+                <TextBlock Text="Welcome — Let's Set Up Your Business" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                <TextBlock Text="This quick setup configures categories, terminology and modules for your type of business." Foreground="{DynamicResource TextSecondaryColor}"/>
+            </StackPanel>
+
+            <!-- Step indicator -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" Margin="0,0,0,25">
+                <Border Classes="step-dot" Classes.active="{Binding IsStep1}">
+                    <TextBlock Classes="step-number" Text="1"/>
+                </Border>
+                <TextBlock Text="Business Info" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryColor}"/>
+                <Rectangle Width="30" Height="2" Fill="{DynamicResource BorderColor}" VerticalAlignment="Center"/>
+                <Border Classes="step-dot" Classes.active="{Binding IsStep2}">
+                    <TextBlock Classes="step-number" Text="2"/>
+                </Border>
+                <TextBlock Text="Industry Template" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryColor}"/>
+                <Rectangle Width="30" Height="2" Fill="{DynamicResource BorderColor}" VerticalAlignment="Center"/>
+                <Border Classes="step-dot" Classes.active="{Binding IsStep3}">
+                    <TextBlock Classes="step-number" Text="3"/>
+                </Border>
+                <TextBlock Text="Confirm" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryColor}"/>
+            </StackPanel>
+
+            <!-- Content card -->
+            <Border Grid.Row="2" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" Padding="30"
+                    BorderThickness="1" BorderBrush="{DynamicResource BorderColor}" BoxShadow="0 2 8 0 #0A000000"
+                    MinHeight="380">
+                <Panel>
+                    <!-- STEP 1: BUSINESS INFO -->
+                    <StackPanel Spacing="18" IsVisible="{Binding IsStep1}">
+                        <TextBlock Text="Tell us about your business" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Store / Business Name" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding StoreName}" Watermark="e.g. My Store"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Address" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding StoreAddress}" Watermark="Store address" Height="70" AcceptsReturn="True"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Currency Symbol" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding CurrencySymbol}" Watermark="e.g. RWF, $, €" Width="150" HorizontalAlignment="Left"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- STEP 2: INDUSTRY TEMPLATE -->
+                    <StackPanel Spacing="15" IsVisible="{Binding IsStep2}">
+                        <TextBlock Text="Choose the template that best fits your business" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                        <TextBlock Text="This pre-configures categories, units, terminology, custom fields and which modules are enabled. You can change everything later in Settings." Foreground="{DynamicResource TextSecondaryColor}" TextWrapping="Wrap"/>
+
+                        <ListBox ItemsSource="{Binding AvailableTemplates}" SelectedItem="{Binding SelectedTemplate}" Background="Transparent" BorderThickness="0" MaxHeight="330">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="services:IndustryTemplate">
+                                    <Border Padding="16" Margin="0,0,0,4" CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource BorderColor}">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                            <TextBlock Text="{Binding Description}" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <Button Content="Skip / I'll configure manually" Command="{Binding SkipSetupCommand}"
+                                Background="Transparent" Foreground="{DynamicResource TextSecondaryColor}" HorizontalAlignment="Left"
+                                BorderThickness="0" Padding="0" FontSize="13" Cursor="Hand"/>
+                    </StackPanel>
+
+                    <!-- STEP 3: CONFIRM -->
+                    <StackPanel Spacing="15" IsVisible="{Binding IsStep3}">
+                        <TextBlock Text="Review and confirm" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+
+                        <Border Background="{DynamicResource PageBackgroundColor}" CornerRadius="8" Padding="15">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding StoreName, StringFormat='Business: {0}'}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding CurrencySymbol, StringFormat='Currency: {0}'}"/>
+                                <TextBlock Text="{Binding SelectedTemplate.DisplayName, StringFormat='Template: {0}'}" IsVisible="{Binding SelectedTemplate, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="{Binding TemplateSummary}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryColor}" LineHeight="22"/>
+                    </StackPanel>
+                </Panel>
+            </Border>
+
+            <!-- Footer: error + navigation -->
+            <Grid Grid.Row="3" ColumnDefinitions="*, Auto" Margin="0,20,0,0">
+                <TextBlock Grid.Column="0" Text="{Binding ErrorMessage}" Foreground="#D32F2F" FontSize="13"
+                           VerticalAlignment="Center" TextWrapping="Wrap"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <Button Content="Back" Command="{Binding BackCommand}" IsVisible="{Binding !IsStep1}"
+                            Background="#F5F5F5" Padding="20,10"/>
+                    <Button Content="Next" Command="{Binding NextCommand}" IsVisible="{Binding !IsStep3}"
+                            Background="#007ACC" Foreground="White" FontWeight="SemiBold" Padding="20,10"/>
+                    <Button Content="Finish Setup" Command="{Binding FinishCommand}" IsVisible="{Binding IsStep3}"
+                            IsEnabled="{Binding !IsBusy}"
+                            Background="#2E7D32" Foreground="White" FontWeight="SemiBold" Padding="20,10"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+
+</UserControl>

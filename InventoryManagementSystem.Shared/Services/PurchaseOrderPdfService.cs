@@ -293,14 +293,12 @@ namespace InventoryManagementSystem.Services
                             });
 
                             // Render each tax breakdown line
-                            bool hasInclusiveTax = false;
                             foreach (var taxVal in taxTotals.Values)
                             {
                                 var inclusiveIndicator = "";
                                 if (taxVal.Tax.IncludedInPrice == "Include")
                                 {
                                     inclusiveIndicator = " (Tax Inclusive)";
-                                    hasInclusiveTax = true;
                                 }
                                 summary.Item().Row(r =>
                                 {

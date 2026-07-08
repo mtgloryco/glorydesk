@@ -16,15 +16,22 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly JournalService _journalService;
     private readonly AccountingReportService _accountingReportService;
     private readonly PaymentService _paymentService;
+    private readonly CustomFieldService _customFieldService;
+    private readonly Action? _onRequestShowWizard;
+    private readonly Action? _onModulesChanged;
 
     // Tabs
     [ObservableProperty]
-    private string _selectedTab = "General"; // "General", "Taxes", "Accounting", "Payments"
+    private string _selectedTab = "General"; // "General", "Taxes", "Accounting", "Payments", "BusinessSetup", "CustomFields", "Terminology", "Modules"
 
     public bool IsGeneralTabActive => SelectedTab == "General";
     public bool IsTaxesTabActive => SelectedTab == "Taxes";
     public bool IsAccountingTabActive => SelectedTab == "Accounting";
     public bool IsPaymentsTabActive => SelectedTab == "Payments";
+    public bool IsBusinessSetupTabActive => SelectedTab == "BusinessSetup";
+    public bool IsCustomFieldsTabActive => SelectedTab == "CustomFields";
+    public bool IsTerminologyTabActive => SelectedTab == "Terminology";
+    public bool IsModulesTabActive => SelectedTab == "Modules";
 
     partial void OnSelectedTabChanged(string value)
     {
@@ -32,6 +39,10 @@ public partial class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsTaxesTabActive));
         OnPropertyChanged(nameof(IsAccountingTabActive));
         OnPropertyChanged(nameof(IsPaymentsTabActive));
+        OnPropertyChanged(nameof(IsBusinessSetupTabActive));
+        OnPropertyChanged(nameof(IsCustomFieldsTabActive));
+        OnPropertyChanged(nameof(IsTerminologyTabActive));
+        OnPropertyChanged(nameof(IsModulesTabActive));
 
         if (value == "Accounting" || value == "Taxes")
         {
@@ -44,6 +55,23 @@ public partial class SettingsViewModel : ViewModelBase
         if (value == "Payments")
         {
             _ = LoadPaymentsDataAsync();
+        }
+        if (value == "BusinessSetup")
+        {
+            OnPropertyChanged(nameof(CurrentBusinessTypeDisplay));
+            OnPropertyChanged(nameof(IsBusinessSetupCompleted));
+        }
+        if (value == "CustomFields")
+        {
+            _ = LoadCustomFieldDefinitionsAsync();
+        }
+        if (value == "Terminology")
+        {
+            LoadTerminologyTerms();
+        }
+        if (value == "Modules")
+        {
+            LoadModuleToggles();
         }
     }
 
@@ -617,7 +645,17 @@ public partial class SettingsViewModel : ViewModelBase
 
     public LanguageService Language { get; }
 
-    public SettingsViewModel(SettingsService settingsService, LanguageService languageService, TaxService taxService, AccountService accountService, JournalService journalService, AccountingReportService accountingReportService, PaymentService paymentService)
+    public SettingsViewModel(
+        SettingsService settingsService,
+        LanguageService languageService,
+        TaxService taxService,
+        AccountService accountService,
+        JournalService journalService,
+        AccountingReportService accountingReportService,
+        PaymentService paymentService,
+        CustomFieldService customFieldService,
+        Action? onRequestShowWizard = null,
+        Action? onModulesChanged = null)
     {
         _settingsService = settingsService;
         Language = languageService;
@@ -626,6 +664,9 @@ public partial class SettingsViewModel : ViewModelBase
         _journalService = journalService;
         _accountingReportService = accountingReportService;
         _paymentService = paymentService;
+        _customFieldService = customFieldService;
+        _onRequestShowWizard = onRequestShowWizard;
+        _onModulesChanged = onModulesChanged;
 
         var s = _settingsService.CurrentSettings;
         _storeName = s.StoreName;
@@ -634,6 +675,11 @@ public partial class SettingsViewModel : ViewModelBase
         _printerName = s.PrinterName;
         _isSudoModeEnabled = s.IsSudoModeEnabled;
         _statusMessage = "";
+
+        foreach (var template in IndustryTemplateService.GetAvailableTemplates())
+        {
+            AvailableBusinessTemplates.Add(template);
+        }
 
         // Load taxes
         _ = LoadTaxesAsync();
@@ -1989,6 +2035,340 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     #endregion
+
+    #region Business Setup
+
+    public ObservableCollection<IndustryTemplate> AvailableBusinessTemplates { get; } = new();
+
+    public string CurrentBusinessTypeDisplay
+    {
+        get
+        {
+            var type = _settingsService.CurrentSettings.BusinessType;
+            if (string.IsNullOrWhiteSpace(type)) return "Not configured yet";
+            if (type == "custom") return "Custom (manually configured)";
+            var match = AvailableBusinessTemplates.FirstOrDefault(t => t.Key == type);
+            return match?.DisplayName ?? type;
+        }
+    }
+
+    public bool IsBusinessSetupCompleted => _settingsService.CurrentSettings.SetupCompleted;
+
+    [RelayCommand]
+    private void RunSetupWizard()
+    {
+        _onRequestShowWizard?.Invoke();
+    }
+
+    #endregion
+
+    #region Custom Fields
+
+    public ObservableCollection<string> CustomFieldEntityTypes { get; } = new()
+    {
+        "Product", "Customer", "Supplier", "SalesOrder", "PurchaseOrder"
+    };
+
+    public ObservableCollection<string> CustomFieldTypeOptions { get; } = new()
+    {
+        "Text", "Number", "Date", "Boolean", "Choice"
+    };
+
+    [ObservableProperty]
+    private string _selectedCustomFieldEntityType = "Product";
+
+    partial void OnSelectedCustomFieldEntityTypeChanged(string value)
+    {
+        _ = LoadCustomFieldDefinitionsAsync();
+    }
+
+    [ObservableProperty]
+    private ObservableCollection<CustomFieldDefinition> _customFieldDefinitions = new();
+
+    [ObservableProperty]
+    private bool _isCustomFieldFormVisible;
+
+    [ObservableProperty]
+    private int _customFieldFormId;
+
+    [ObservableProperty]
+    private string _customFieldFormLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _customFieldFormType = "Text";
+
+    public bool IsCustomFieldChoiceOptionsVisible => CustomFieldFormType == "Choice";
+
+    partial void OnCustomFieldFormTypeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsCustomFieldChoiceOptionsVisible));
+    }
+
+    [ObservableProperty]
+    private string _customFieldFormChoiceOptions = string.Empty;
+
+    [ObservableProperty]
+    private bool _customFieldFormIsRequired;
+
+    [ObservableProperty]
+    private string _customFieldErrorMessage = string.Empty;
+
+    [RelayCommand]
+    public async Task LoadCustomFieldDefinitionsAsync()
+    {
+        try
+        {
+            var defs = await _customFieldService.GetDefinitionsAsync(SelectedCustomFieldEntityType, activeOnly: false);
+            CustomFieldDefinitions = new ObservableCollection<CustomFieldDefinition>(defs);
+        }
+        catch (Exception ex)
+        {
+            CustomFieldErrorMessage = $"Error loading custom fields: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void OpenAddCustomFieldForm()
+    {
+        CustomFieldFormId = 0;
+        CustomFieldFormLabel = string.Empty;
+        CustomFieldFormType = "Text";
+        CustomFieldFormChoiceOptions = string.Empty;
+        CustomFieldFormIsRequired = false;
+        CustomFieldErrorMessage = string.Empty;
+        IsCustomFieldFormVisible = true;
+    }
+
+    [RelayCommand]
+    private void OpenEditCustomFieldForm(CustomFieldDefinition def)
+    {
+        if (def == null) return;
+        CustomFieldFormId = def.Id;
+        CustomFieldFormLabel = def.FieldLabel;
+        CustomFieldFormType = def.FieldType;
+        CustomFieldFormChoiceOptions = def.ChoiceOptions;
+        CustomFieldFormIsRequired = def.IsRequired;
+        CustomFieldErrorMessage = string.Empty;
+        IsCustomFieldFormVisible = true;
+    }
+
+    [RelayCommand]
+    private void CloseCustomFieldForm()
+    {
+        IsCustomFieldFormVisible = false;
+    }
+
+    [RelayCommand]
+    private async Task SaveCustomFieldAsync()
+    {
+        if (string.IsNullOrWhiteSpace(CustomFieldFormLabel))
+        {
+            CustomFieldErrorMessage = "Field label is required.";
+            return;
+        }
+
+        try
+        {
+            if (CustomFieldFormId == 0)
+            {
+                var fieldKey = new string(CustomFieldFormLabel.Where(char.IsLetterOrDigit).ToArray());
+                if (string.IsNullOrWhiteSpace(fieldKey))
+                {
+                    fieldKey = $"Field{DateTime.UtcNow.Ticks}";
+                }
+
+                var def = new CustomFieldDefinition
+                {
+                    EntityType = SelectedCustomFieldEntityType,
+                    FieldKey = fieldKey,
+                    FieldLabel = CustomFieldFormLabel.Trim(),
+                    FieldType = CustomFieldFormType,
+                    ChoiceOptions = CustomFieldFormType == "Choice" ? CustomFieldFormChoiceOptions.Trim() : string.Empty,
+                    IsRequired = CustomFieldFormIsRequired,
+                    IsActive = true
+                };
+                await _customFieldService.AddDefinitionAsync(def);
+            }
+            else
+            {
+                var existing = CustomFieldDefinitions.FirstOrDefault(d => d.Id == CustomFieldFormId);
+                if (existing == null) return;
+                existing.FieldLabel = CustomFieldFormLabel.Trim();
+                existing.FieldType = CustomFieldFormType;
+                existing.ChoiceOptions = CustomFieldFormType == "Choice" ? CustomFieldFormChoiceOptions.Trim() : string.Empty;
+                existing.IsRequired = CustomFieldFormIsRequired;
+                await _customFieldService.UpdateDefinitionAsync(existing);
+            }
+
+            IsCustomFieldFormVisible = false;
+            await LoadCustomFieldDefinitionsAsync();
+        }
+        catch (Exception ex)
+        {
+            CustomFieldErrorMessage = $"Error saving custom field: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeactivateCustomFieldAsync(CustomFieldDefinition def)
+    {
+        if (def == null) return;
+        try
+        {
+            await _customFieldService.DeactivateDefinitionAsync(def.Id);
+            await LoadCustomFieldDefinitionsAsync();
+        }
+        catch (Exception ex)
+        {
+            CustomFieldErrorMessage = $"Error deactivating custom field: {ex.Message}";
+        }
+    }
+
+    #endregion
+
+    #region Terminology
+
+    private static readonly (string Key, string DefaultLabel)[] TerminologyKeys =
+    {
+        ("Product", "Product"),
+        ("Customer", "Customer"),
+        ("Supplier", "Supplier"),
+        ("Category", "Category"),
+        ("Order", "Order"),
+        ("Invoice", "Invoice")
+    };
+
+    public ObservableCollection<TerminologyTermItem> TerminologyTerms { get; } = new();
+
+    [ObservableProperty]
+    private string _terminologyStatusMessage = string.Empty;
+
+    private void LoadTerminologyTerms()
+    {
+        var overrides = _settingsService.CurrentSettings.TerminologyOverrides;
+        TerminologyTerms.Clear();
+        foreach (var (key, defaultLabel) in TerminologyKeys)
+        {
+            TerminologyTerms.Add(new TerminologyTermItem
+            {
+                Key = key,
+                DefaultLabel = defaultLabel,
+                OverrideText = overrides.TryGetValue(key, out var val) ? val : string.Empty
+            });
+        }
+        TerminologyStatusMessage = string.Empty;
+    }
+
+    [RelayCommand]
+    private void SaveTerminology()
+    {
+        try
+        {
+            var overrides = _settingsService.CurrentSettings.TerminologyOverrides;
+            foreach (var term in TerminologyTerms)
+            {
+                if (string.IsNullOrWhiteSpace(term.OverrideText))
+                {
+                    overrides.Remove(term.Key);
+                }
+                else
+                {
+                    overrides[term.Key] = term.OverrideText.Trim();
+                }
+            }
+
+            _settingsService.SaveSettings();
+            Language.SetTerminologyOverrides(overrides);
+            TerminologyStatusMessage = "Terminology saved successfully!";
+        }
+        catch (Exception ex)
+        {
+            TerminologyStatusMessage = $"Failed to save terminology: {ex.Message}";
+        }
+    }
+
+    #endregion
+
+    #region Modules
+
+    private static readonly (string Key, string DisplayName)[] ModuleKeys =
+    {
+        ("POS", "Point of Sale"),
+        ("Manufacturing", "Manufacturing"),
+        ("BOM", "Bundles / Bill of Materials"),
+        ("Expiry", "Expiry & Batch Tracking"),
+        ("MultiLocation", "Multi-Location & Stock Transfers")
+    };
+
+    public ObservableCollection<ModuleToggleItem> ModuleToggles { get; } = new();
+
+    [ObservableProperty]
+    private string _modulesStatusMessage = string.Empty;
+
+    private void LoadModuleToggles()
+    {
+        var modules = _settingsService.CurrentSettings.EnabledModules;
+        ModuleToggles.Clear();
+        foreach (var (key, displayName) in ModuleKeys)
+        {
+            ModuleToggles.Add(new ModuleToggleItem
+            {
+                Key = key,
+                DisplayName = displayName,
+                IsEnabled = !modules.TryGetValue(key, out var enabled) || enabled
+            });
+        }
+        ModulesStatusMessage = string.Empty;
+    }
+
+    [RelayCommand]
+    private void SaveModules()
+    {
+        try
+        {
+            var modules = _settingsService.CurrentSettings.EnabledModules;
+            foreach (var item in ModuleToggles)
+            {
+                modules[item.Key] = item.IsEnabled;
+            }
+
+            _settingsService.SaveSettings();
+            _onModulesChanged?.Invoke();
+            ModulesStatusMessage = "Modules saved successfully!";
+        }
+        catch (Exception ex)
+        {
+            ModulesStatusMessage = $"Failed to save modules: {ex.Message}";
+        }
+    }
+
+    #endregion
+}
+
+public class TerminologyTermItem : ObservableObject
+{
+    public string Key { get; set; } = string.Empty;
+    public string DefaultLabel { get; set; } = string.Empty;
+
+    private string _overrideText = string.Empty;
+    public string OverrideText
+    {
+        get => _overrideText;
+        set => SetProperty(ref _overrideText, value);
+    }
+}
+
+public class ModuleToggleItem : ObservableObject
+{
+    public string Key { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+
+    private bool _isEnabled = true;
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set => SetProperty(ref _isEnabled, value);
+    }
 }
 
 public class BankAccountDisplayRow

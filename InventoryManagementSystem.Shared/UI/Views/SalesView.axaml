@@ -45,7 +45,7 @@
                           IsVisible="{Binding IsQuotationsTabSelected}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Reference" Binding="{Binding SalesOrder.SONumber}" Width="120"/>
-                        <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*"/>
+                        <DataGridTextColumn Header="{Binding Language.Resources[Customer]}" Binding="{Binding CustomerName}" Width="*"/>
                         <DataGridTextColumn Header="Date" Binding="{Binding SalesOrder.QuotationDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="120"/>
                         <DataGridTextColumn Header="Expiration Date" Binding="{Binding SalesOrder.ExpirationDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="130"/>
                         <DataGridTemplateColumn Header="Total Amount" Width="130">
@@ -86,7 +86,7 @@
                           IsVisible="{Binding IsSalesOrdersTabSelected}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Reference" Binding="{Binding SalesOrder.SONumber}" Width="120"/>
-                        <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*"/>
+                        <DataGridTextColumn Header="{Binding Language.Resources[Customer]}" Binding="{Binding CustomerName}" Width="*"/>
                         <DataGridTextColumn Header="Order Date" Binding="{Binding SalesOrder.OrderDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="120"/>
                         <DataGridTextColumn Header="Delivery Status" Binding="{Binding SalesOrder.DeliveryStatus}" Width="130"/>
                         <DataGridTextColumn Header="Invoice Status" Binding="{Binding SalesOrder.BillingStatus}" Width="120"/>

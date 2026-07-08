@@ -35,6 +35,13 @@ public partial class MainViewModel : ViewModelBase
     private readonly AccountingReportService _accountingReportService;
     private readonly ManufacturingService _manufacturingService;
     private readonly PaymentService _paymentService;
+    private readonly IndustryTemplateService _industryTemplateService;
+    private readonly CustomFieldService _customFieldService;
+    private readonly CustomerService _customerService;
+
+    public IndustryTemplateService IndustryTemplateService => _industryTemplateService;
+    public CustomFieldService CustomFieldService => _customFieldService;
+    public CustomerService CustomerService => _customerService;
 
     // Navigation Stack
     private readonly System.Collections.Generic.Stack<ViewModelBase> _navigationStack = new();
@@ -100,7 +107,10 @@ public partial class MainViewModel : ViewModelBase
         JournalService journalService,
         AccountingReportService accountingReportService,
         ManufacturingService manufacturingService,
-        PaymentService paymentService)
+        PaymentService paymentService,
+        IndustryTemplateService industryTemplateService,
+        CustomFieldService customFieldService,
+        CustomerService customerService)
     {
         _inventoryService = inventoryService;
         _userService = userService;
@@ -130,6 +140,9 @@ public partial class MainViewModel : ViewModelBase
         _accountingReportService = accountingReportService;
         _manufacturingService = manufacturingService;
         _paymentService = paymentService;
+        _industryTemplateService = industryTemplateService;
+        _customFieldService = customFieldService;
+        _customerService = customerService;
 
         // Check for updates on startup (fire and forget, silent)
         _ = CheckForUpdatesInternal(false);
@@ -169,7 +182,43 @@ public partial class MainViewModel : ViewModelBase
         SidebarGridLength = new Avalonia.Controls.GridLength(250);
         CurrentUserName = UserSession.CurrentUser?.Username ?? "Unknown";
         IsAdmin = UserSession.IsAdmin;
-        
+
+        if (!_settingsService.CurrentSettings.SetupCompleted)
+        {
+            ShowSetupWizard(EnterDashboardAfterLogin);
+            return;
+        }
+
+        EnterDashboardAfterLogin();
+    }
+
+    private void ShowSetupWizard(Action onCompleted)
+    {
+        CurrentPage = new SetupWizardViewModel(_industryTemplateService, _settingsService, _customFieldService, Language, onCompleted);
+        _navigationStack.Clear();
+        CanGoBack = false;
+    }
+
+    public void RunSetupWizardFromSettings()
+    {
+        ShowSetupWizard(() =>
+        {
+            RefreshModuleGatedAccessProperties();
+            GoToSettings();
+        });
+    }
+
+    public void RefreshModuleGatedAccessProperties()
+    {
+        OnPropertyChanged(nameof(CanAccessManufacturing));
+        OnPropertyChanged(nameof(CanAccessBundles));
+        OnPropertyChanged(nameof(CanAccessExpiry));
+        OnPropertyChanged(nameof(CanAccessLocations));
+        OnPropertyChanged(nameof(CanAccessPOS));
+    }
+
+    private void EnterDashboardAfterLogin()
+    {
         // Start fresh on Dashboard, clearing any login/license history
         CurrentPage = new DashboardViewModel(_inventoryService, _licenseService, Language, _settingsService, _dailyBriefingService, _salesOrderService, GoToInventory, GoToReports, GoToPOS);
         _navigationStack.Clear();
@@ -178,12 +227,14 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanAccessReports));
         OnPropertyChanged(nameof(CanAccessInventory));
         OnPropertyChanged(nameof(CanAccessSuppliers));
+        OnPropertyChanged(nameof(CanAccessCustomers));
         OnPropertyChanged(nameof(CanAccessPurchaseOrders));
         OnPropertyChanged(nameof(CanAccessForecasting));
         OnPropertyChanged(nameof(CanAccessExpiry));
         OnPropertyChanged(nameof(CanAccessLocations));
         OnPropertyChanged(nameof(CanAccessReturns));
         OnPropertyChanged(nameof(CanAccessBundles));
+        OnPropertyChanged(nameof(CanAccessManufacturing));
         OnPropertyChanged(nameof(CanAccessAudit));
         OnPropertyChanged(nameof(CanAccessAdvancedAnalytics));
         OnPropertyChanged(nameof(CanAccessAnalytics));
@@ -348,21 +399,27 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    // Business-driven module gating: defaults to enabled if the key isn't present in EnabledModules,
+    // so existing installs and templates that don't mention a module aren't unexpectedly hidden.
+    private bool IsModuleEnabled(string key) =>
+        !_settingsService.CurrentSettings.EnabledModules.TryGetValue(key, out var enabled) || enabled;
+
     // Permission flags for UI
-    public bool CanAccessPOS => _licenseService.CanAccessPOS();
+    public bool CanAccessPOS => _licenseService.CanAccessPOS() && IsModuleEnabled("POS");
     public bool CanAccessReports => _licenseService.CanAccessAdvancedReports();
     public bool CanAccessInventory => true; // Basic free tier
     public bool CanAccessSuppliers => _licenseService.CanAccessSupplierManagement();
+    public bool CanAccessCustomers => true; // Basic free tier
     public bool CanAccessPurchaseOrders => _licenseService.CanAccessPurchaseOrders();
     public bool CanAccessForecasting => _licenseService.CanAccessForecasting();
-    public bool CanAccessExpiry => _licenseService.CanAccessExpiryTracking();
-    public bool CanAccessLocations => _licenseService.CanAccessMultiLocation();
+    public bool CanAccessExpiry => _licenseService.CanAccessExpiryTracking() && IsModuleEnabled("Expiry");
+    public bool CanAccessLocations => _licenseService.CanAccessMultiLocation() && IsModuleEnabled("MultiLocation");
     public bool CanAccessReturns => _licenseService.CanAccessReturns();
-    public bool CanAccessBundles => _licenseService.CanAccessKitting();
+    public bool CanAccessBundles => _licenseService.CanAccessKitting() && IsModuleEnabled("BOM");
     public bool CanAccessAudit => _licenseService.CanAccessAuditTrail();
     public bool CanAccessAdvancedAnalytics => _licenseService.CanAccessAdvancedAnalytics();
     public bool CanAccessAnalytics => _licenseService.CanAccessAnalytics();
-    public bool CanAccessManufacturing => true;
+    public bool CanAccessManufacturing => IsModuleEnabled("Manufacturing");
     public bool CanAccessCloudSync => _licenseService.CanAccessCloudSync();
 
     [ObservableProperty]
@@ -423,7 +480,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers));
+    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, CustomFieldService));
 
     [RelayCommand]
     public void GoToManufacturing() => NavigateTo(new ManufacturingViewModel(_manufacturingService, _inventoryService, Language));
@@ -455,19 +512,19 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToSalesQuotations()
     {
-        NavigateTo(new SalesViewModel(_salesOrderService, _supplierService, _inventoryService, _taxService, _settingsService, _returnsService, Language, initialTab: 0));
+        NavigateTo(new SalesViewModel(_salesOrderService, _customerService, _inventoryService, _taxService, _settingsService, _returnsService, Language, initialTab: 0));
     }
 
     [RelayCommand]
     public void GoToSalesOrders()
     {
-        NavigateTo(new SalesViewModel(_salesOrderService, _supplierService, _inventoryService, _taxService, _settingsService, _returnsService, Language, initialTab: 1));
+        NavigateTo(new SalesViewModel(_salesOrderService, _customerService, _inventoryService, _taxService, _settingsService, _returnsService, Language, initialTab: 1));
     }
 
     [RelayCommand]
     public void GoToCustomers()
     {
-        GoToSuppliers();
+        NavigateTo(new CustomersViewModel(_customerService, Language));
     }
 
     [RelayCommand]
@@ -491,7 +548,7 @@ public partial class MainViewModel : ViewModelBase
             GoToLicense();
             return;
         }
-        NavigateTo(new POSViewModel(_inventoryService, _licenseService, _receiptService, _settingsService, Language, _salesOrderService, _supplierService, _journalService, _taxService));
+        NavigateTo(new POSViewModel(_inventoryService, _licenseService, _receiptService, _settingsService, Language, _salesOrderService, _customerService, _journalService, _taxService));
     }
 
     [RelayCommand]
@@ -518,7 +575,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToSettings()
     {
-        NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService, _paymentService));
+        NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService, _paymentService, _customFieldService, RunSetupWizardFromSettings, RefreshModuleGatedAccessProperties));
     }
 
     [RelayCommand]

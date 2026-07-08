@@ -24,7 +24,7 @@ namespace InventoryManagementSystem.Services
             List<SalesOrderItem> items, 
             List<Product> allProducts, 
             List<Tax> allTaxes, 
-            Supplier? customer,
+            Customer? customer,
             bool asInvoice = false)
         {
             var dateStr = DateTime.Now.ToString("yyyyMMdd_HHmmss");
