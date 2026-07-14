@@ -91,8 +91,11 @@ namespace InventoryManagementSystem.Domain
         public int Id { get; set; }
         public string Username { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
-        public string Role { get; set; } = "Staff"; // Admin, Staff
+        public string Role { get; set; } = "Staff"; // Admin, Staff, Manager, Accountant, Cashier, Guest
         public bool IsActive { get; set; } = true;
+        /// <summary>JSON array of permission keys. When set, overrides role defaults for module access.</summary>
+        public string PermissionsJson { get; set; } = string.Empty;
+        public DateTime? LastLoginAt { get; set; }
     }
 
     public class LocalLicense
@@ -720,6 +723,66 @@ namespace InventoryManagementSystem.Domain
         public string WebsiteUrl { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+    }
+
+    // --- PHASE 1: FORMAL CREDIT / DEBIT DOCUMENTS ---
+
+    public class CreditNote : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public string CreditNoteNumber { get; set; } = string.Empty;
+        public int CustomerId { get; set; }
+        public int? CustomerReturnId { get; set; }
+        public int? SalesOrderId { get; set; }
+        public decimal Amount { get; set; }
+        public DateTime IssueDate { get; set; } = DateTime.Now;
+        public string Status { get; set; } = "Posted";
+        public string Reason { get; set; } = string.Empty;
+        public string CreatedByUsername { get; set; } = string.Empty;
+    }
+
+    public class DebitNote : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public string DebitNoteNumber { get; set; } = string.Empty;
+        public int SupplierId { get; set; }
+        public int? SupplierReturnId { get; set; }
+        public int? PurchaseOrderId { get; set; }
+        public decimal Amount { get; set; }
+        public DateTime IssueDate { get; set; } = DateTime.Now;
+        public string Status { get; set; } = "Posted";
+        public string Reason { get; set; } = string.Empty;
+        public string CreatedByUsername { get; set; } = string.Empty;
+    }
+
+    public class AgingLine
+    {
+        public string PartnerName { get; set; } = string.Empty;
+        public string DocumentNumber { get; set; } = string.Empty;
+        public DateTime DocumentDate { get; set; }
+        public DateTime DueDate { get; set; }
+        public decimal TotalAmount { get; set; }
+        public decimal OpenBalance { get; set; }
+        public int DaysOverdue { get; set; }
+        public string AgingBucket { get; set; } = "Current";
+    }
+
+    public class AgingSummary
+    {
+        public decimal Current { get; set; }
+        public decimal Days1To30 { get; set; }
+        public decimal Days31To60 { get; set; }
+        public decimal Days61To90 { get; set; }
+        public decimal Over90 { get; set; }
+        public decimal TotalOpen { get; set; }
     }
 }
 

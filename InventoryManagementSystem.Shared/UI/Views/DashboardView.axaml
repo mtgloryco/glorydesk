@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             xmlns:views="clr-namespace:InventoryManagementSystem.UI.Views"
              xmlns:helpers="using:InventoryManagementSystem.UI.Helpers"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
              x:Class="InventoryManagementSystem.UI.Views.DashboardView"
@@ -144,7 +145,43 @@
                     </Border>
                 </Grid>
 
-                <!-- Analytics Graphs -->
+                <!-- Secondary KPI Cards -->
+                <Grid ColumnDefinitions="*,15,*,15,*,15,*" RowDefinitions="Auto">
+                    <Border Grid.Column="0" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" BoxShadow="0 2 8 0 #0A000000">
+                        <StackPanel Margin="18,14" Spacing="4">
+                            <TextBlock Text="Orders (30 days)" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding TotalOrders}" FontSize="24" FontWeight="Bold" Foreground="#0EA5E9"/>
+                            <TextBlock Text="{Binding OrdersThisWeek, StringFormat='{}{0} this week'}" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" BoxShadow="0 2 8 0 #0A000000">
+                        <StackPanel Margin="18,14" Spacing="4">
+                            <TextBlock Text="Avg Order Value" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock FontSize="24" FontWeight="Bold" Foreground="#14B8A6">
+                                <Run Text="{Binding AverageOrderValue, StringFormat={}{0:N0}}"/>
+                                <Run Text="{Binding CurrencySymbol}" FontSize="14"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="4" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" BoxShadow="0 2 8 0 #0A000000">
+                        <StackPanel Margin="18,14" Spacing="4">
+                            <TextBlock Text="Customers / Suppliers" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12" FontWeight="SemiBold"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding TotalCustomers}" FontSize="24" FontWeight="Bold" Foreground="#A855F7"/>
+                                <TextBlock Text="/" FontSize="20" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding TotalSuppliers}" FontSize="24" FontWeight="Bold" Foreground="#F97316"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="6" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" BoxShadow="0 2 8 0 #0A000000">
+                        <StackPanel Margin="18,14" Spacing="4">
+                            <TextBlock Text="Categories" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding CategoryCount}" FontSize="24" FontWeight="Bold" Foreground="#64748B"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Analytics Graphs - Row 1 -->
                 <Grid ColumnDefinitions="*, 20, *" Margin="0,10,0,10">
                     <!-- Column 0: Sales Trend Chart -->
                     <Border Grid.Column="0" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #0A000000">
@@ -211,6 +248,56 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Analytics Graphs - Row 2: Monthly + Pie Charts -->
+                <Grid ColumnDefinitions="*, 20, *, 20, *" Margin="0,0,0,10">
+                    <Border Grid.Column="0" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #0A000000">
+                        <StackPanel Spacing="15">
+                            <TextBlock Text="Monthly Revenue (6 Months)" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                            <Grid Height="150" VerticalAlignment="Bottom">
+                                <ItemsControl ItemsSource="{Binding MonthlyRevenueBars}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1" VerticalAlignment="Bottom"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:DashboardChartBar">
+                                            <Grid RowDefinitions="*, Auto" Margin="4,0" VerticalAlignment="Bottom">
+                                                <StackPanel Grid.Row="0" Spacing="4" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+                                                    <TextBlock Text="{Binding ValueDisplay}" FontSize="9" FontWeight="SemiBold" Foreground="Gray" HorizontalAlignment="Center"/>
+                                                    <Border Height="{Binding BarHeight}" CornerRadius="4 4 0 0" Width="28" HorizontalAlignment="Center">
+                                                        <Border.Background>
+                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                <GradientStop Offset="0" Color="#0EA5E9"/>
+                                                                <GradientStop Offset="1" Color="#38BDF8"/>
+                                                            </LinearGradientBrush>
+                                                        </Border.Background>
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Grid.Row="1" Text="{Binding Label}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,6,0,0" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #0A000000">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Inventory by Category" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                            <views:PieChartView Slices="{Binding CategoryDistributionSlices}" MinHeight="150"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="4" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="20" BoxShadow="0 2 8 0 #0A000000">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Stock Health" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                            <views:PieChartView Slices="{Binding StockHealthSlices}" MinHeight="150"/>
                         </StackPanel>
                     </Border>
                 </Grid>

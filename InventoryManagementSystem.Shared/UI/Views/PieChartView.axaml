@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="InventoryManagementSystem.UI.Views.PieChartView"
+             x:Name="Root">
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+        <Canvas x:Name="ChartCanvas" Width="150" Height="150" Grid.Column="0"/>
+        <ItemsControl x:Name="LegendItems" Grid.Column="1" VerticalAlignment="Center">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,3">
+                        <Border Grid.Column="0" Width="10" Height="10" CornerRadius="2"
+                                Background="{Binding ColorBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryColor}" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="2" Text="{Binding PercentDisplay}" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryColor}" Margin="8,0,0,0"/>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>

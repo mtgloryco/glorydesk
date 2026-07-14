@@ -165,7 +165,8 @@ namespace InventoryManagementSystem.Services
             decimal? unitPrice = null,
             string? batchNumber = null,
             DateTime? expiryDate = null,
-            string? qualityStatus = null)
+            string? qualityStatus = null,
+            bool postSalesRevenueJournal = true)
         {
             await _databaseService.Connection.RunInTransactionAsync(conn =>
             {
@@ -307,9 +308,11 @@ namespace InventoryManagementSystem.Services
                     }
 
                     // --- Post Journal Entry for Sales ---
+                    // When postSalesRevenueJournal is false (e.g. POS with invoice), revenue is posted
+                    // separately via AR/invoice flow; only COGS/inventory is recorded here.
                     var journal = conn.Table<Journal>().Where(j => j.Type == "Sales").FirstOrDefault()
                                   ?? conn.Table<Journal>().Where(j => j.Name == "Point of Sale").FirstOrDefault();
-                    if (journal != null)
+                    if (journal != null && (postSalesRevenueJournal || (product.ProductType == "Good" && cogsAmount > 0)))
                     {
                         var entryCount = conn.Table<JournalEntry>().Where(e => e.JournalId == journal.Id).Count();
                         var entryNumber = $"{journal.SequencePrefix}/{DateTime.Now.Year}/{(entryCount + 1):D5}";
@@ -319,43 +322,46 @@ namespace InventoryManagementSystem.Services
                             EntryNumber = entryNumber,
                             JournalId = journal.Id,
                             Date = DateTime.Now,
-                            Reference = $"POS Sale - {movement.Id}",
+                            Reference = postSalesRevenueJournal ? $"POS Sale - {movement.Id}" : $"Stock Issue - {movement.Id}",
                             State = "Posted"
                         };
                         conn.Insert(entry);
 
-                        // Debit Cash on Hand (101000)
-                        var cashAccount = conn.Table<Account>().Where(a => a.Code == "101000").FirstOrDefault();
-                        int debitAccountId = cashAccount?.Id ?? 1;
-                        decimal revenueAmount = quantity * movement.UnitPrice;
-
-                        conn.Insert(new JournalLine
+                        if (postSalesRevenueJournal)
                         {
-                            JournalEntryId = entry.Id,
-                            AccountId = debitAccountId,
-                            ProductId = productId,
-                            Label = $"POS Sale - {product.Name} (Qty: {quantity})",
-                            Debit = revenueAmount,
-                            Credit = 0
-                        });
+                            // Debit Cash on Hand (101000)
+                            var cashAccount = conn.Table<Account>().Where(a => a.Code == "101000").FirstOrDefault();
+                            int debitAccountId = cashAccount?.Id ?? 1;
+                            decimal revenueAmount = quantity * movement.UnitPrice;
 
-                        // Credit Income Account (product.IncomeAccountId or 401000 Product Sales Revenue)
-                        int creditAccountId = product.IncomeAccountId ?? 0;
-                        if (creditAccountId == 0)
-                        {
-                            var revAccount = conn.Table<Account>().Where(a => a.Code == "401000").FirstOrDefault();
-                            creditAccountId = revAccount?.Id ?? 13;
+                            conn.Insert(new JournalLine
+                            {
+                                JournalEntryId = entry.Id,
+                                AccountId = debitAccountId,
+                                ProductId = productId,
+                                Label = $"POS Sale - {product.Name} (Qty: {quantity})",
+                                Debit = revenueAmount,
+                                Credit = 0
+                            });
+
+                            // Credit Income Account (product.IncomeAccountId or 401000 Product Sales Revenue)
+                            int creditAccountId = product.IncomeAccountId ?? 0;
+                            if (creditAccountId == 0)
+                            {
+                                var revAccount = conn.Table<Account>().Where(a => a.Code == "401000").FirstOrDefault();
+                                creditAccountId = revAccount?.Id ?? 13;
+                            }
+
+                            conn.Insert(new JournalLine
+                            {
+                                JournalEntryId = entry.Id,
+                                AccountId = creditAccountId,
+                                ProductId = productId,
+                                Label = $"POS Sale - {product.Name} (Qty: {quantity})",
+                                Debit = 0,
+                                Credit = revenueAmount
+                            });
                         }
-
-                        conn.Insert(new JournalLine
-                        {
-                            JournalEntryId = entry.Id,
-                            AccountId = creditAccountId,
-                            ProductId = productId,
-                            Label = $"POS Sale - {product.Name} (Qty: {quantity})",
-                            Debit = 0,
-                            Credit = revenueAmount
-                        });
 
                         // COGS & Inventory Asset
                         if (product.ProductType == "Good" && cogsAmount > 0)
@@ -441,9 +447,15 @@ namespace InventoryManagementSystem.Services
 
                 if (newStock < 0) throw new InvalidOperationException("Negative stock detected.");
 
+                var stockDelta = newStock - product.StockQuantity;
                 product.StockQuantity = newStock;
                 SyncMetadataHelper.Touch(product);
                 conn.Update(product);
+
+                if (product.ProductType == "Good" && stockDelta != 0)
+                {
+                    LocationStockSync.ApplyDelta(conn, productId, stockDelta);
+                }
 
                 if (type != "OUT")
                 {
@@ -547,6 +559,23 @@ namespace InventoryManagementSystem.Services
             return await _databaseService.Connection.Table<Product>().Where(p => p.StockQuantity <= threshold).ToListAsync();
         }
 
+        public async Task<List<StockMovement>> GetStockOutMovementsAsync()
+        {
+            return await _databaseService.Connection.Table<StockMovement>()
+                .Where(m => m.MovementType == "OUT")
+                .ToListAsync();
+        }
+
+        public async Task<int> GetActiveCustomerCountAsync()
+        {
+            return await _databaseService.Connection.Table<Customer>().Where(c => c.IsActive).CountAsync();
+        }
+
+        public async Task<int> GetActiveSupplierCountAsync()
+        {
+            return await _databaseService.Connection.Table<Supplier>().Where(s => s.IsActive).CountAsync();
+        }
+
         public async Task<List<StockMovement>> GetRecentStockMovementsAsync(int limit = 10)
         {
             var movements = await _databaseService.Connection.Table<StockMovement>()
@@ -619,15 +648,22 @@ namespace InventoryManagementSystem.Services
 
         public async Task<FinancialOverview> GetFinancialOverviewAsync()
         {
-            var reports = await GetMonthlyProfitSummaryAsync();
-            var overview = new FinancialOverview();
+            // Revenue aligns with operational SalesOrder totals; COGS uses FIFO batch usage from OUT movements.
+            var salesOrders = await _databaseService.Connection.Table<SalesOrder>()
+                .Where(so => so.Status != "Draft" && so.Status != "Cancelled")
+                .ToListAsync();
+            var overview = new FinancialOverview
+            {
+                TotalRevenue = salesOrders.Sum(so => so.TotalAmount)
+            };
 
+            var reports = await GetMonthlyProfitSummaryAsync();
             foreach (var r in reports)
             {
-                overview.TotalRevenue += r.Revenue;
                 overview.TotalCOGS += r.COGS;
-                overview.TotalProfit += r.Profit;
             }
+
+            overview.TotalProfit = overview.TotalRevenue - overview.TotalCOGS;
             overview.TotalInventoryValue = await GetTotalInventoryValueAsync();
 
             return overview;

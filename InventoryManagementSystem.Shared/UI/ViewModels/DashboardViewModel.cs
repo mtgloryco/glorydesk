@@ -7,12 +7,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CsvHelper;
 using CsvHelper.Configuration;
 using InventoryManagementSystem.Domain;
+using InventoryManagementSystem.Infrastructure;
 using InventoryManagementSystem.Services;
 
 namespace InventoryManagementSystem.UI.ViewModels
@@ -46,6 +48,22 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<DashboardChartBar> _stockLevelBars = new();
+
+        [ObservableProperty]
+        private ObservableCollection<DashboardChartBar> _monthlyRevenueBars = new();
+
+        [ObservableProperty]
+        private ObservableCollection<DashboardPieSlice> _categoryDistributionSlices = new();
+
+        [ObservableProperty]
+        private ObservableCollection<DashboardPieSlice> _stockHealthSlices = new();
+
+        [ObservableProperty] private int _totalOrders;
+        [ObservableProperty] private int _ordersThisWeek;
+        [ObservableProperty] private int _totalCustomers;
+        [ObservableProperty] private int _totalSuppliers;
+        [ObservableProperty] private int _categoryCount;
+        [ObservableProperty] private decimal _averageOrderValue;
 
         [ObservableProperty]
         private string _welcomeMessage = "Welcome to IMS";
@@ -164,11 +182,14 @@ namespace InventoryManagementSystem.UI.ViewModels
         [RelayCommand]
         private async Task LoadDashboardData()
         {
+            var today = DateTime.Today;
+
             TotalProducts = await _inventoryService.GetTotalProductCountAsync();
             var lowStockList = await _inventoryService.GetLowStockProductsAsync(5);
             LowStockCount = lowStockList.Count;
 
             var financial = await _inventoryService.GetFinancialOverviewAsync();
+            // Revenue KPIs use SalesOrder totals; profit uses SalesOrder revenue minus FIFO COGS from OUT movements.
             TotalRevenue = financial.TotalRevenue;
             TotalInventoryValue = financial.TotalInventoryValue;
 
@@ -214,7 +235,6 @@ namespace InventoryManagementSystem.UI.ViewModels
             var confirmedSales = allOrders.Where(o => o.SalesOrder.Status != "Draft" && o.SalesOrder.Status != "Cancelled").ToList();
             
             var trendBars = new List<DashboardChartBar>();
-            var today = DateTime.Today;
             for (int i = 6; i >= 0; i--)
             {
                 var targetDate = today.AddDays(-i);
@@ -255,6 +275,75 @@ namespace InventoryManagementSystem.UI.ViewModels
                 bar.BarHeight = maxStock > 0 ? (double)bar.Value / maxStock * 120 : 0;
             }
             StockLevelBars = new ObservableCollection<DashboardChartBar>(stockBars);
+
+            // Monthly revenue (last 6 months) — aligned with SalesOrder totals used elsewhere on the dashboard.
+            var monthlyBars = new List<DashboardChartBar>();
+
+            for (int i = 5; i >= 0; i--)
+            {
+                var monthStart = new DateTime(today.Year, today.Month, 1).AddMonths(-i);
+                var monthEnd = monthStart.AddMonths(1);
+                var monthRevenue = confirmedSales
+                    .Where(o => o.SalesOrder.OrderDate >= monthStart && o.SalesOrder.OrderDate < monthEnd)
+                    .Sum(o => o.SalesOrder.TotalAmount);
+
+                monthlyBars.Add(new DashboardChartBar
+                {
+                    Label = monthStart.ToString("MMM"),
+                    Value = monthRevenue,
+                    ValueDisplay = monthRevenue >= 1000 ? $"{monthRevenue / 1000:N0}k" : monthRevenue.ToString("N0")
+                });
+            }
+
+            var maxMonthly = (double)monthlyBars.Max(b => b.Value);
+            foreach (var bar in monthlyBars)
+            {
+                bar.BarHeight = maxMonthly > 0 ? (double)bar.Value / maxMonthly * 120 : 4;
+            }
+            MonthlyRevenueBars = new ObservableCollection<DashboardChartBar>(monthlyBars);
+
+            // Category distribution by inventory value
+            var pieColors = DemoDataSeeder.GetDefaultPieColors();
+            var categoryGroups = products
+                .GroupBy(p => string.IsNullOrWhiteSpace(p.Category) ? "General" : p.Category)
+                .Select(g => new { Category = g.Key, Value = g.Sum(p => (decimal)p.StockQuantity * p.Cost) })
+                .Where(g => g.Value > 0)
+                .OrderByDescending(g => g.Value)
+                .Take(6)
+                .ToList();
+
+            var categorySlices = categoryGroups.Select((g, idx) => new DashboardPieSlice
+            {
+                Label = g.Category,
+                Value = (double)g.Value,
+                Color = pieColors[idx % pieColors.Count],
+                ValueDisplay = g.Value.ToString("N0")
+            }).ToList();
+            CategoryDistributionSlices = new ObservableCollection<DashboardPieSlice>(categorySlices);
+
+            // Stock health pie
+            var inStock = products.Count(p => p.StockQuantity > 5);
+            var lowStock = products.Count(p => p.StockQuantity > 0 && p.StockQuantity <= 5);
+            var outOfStock = products.Count(p => p.StockQuantity <= 0);
+            StockHealthSlices = new ObservableCollection<DashboardPieSlice>(new[]
+            {
+                new DashboardPieSlice { Label = "In Stock", Value = inStock, Color = "#10B981" },
+                new DashboardPieSlice { Label = "Low Stock", Value = lowStock, Color = "#F59E0B" },
+                new DashboardPieSlice { Label = "Out of Stock", Value = outOfStock, Color = "#EF4444" }
+            }.Where(s => s.Value > 0));
+
+            // Operational KPIs
+            var thirtyDaysAgo = today.AddDays(-30);
+            var weekStart = today.AddDays(-(int)today.DayOfWeek);
+            TotalOrders = confirmedSales.Count(o => o.SalesOrder.OrderDate >= thirtyDaysAgo);
+            OrdersThisWeek = confirmedSales.Count(o => o.SalesOrder.OrderDate.Date >= weekStart);
+            AverageOrderValue = TotalOrders > 0
+                ? confirmedSales.Where(o => o.SalesOrder.OrderDate >= thirtyDaysAgo).Sum(o => o.SalesOrder.TotalAmount) / TotalOrders
+                : 0;
+
+            CategoryCount = products.Select(p => p.Category).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+            TotalCustomers = await _inventoryService.GetActiveCustomerCountAsync();
+            TotalSuppliers = await _inventoryService.GetActiveSupplierCountAsync();
 
             // Load Daily Briefing
             Briefing.Clear();
@@ -493,5 +582,16 @@ namespace InventoryManagementSystem.UI.ViewModels
         public double BarHeight { get; set; }
         public decimal Value { get; set; }
         public string ValueDisplay { get; set; } = string.Empty;
+    }
+
+    public class DashboardPieSlice
+    {
+        public string Label { get; set; } = string.Empty;
+        public double Value { get; set; }
+        public string Color { get; set; } = "#4F46E5";
+        public double Percentage { get; set; }
+        public string PercentDisplay { get; set; } = string.Empty;
+        public string ValueDisplay { get; set; } = string.Empty;
+        public IBrush? ColorBrush { get; set; }
     }
 }

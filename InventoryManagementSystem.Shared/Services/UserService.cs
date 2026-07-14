@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +20,8 @@ namespace InventoryManagementSystem.Services
 
         public async Task InitializeAsync()
         {
+            await RepairLegacyAdminPasswordAsync();
+
             // Create default admin if no users exist
             var count = await _databaseService.Connection.Table<User>().CountAsync();
             if (count == 0)
@@ -38,18 +42,39 @@ namespace InventoryManagementSystem.Services
                 guest = new User
                 {
                     Username = "guest",
-                    PasswordHash = HashPassword(""), // No password for guest
+                    PasswordHash = HashPassword(""),
                     Role = "Guest"
                 };
                 await _databaseService.Connection.InsertAsync(guest);
             }
         }
 
+        /// <summary>
+        /// Older DB versions stored admin password as plain text. Re-hash so login works.
+        /// </summary>
+        private async Task RepairLegacyAdminPasswordAsync()
+        {
+            var admin = await _databaseService.Connection.Table<User>()
+                .Where(u => u.Username == "admin")
+                .FirstOrDefaultAsync();
+            if (admin == null)
+            {
+                return;
+            }
+
+            if (admin.PasswordHash == "admin123" || admin.PasswordHash.Length != 64)
+            {
+                admin.PasswordHash = HashPassword("admin123");
+                await _databaseService.Connection.UpdateAsync(admin);
+            }
+        }
+
         public async Task<User?> AuthenticateAsync(string username, string password)
         {
             var hash = HashPassword(password);
+            var normalized = username.Trim();
             return await _databaseService.Connection.Table<User>()
-                .Where(u => u.Username == username && u.PasswordHash == hash)
+                .Where(u => u.Username == normalized && u.PasswordHash == hash)
                 .FirstOrDefaultAsync();
         }
 
@@ -68,6 +93,21 @@ namespace InventoryManagementSystem.Services
         {
             await _databaseService.Connection.UpdateAsync(user);
         }
+
+        public async Task UpdateUserAccessAsync(User user, IEnumerable<string> permissions)
+        {
+            user.PermissionsJson = UserAccessService.SerializePermissions(permissions);
+            await _databaseService.Connection.UpdateAsync(user);
+        }
+
+        public async Task RecordLoginAsync(User user)
+        {
+            user.LastLoginAt = DateTime.Now;
+            await _databaseService.Connection.UpdateAsync(user);
+        }
+
+        public async Task<User?> GetUserByIdAsync(int id) =>
+            await _databaseService.Connection.FindAsync<User>(id);
 
         public async Task UpdatePasswordAsync(User user, string newPassword)
         {

@@ -32,6 +32,8 @@
                     <TabItem Header="Profit &amp; Loss"/>
                     <TabItem Header="Stock Status"/>
                     <TabItem Header="Stock History"/>
+                    <TabItem Header="AR Aging"/>
+                    <TabItem Header="AP Aging"/>
                 </TabStrip>
             </StackPanel>
             
@@ -247,6 +249,56 @@
                               <DataGridTextColumn Header="Operator" Binding="{Binding Username}" Width="120"/>
                            </DataGrid.Columns>
                        </DataGrid>
+
+                      <!-- AR Aging -->
+                      <ScrollViewer IsVisible="{Binding IsArAgingSelected}" Margin="20">
+                          <StackPanel Spacing="16">
+                              <Grid ColumnDefinitions="*,*,*,*,*,*">
+                                  <Border Background="#E8F5E9" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="Current" FontSize="11"/><TextBlock Text="{Binding ArAgingSummary.Current, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="1" Background="#FFF8E1" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="1-30 days" FontSize="11"/><TextBlock Text="{Binding ArAgingSummary.Days1To30, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="2" Background="#FFE0B2" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="31-60 days" FontSize="11"/><TextBlock Text="{Binding ArAgingSummary.Days31To60, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="3" Background="#FFCDD2" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="61-90 days" FontSize="11"/><TextBlock Text="{Binding ArAgingSummary.Days61To90, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="4" Background="#EF9A9A" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="90+ days" FontSize="11"/><TextBlock Text="{Binding ArAgingSummary.Over90, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="5" Background="#E3F2FD" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="Total Open" FontSize="11"/><TextBlock Text="{Binding ArAgingSummary.TotalOpen, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                              </Grid>
+                              <DataGrid ItemsSource="{Binding ArAgingLines}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal">
+                                  <DataGrid.Columns>
+                                      <DataGridTextColumn Header="Customer" Binding="{Binding PartnerName}" Width="*"/>
+                                      <DataGridTextColumn Header="Invoice" Binding="{Binding DocumentNumber}" Width="140"/>
+                                      <DataGridTextColumn Header="Date" Binding="{Binding DocumentDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="110"/>
+                                      <DataGridTextColumn Header="Due" Binding="{Binding DueDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="110"/>
+                                      <DataGridTextColumn Header="Open Balance" Binding="{Binding OpenBalance, StringFormat='{}{0:N0}'}" Width="120"/>
+                                      <DataGridTextColumn Header="Days Overdue" Binding="{Binding DaysOverdue}" Width="100"/>
+                                      <DataGridTextColumn Header="Bucket" Binding="{Binding AgingBucket}" Width="80"/>
+                                  </DataGrid.Columns>
+                              </DataGrid>
+                          </StackPanel>
+                      </ScrollViewer>
+
+                      <!-- AP Aging -->
+                      <ScrollViewer IsVisible="{Binding IsApAgingSelected}" Margin="20">
+                          <StackPanel Spacing="16">
+                              <Grid ColumnDefinitions="*,*,*,*,*,*">
+                                  <Border Background="#E8F5E9" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="Current" FontSize="11"/><TextBlock Text="{Binding ApAgingSummary.Current, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="1" Background="#FFF8E1" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="1-30 days" FontSize="11"/><TextBlock Text="{Binding ApAgingSummary.Days1To30, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="2" Background="#FFE0B2" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="31-60 days" FontSize="11"/><TextBlock Text="{Binding ApAgingSummary.Days31To60, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="3" Background="#FFCDD2" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="61-90 days" FontSize="11"/><TextBlock Text="{Binding ApAgingSummary.Days61To90, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="4" Background="#EF9A9A" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="90+ days" FontSize="11"/><TextBlock Text="{Binding ApAgingSummary.Over90, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="5" Background="#E3F2FD" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="Total Open" FontSize="11"/><TextBlock Text="{Binding ApAgingSummary.TotalOpen, StringFormat='{}{0:N0}'}" FontWeight="Bold"/></StackPanel></Border>
+                              </Grid>
+                              <DataGrid ItemsSource="{Binding ApAgingLines}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal">
+                                  <DataGrid.Columns>
+                                      <DataGridTextColumn Header="Supplier" Binding="{Binding PartnerName}" Width="*"/>
+                                      <DataGridTextColumn Header="Bill" Binding="{Binding DocumentNumber}" Width="140"/>
+                                      <DataGridTextColumn Header="Date" Binding="{Binding DocumentDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="110"/>
+                                      <DataGridTextColumn Header="Due" Binding="{Binding DueDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="110"/>
+                                      <DataGridTextColumn Header="Open Balance" Binding="{Binding OpenBalance, StringFormat='{}{0:N0}'}" Width="120"/>
+                                      <DataGridTextColumn Header="Days Overdue" Binding="{Binding DaysOverdue}" Width="100"/>
+                                      <DataGridTextColumn Header="Bucket" Binding="{Binding AgingBucket}" Width="80"/>
+                                  </DataGrid.Columns>
+                              </DataGrid>
+                          </StackPanel>
+                      </ScrollViewer>
                   </Panel>
              </Grid>
         </Border>

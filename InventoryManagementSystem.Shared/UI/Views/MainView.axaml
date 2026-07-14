@@ -26,10 +26,11 @@
                     <Button Content="{Binding Language.Resources[Customers]}" Command="{Binding GoToCustomersCommand}" IsVisible="{Binding CanAccessCustomers}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
                     <Button Content="{Binding Language.Resources[Suppliers]}" Command="{Binding GoToSuppliersCommand}" IsVisible="{Binding CanAccessSuppliers}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
                     <Button Content="{Binding Language.Resources[Reports]}" Command="{Binding GoToReportsCommand}" IsVisible="{Binding CanAccessReports}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[AuditTrail]}" Command="{Binding GoToAuditTrailCommand}" IsVisible="{Binding CanAccessAudit}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
                     <Button Content="{Binding Language.Resources[Returns]}" Command="{Binding GoToReturnsCommand}" IsVisible="{Binding CanAccessReturns}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Users]}" Command="{Binding GoToUsersCommand}" IsVisible="{Binding IsAdmin}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Users]}" Command="{Binding GoToUsersCommand}" IsVisible="{Binding CanManageUsers}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
                     <Button Content="{Binding Language.Resources[License]}" Command="{Binding GoToLicenseCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Settings]}" Command="{Binding GoToSettingsCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                    <Button Content="{Binding Language.Resources[Settings]}" Command="{Binding GoToSettingsCommand}" IsVisible="{Binding CanAccessSettings}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
                     <Button Content="{Binding UpdateStatusText}" Command="{Binding CheckForUpdatesCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
 
                     <Border Background="{DynamicResource ThemeControlLowBrush}" CornerRadius="6" Padding="10" IsVisible="{Binding CanAccessCloudSync}">
@@ -59,6 +60,7 @@
                            <Button Grid.Column="2" Content="RW" Command="{Binding ChangeLanguageCommand}" CommandParameter="rw" Background="Transparent" BorderThickness="0" FontSize="10"/>
                         </Grid>
                     
+                         <Button Content="Switch User" Command="{Binding SwitchUserCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
                          <Button Content="{Binding Language.Resources[Exit]}" Command="{Binding LogoutCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10" Foreground="#FF5252"/>
                     </StackPanel>
                 </StackPanel>

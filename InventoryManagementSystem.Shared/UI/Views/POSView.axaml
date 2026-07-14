@@ -81,13 +81,18 @@
                          </StackPanel>
                     </StackPanel>
                         
-                    <Border Grid.Column="1" Width="300" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="8" Padding="12,0" 
+                    <Border Grid.Column="1" Width="300" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="8" Padding="12,8" 
                             BoxShadow="0 1 2 0 #0F000000" VerticalAlignment="Center">
-                        <Grid ColumnDefinitions="Auto, *">
-                            <TextBlock Text="🔍" VerticalAlignment="Center" Margin="0,0,8,0" Opacity="0.5"/>
-                            <TextBox Grid.Column="1" Text="{Binding SearchText}" Watermark="Search by Name or SKU..." 
-                                     FontSize="14" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"/>
-                        </Grid>
+                        <StackPanel Spacing="4">
+                            <Grid ColumnDefinitions="Auto, *">
+                                <TextBlock Text="🔍" VerticalAlignment="Center" Margin="0,0,8,0" Opacity="0.5"/>
+                                <TextBox Grid.Column="1" x:Name="SearchBox" Text="{Binding SearchText}" Watermark="Scan barcode or search SKU..." 
+                                         FontSize="14" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
+                                         KeyDown="OnSearchKeyDown"/>
+                            </Grid>
+                            <TextBlock Text="{Binding BarcodeStatusMessage}" FontSize="11" Foreground="#059669"
+                                       IsVisible="{Binding BarcodeStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
                     </Border>
                     
                     <!-- Product Grid -->

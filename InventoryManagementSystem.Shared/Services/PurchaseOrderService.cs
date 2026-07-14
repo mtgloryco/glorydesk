@@ -143,9 +143,11 @@ namespace InventoryManagementSystem.Services
                     var product = conn.Find<Product>(item.ProductId);
                     if (product != null)
                     {
+                        var previousStock = product.StockQuantity;
                         product.StockQuantity += line.quantityReceived;
                         if (item.UnitCost > 0) product.Cost = item.UnitCost;
                         conn.Update(product);
+                        LocationStockSync.ApplyDelta(conn, product.Id, product.StockQuantity - previousStock);
 
                         conn.Insert(new PurchaseBatch
                         {

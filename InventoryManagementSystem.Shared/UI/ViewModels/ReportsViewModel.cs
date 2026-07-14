@@ -17,10 +17,15 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly LicenseService _licenseService;
         private readonly SettingsService _settingsService;
         private readonly AccountingReportService _accountingReportService;
+        private readonly AgingReportService _agingReportService;
 
-        [ObservableProperty] private int _selectedTabIndex; // 0 = Balance Sheet, 1 = Profit & Loss, 2 = Stock Status, 3 = Stock History
+        [ObservableProperty] private int _selectedTabIndex;
         [ObservableProperty] private ObservableCollection<ReportLineWrapper> _balanceSheetLines = new();
         [ObservableProperty] private ObservableCollection<ReportLineWrapper> _profitAndLossLines = new();
+        [ObservableProperty] private ObservableCollection<AgingLine> _arAgingLines = new();
+        [ObservableProperty] private ObservableCollection<AgingLine> _apAgingLines = new();
+        [ObservableProperty] private AgingSummary _arAgingSummary = new();
+        [ObservableProperty] private AgingSummary _apAgingSummary = new();
         [ObservableProperty] private bool _isLoadingReport;
 
         [ObservableProperty] private ObservableCollection<Product> _reportData = new();
@@ -37,6 +42,8 @@ namespace InventoryManagementSystem.UI.ViewModels
         public bool IsProfitAndLossSelected => SelectedTabIndex == 1;
         public bool IsStockStatusSelected => SelectedTabIndex == 2;
         public bool IsStockHistorySelected => SelectedTabIndex == 3;
+        public bool IsArAgingSelected => SelectedTabIndex == 4;
+        public bool IsApAgingSelected => SelectedTabIndex == 5;
 
         partial void OnSelectedTabIndexChanged(int value)
         {
@@ -44,6 +51,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             OnPropertyChanged(nameof(IsProfitAndLossSelected));
             OnPropertyChanged(nameof(IsStockStatusSelected));
             OnPropertyChanged(nameof(IsStockHistorySelected));
+            OnPropertyChanged(nameof(IsArAgingSelected));
+            OnPropertyChanged(nameof(IsApAgingSelected));
             _ = LoadSelectedReportAsync();
         }
 
@@ -55,13 +64,15 @@ namespace InventoryManagementSystem.UI.ViewModels
             LicenseService licenseService, 
             SettingsService settingsService, 
             LanguageService languageService,
-            AccountingReportService accountingReportService)
+            AccountingReportService accountingReportService,
+            AgingReportService agingReportService)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
             _settingsService = settingsService;
             Language = languageService;
             _accountingReportService = accountingReportService;
+            _agingReportService = agingReportService;
             
             SelectedTabIndex = 0; // Default to Balance Sheet
             _ = LoadSelectedReportAsync();
@@ -90,6 +101,14 @@ namespace InventoryManagementSystem.UI.ViewModels
                 else if (SelectedTabIndex == 3)
                 {
                     await LoadStockHistoryReport();
+                }
+                else if (SelectedTabIndex == 4)
+                {
+                    await LoadArAgingAsync();
+                }
+                else if (SelectedTabIndex == 5)
+                {
+                    await LoadApAgingAsync();
                 }
             }
             catch (Exception ex)
@@ -200,6 +219,24 @@ namespace InventoryManagementSystem.UI.ViewModels
             OnPropertyChanged(nameof(IsStockReport));
             var list = await _inventoryService.GetMonthlyProfitSummaryAsync();
             MonthlyProfitData = new ObservableCollection<MonthlyProfitReport>(list);
+        }
+
+        [RelayCommand]
+        private async Task LoadArAgingAsync()
+        {
+            ReportTitle = "Accounts Receivable Aging";
+            var lines = await _agingReportService.GetAccountsReceivableAgingAsync();
+            ArAgingLines = new ObservableCollection<AgingLine>(lines);
+            ArAgingSummary = _agingReportService.Summarize(lines);
+        }
+
+        [RelayCommand]
+        private async Task LoadApAgingAsync()
+        {
+            ReportTitle = "Accounts Payable Aging";
+            var lines = await _agingReportService.GetAccountsPayableAgingAsync();
+            ApAgingLines = new ObservableCollection<AgingLine>(lines);
+            ApAgingSummary = _agingReportService.Summarize(lines);
         }
 
         [RelayCommand]

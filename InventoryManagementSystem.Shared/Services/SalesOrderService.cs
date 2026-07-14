@@ -139,7 +139,7 @@ namespace InventoryManagementSystem.Services
                 .OrderByDescending(s => s.OrderDate)
                 .ToListAsync();
 
-            var customers = await _databaseService.Connection.Table<Supplier>().ToListAsync();
+            var customers = await _databaseService.Connection.Table<Customer>().ToListAsync();
             return salesOrders.Select(so => new SalesOrderListItem
             {
                 SalesOrder = so,
@@ -242,8 +242,10 @@ namespace InventoryManagementSystem.Services
                     var product = conn.Find<Product>(item.ProductId);
                     if (product != null)
                     {
+                        var previousStock = product.StockQuantity;
                         product.StockQuantity = Math.Max(0, product.StockQuantity - line.quantityDelivered);
                         conn.Update(product);
+                        LocationStockSync.ApplyDelta(conn, product.Id, product.StockQuantity - previousStock);
 
                         // --- Record Stock Movement OUT ---
                         var movement = new StockMovement
@@ -482,12 +484,12 @@ namespace InventoryManagementSystem.Services
                 .OrderByDescending(so => so.OrderDate)
                 .ToListAsync();
 
-            var suppliers = await _databaseService.Connection.Table<Supplier>().ToListAsync();
+            var customers = await _databaseService.Connection.Table<Customer>().ToListAsync();
             
             var items = new List<SalesOrderListItem>();
             foreach (var so in posOrders)
             {
-                var customer = suppliers.Find(s => s.Id == so.CustomerId);
+                var customer = customers.Find(c => c.Id == so.CustomerId);
                 items.Add(new SalesOrderListItem 
                 { 
                     SalesOrder = so, 

@@ -12,7 +12,7 @@ namespace InventoryManagementSystem.Infrastructure
         private readonly string _databasePath;
         private readonly string _legacyDatabasePath;
         private SQLiteAsyncConnection _connection;
-        private const int CurrentDatabaseVersion = 3;
+        private const int CurrentDatabaseVersion = 4;
 
         public DatabaseService()
         {
@@ -108,6 +108,8 @@ namespace InventoryManagementSystem.Infrastructure
             await _connection.CreateTableAsync<CustomFieldDefinition>();
             await _connection.CreateTableAsync<CustomFieldValue>();
             await _connection.CreateTableAsync<Customer>();
+            await _connection.CreateTableAsync<CreditNote>();
+            await _connection.CreateTableAsync<DebitNote>();
 
             // 3. Perform Schema Migrations
             await PerformMigrationsAsync();
@@ -148,6 +150,11 @@ namespace InventoryManagementSystem.Infrastructure
                 if (metaVersion < 3)
                 {
                     await MigrateToV3Async();
+                }
+
+                if (metaVersion < 4)
+                {
+                    await MigrateToV4Async();
                 }
 
                 await _connection.ExecuteAsync($"PRAGMA user_version = {CurrentDatabaseVersion}");
@@ -237,6 +244,12 @@ namespace InventoryManagementSystem.Infrastructure
             }
         }
 
+        private async Task MigrateToV4Async()
+        {
+            await AddColumnIfNotExistsAsync("User", "PermissionsJson", "TEXT NOT NULL DEFAULT ''");
+            await AddColumnIfNotExistsAsync("User", "LastLoginAt", "TEXT");
+        }
+
         private async Task AddColumnIfNotExistsAsync(string table, string column, string definition)
         {
             var columns = await _connection.QueryAsync<TableColumnInfo>($"PRAGMA table_info({table})");
@@ -292,18 +305,7 @@ namespace InventoryManagementSystem.Infrastructure
         private async Task SeedDataAsync(string defaultCurrency = "RWF")
         {
             // App starts clean for production. No test categories or products seeded.
-            // Check if we need to seed a default admin if none exists
-            var userCount = await _connection.Table<User>().CountAsync();
-            if (userCount == 0)
-            {
-                await _connection.InsertAsync(new User 
-                { 
-                    Username = "admin", 
-                    Role = "Admin",
-                    PasswordHash = "admin123", // Ideally hashed, but for v1 MVP default
-                    IsActive = true
-                });
-            }
+            // Default admin user is created by UserService.InitializeAsync (hashed password).
 
             var unitCount = await _connection.Table<ProductUnit>().CountAsync();
             if (unitCount == 0)
@@ -317,6 +319,31 @@ namespace InventoryManagementSystem.Infrastructure
                     new ProductUnit { Name = "kg", Quantity = 1.0, GroupInPOS = false, ReferenceUnit = "" },
                     new ProductUnit { Name = "l", Quantity = 1.0, GroupInPOS = false, ReferenceUnit = "" }
                 });
+            }
+
+            var locationCount = await _connection.Table<Location>().CountAsync();
+            if (locationCount == 0)
+            {
+                var defaultLocation = new Location
+                {
+                    Name = "Main Warehouse",
+                    Type = "Warehouse",
+                    IsActive = true
+                };
+                await _connection.InsertAsync(defaultLocation);
+
+                var productsWithStock = await _connection.Table<Product>()
+                    .Where(p => p.StockQuantity > 0)
+                    .ToListAsync();
+                foreach (var product in productsWithStock)
+                {
+                    await _connection.InsertAsync(new LocationStock
+                    {
+                        LocationId = defaultLocation.Id,
+                        ProductId = product.Id,
+                        Quantity = product.StockQuantity
+                    });
+                }
             }
 
             var accountCount = await _connection.Table<Account>().CountAsync();
@@ -568,6 +595,8 @@ namespace InventoryManagementSystem.Infrastructure
                         new() { Name = "30 days", Description = "Payment is due within 30 days of invoice date" }
                     });
                 }
+
+                await DemoDataSeeder.SeedIfEmptyAsync(_connection, defaultCurrency);
             }
 
             public SQLiteAsyncConnection Connection => _connection;

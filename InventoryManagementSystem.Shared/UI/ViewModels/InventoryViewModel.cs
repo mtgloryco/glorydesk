@@ -234,6 +234,9 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly Action? _goToSalesQuotations;
         private readonly Action? _goToSalesOrders;
         private readonly Action? _goToCustomers;
+        private readonly BarcodeService? _barcodeService;
+
+        [ObservableProperty] private string _barcodeStatusMessage = string.Empty;
 
         public InventoryViewModel(
             InventoryService inventoryService, 
@@ -248,7 +251,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             Action? goToSalesQuotations = null,
             Action? goToSalesOrders = null,
             Action? goToCustomers = null,
-            CustomFieldService? customFieldService = null)
+            CustomFieldService? customFieldService = null,
+            BarcodeService? barcodeService = null)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
@@ -263,6 +267,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             _goToSalesOrders = goToSalesOrders;
             _goToCustomers = goToCustomers;
             _customFieldService = customFieldService;
+            _barcodeService = barcodeService;
             _customFieldsPanel.Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasCustomFields));
             LoadProductsCommand.Execute(null);
         }
@@ -848,6 +853,27 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         partial void OnSearchTextChanged(string value)
         {
+            LoadProductsCommand.Execute(null);
+        }
+
+        [RelayCommand]
+        private async Task ScanBarcodeAsync()
+        {
+            if (_barcodeService == null || string.IsNullOrWhiteSpace(SearchText))
+            {
+                return;
+            }
+
+            var product = await _barcodeService.FindProductByBarcodeAsync(SearchText.Trim());
+            if (product == null)
+            {
+                BarcodeStatusMessage = "No product found for this barcode.";
+                return;
+            }
+
+            SelectedProduct = product;
+            BarcodeStatusMessage = $"Selected {product.Name}.";
+            SearchText = product.SKU ?? product.Name;
             LoadProductsCommand.Execute(null);
         }
 

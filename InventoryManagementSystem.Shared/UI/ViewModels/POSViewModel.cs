@@ -68,8 +68,10 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly CustomerService _customerService;
         private readonly JournalService _journalService;
         private readonly TaxService _taxService;
+        private readonly BarcodeService _barcodeService;
 
         [ObservableProperty] private ObservableCollection<Product> _availableProducts = new();
+        [ObservableProperty] private string _barcodeStatusMessage = string.Empty;
         [ObservableProperty] private ObservableCollection<CartItem> _cartItems = new();
         [ObservableProperty] private string _searchText = string.Empty;
         [ObservableProperty] private decimal _totalAmount;
@@ -138,7 +140,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             SalesOrderService salesOrderService,
             CustomerService customerService,
             JournalService journalService,
-            TaxService taxService)
+            TaxService taxService,
+            BarcodeService barcodeService)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService; // Future pro features
@@ -149,12 +152,40 @@ namespace InventoryManagementSystem.UI.ViewModels
             _customerService = customerService;
             _journalService = journalService;
             _taxService = taxService;
+            _barcodeService = barcodeService;
             LoadProductsCommand.Execute(null);
             _ = EnsureWalkInCustomerExistsAsync();
         }
 
         async partial void OnSearchTextChanged(string value)
         {
+            await LoadProducts();
+        }
+
+        [RelayCommand]
+        private async Task ScanBarcodeAsync()
+        {
+            if (string.IsNullOrWhiteSpace(SearchText))
+            {
+                return;
+            }
+
+            var product = await _barcodeService.FindProductByBarcodeAsync(SearchText.Trim());
+            if (product == null)
+            {
+                BarcodeStatusMessage = "No product found for this barcode.";
+                return;
+            }
+
+            if (!product.AvailableInPOS || !product.CanBeSold)
+            {
+                BarcodeStatusMessage = $"{product.Name} is not available at POS.";
+                return;
+            }
+
+            AddToCart(product);
+            SearchText = string.Empty;
+            BarcodeStatusMessage = $"Added {product.Name} to cart.";
             await LoadProducts();
         }
 
@@ -541,7 +572,8 @@ namespace InventoryManagementSystem.UI.ViewModels
                         $"POS Sale: {order.SONumber}", 
                         user, 
                         customCost: null, 
-                        unitPrice: item.UnitPrice
+                        unitPrice: item.UnitPrice,
+                        postSalesRevenueJournal: !AutoCreateInvoice
                     );
                 }
 

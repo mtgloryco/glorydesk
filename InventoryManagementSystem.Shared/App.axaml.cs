@@ -37,7 +37,7 @@ public partial class App : Application
                     services.bundle, services.audit, services.reporting, services.cloudSync,
                     services.briefing, services.tax, services.account, services.journal, services.accountingReport,
                     services.manufacturing, services.payment, services.industryTemplateService,
-                    services.customFieldService, services.customerService),
+                    services.customFieldService, services.customerService, services.barcodeService, services.agingReportService),
             };
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
@@ -52,7 +52,7 @@ public partial class App : Application
                     services.bundle, services.audit, services.reporting, services.cloudSync,
                     services.briefing, services.tax, services.account, services.journal, services.accountingReport,
                     services.manufacturing, services.payment, services.industryTemplateService,
-                    services.customFieldService, services.customerService),
+                    services.customFieldService, services.customerService, services.barcodeService, services.agingReportService),
             };
         }
 
@@ -68,7 +68,8 @@ public partial class App : Application
         ReportingService reporting, CloudSyncService cloudSync, DailyBriefingService briefing,
         TaxService tax, AccountService account, JournalService journal, AccountingReportService accountingReport,
         ManufacturingService manufacturing, PaymentService payment, IndustryTemplateService industryTemplateService,
-        CustomFieldService customFieldService, CustomerService customerService) InitializeServices()
+        CustomFieldService customFieldService, CustomerService customerService,
+        BarcodeService barcodeService, AgingReportService agingReportService) InitializeServices()
     {
         // Initialize Database
         var dbService = new DatabaseService();
@@ -90,7 +91,7 @@ public partial class App : Application
         var expiryService = new ExpiryService(dbService);
         
         var locationService = new LocationService(dbService);
-        var returnsService = new ReturnsService(dbService);
+        var returnsService = new ReturnsService(dbService, auditService);
         var advancedAnalyticsService = new AdvancedAnalyticsService(dbService);
         var bundleService = new BundleService(dbService);
         var reportingService = new ReportingService(dbService, settingsService);
@@ -106,6 +107,8 @@ public partial class App : Application
         var customFieldService = new CustomFieldService(dbService);
         var customerService = new CustomerService(dbService);
         var industryTemplateService = new IndustryTemplateService(dbService);
+        var barcodeService = new BarcodeService(dbService);
+        var agingReportService = new AgingReportService(dbService);
 
         // Apply any previously-saved terminology overrides immediately so the UI reflects them from startup
         languageService.SetTerminologyOverrides(settingsService.CurrentSettings.TerminologyOverrides);
@@ -116,15 +119,6 @@ public partial class App : Application
             await dbService.InitializeAsync(settingsService.CurrentSettings.CurrencySymbol);
             await userService.InitializeAsync();
             await licenseService.InitializeAsync();
-
-            // Auto-login Guest ONLY if license is valid
-            if (licenseService.CurrentLicense.Status == "Active" || licenseService.CurrentLicense.Status == "Valid")
-            {
-                try {
-                    var guest = await userService.AuthenticateAsync("guest", "");
-                    if (guest != null) { UserSession.Login(guest); }
-                } catch {}
-            }
         }).Wait();
 
         return (
@@ -134,7 +128,7 @@ public partial class App : Application
             expiryService, locationService, returnsService, advancedAnalyticsService,
             bundleService, auditService, reportingService, cloudSyncService, dailyBriefingService,
             taxService, accountService, journalService, accountingReportService, manufacturingService, paymentService,
-            industryTemplateService, customFieldService, customerService);
+            industryTemplateService, customFieldService, customerService, barcodeService, agingReportService);
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

@@ -102,15 +102,46 @@ namespace InventoryManagementSystem.Services
                 });
             }
 
-            // 4. POS Daily Performance (Simulated)
-            briefing.Add(new BriefingItem
+            // 4. POS weekly performance from actual sales orders
+            var today = DateTime.Today;
+            var thisWeekStart = today.AddDays(-(int)today.DayOfWeek);
+            var lastWeekStart = thisWeekStart.AddDays(-7);
+
+            var salesOrders = await _databaseService.Connection.Table<SalesOrder>()
+                .Where(so => so.Status != "Draft" && so.Status != "Cancelled")
+                .ToListAsync();
+
+            var thisWeekTotal = salesOrders
+                .Where(o => o.OrderDate.Date >= thisWeekStart)
+                .Sum(o => o.TotalAmount);
+            var lastWeekTotal = salesOrders
+                .Where(o => o.OrderDate.Date >= lastWeekStart && o.OrderDate.Date < thisWeekStart)
+                .Sum(o => o.TotalAmount);
+
+            if (thisWeekTotal > 0 || lastWeekTotal > 0)
             {
-                Priority = "Positive",
-                Icon = "📈",
-                Message = "Sales are up 12% compared to last Monday!",
-                ActionLabel = "View Reports",
-                NavigateTo = "Reports"
-            });
+                decimal pctChange = 0;
+                string message;
+                if (lastWeekTotal <= 0)
+                {
+                    message = $"Sales this week total {thisWeekTotal:N0}.";
+                }
+                else
+                {
+                    pctChange = (thisWeekTotal - lastWeekTotal) / lastWeekTotal * 100m;
+                    var direction = pctChange >= 0 ? "up" : "down";
+                    message = $"Sales are {direction} {Math.Abs(pctChange):F0}% compared to last week.";
+                }
+
+                briefing.Add(new BriefingItem
+                {
+                    Priority = lastWeekTotal <= 0 || pctChange >= 0 ? "Positive" : "Warning",
+                    Icon = lastWeekTotal <= 0 || pctChange >= 0 ? "📈" : "📉",
+                    Message = message,
+                    ActionLabel = "View Reports",
+                    NavigateTo = "Reports"
+                });
+            }
 
             return briefing.OrderBy(b => b.Priority == "Critical" ? 0 : b.Priority == "Warning" ? 1 : 2).ToList();
         }

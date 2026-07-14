@@ -40,7 +40,10 @@
 
             <!-- Header / Toolbar -->
             <Grid Grid.Row="1" ColumnDefinitions="*, Auto, Auto" Margin="0,0,0,15">
-                <TextBox Text="{Binding SearchText}" Watermark="{Binding Language.Resources[Inv_SearchPlaceholder]}" Width="300" HorizontalAlignment="Left"/>
+                <StackPanel Spacing="4">
+                    <TextBox x:Name="InventorySearchBox" Text="{Binding SearchText}" Watermark="Scan barcode or search products..." Width="300" HorizontalAlignment="Left" KeyDown="OnSearchKeyDown"/>
+                    <TextBlock Text="{Binding BarcodeStatusMessage}" FontSize="11" Foreground="#059669" IsVisible="{Binding BarcodeStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
                 
                 <Button Grid.Column="1" Margin="0,0,10,0" 
                         Content="{Binding Language.Resources[Inv_Import]}" 

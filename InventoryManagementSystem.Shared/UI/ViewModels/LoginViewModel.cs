@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -9,20 +8,17 @@ namespace InventoryManagementSystem.UI.ViewModels
     public partial class LoginViewModel : ViewModelBase
     {
         private readonly UserService _userService;
-        private readonly Action _onLoginSuccess;
+        private readonly AuditService _auditService;
+        private readonly System.Action _onLoginSuccess;
 
-        [ObservableProperty]
-        private string _username = string.Empty;
+        [ObservableProperty] private string _username = string.Empty;
+        [ObservableProperty] private string _password = string.Empty;
+        [ObservableProperty] private string _errorMessage = string.Empty;
 
-        [ObservableProperty]
-        private string _password = string.Empty;
-
-        [ObservableProperty]
-        private string _errorMessage = string.Empty;
-
-        public LoginViewModel(UserService userService, Action onLoginSuccess)
+        public LoginViewModel(UserService userService, AuditService auditService, System.Action onLoginSuccess)
         {
             _userService = userService;
+            _auditService = auditService;
             _onLoginSuccess = onLoginSuccess;
         }
 
@@ -36,16 +32,24 @@ namespace InventoryManagementSystem.UI.ViewModels
                 return;
             }
 
-            var user = await _userService.AuthenticateAsync(Username, Password);
-            if (user != null)
-            {
-                UserSession.Login(user);
-                _onLoginSuccess?.Invoke();
-            }
-            else
+            var user = await _userService.AuthenticateAsync(Username.Trim(), Password);
+            if (user == null)
             {
                 ErrorMessage = "Invalid username or password.";
+                return;
             }
+
+            if (!user.IsActive)
+            {
+                ErrorMessage = "This account is disabled.";
+                return;
+            }
+
+            await _userService.RecordLoginAsync(user);
+            await _auditService.LogActionAsync(user.Username, "Login", "User", user.Id, new { user.Username, user.Role });
+
+            UserSession.Login(user);
+            _onLoginSuccess?.Invoke();
         }
     }
 }

@@ -4,28 +4,34 @@ using System.Linq;
 using System.Threading.Tasks;
 using InventoryManagementSystem.Domain;
 using InventoryManagementSystem.Infrastructure;
+using SQLite;
 
 namespace InventoryManagementSystem.Services
 {
     public class ReturnsService
     {
         private readonly DatabaseService _databaseService;
+        private readonly AuditService _auditService;
 
-        public ReturnsService(DatabaseService databaseService)
+        public ReturnsService(DatabaseService databaseService, AuditService auditService)
         {
             _databaseService = databaseService;
+            _auditService = auditService;
         }
 
         public async Task ProcessCustomerReturnAsync(CustomerReturn ret)
         {
+            CreditNote? creditNote = null;
             await _databaseService.Connection.RunInTransactionAsync(conn =>
             {
-                // Log return
                 conn.Insert(ret);
 
+                var product = conn.Find<Product>(ret.ProductId);
+                if (product == null) return;
+
+                decimal restockValue = 0;
                 if (ret.Condition == "Resaleable")
                 {
-                    // Add stock back via StockMovement IN
                     var movement = new StockMovement
                     {
                         ProductId = ret.ProductId,
@@ -37,39 +43,48 @@ namespace InventoryManagementSystem.Services
                     };
                     conn.Insert(movement);
 
-                    // Update product total stock
-                    var product = conn.Find<Product>(ret.ProductId);
-                    if (product != null)
-                    {
-                        product.StockQuantity += ret.Quantity;
-                        conn.Update(product);
-                    }
+                    var previousStock = product.StockQuantity;
+                    product.StockQuantity += ret.Quantity;
+                    conn.Update(product);
+                    LocationStockSync.ApplyDelta(conn, product.Id, product.StockQuantity - previousStock);
+                    restockValue = ret.Quantity * product.Cost;
                 }
-                else
+
+                PostCustomerReturnJournal(conn, ret, product, restockValue);
+                if (ret.RefundAmount > 0)
                 {
-                    // Log as waste (no stock added back)
-                    // Optionally log separate waste record if there's a waste table
+                    creditNote = CreateCreditNote(conn, 0, ret.Id, null, ret.RefundAmount, ret.Reason, ret.ProcessedByUsername);
                 }
             });
+
+            if (creditNote != null)
+            {
+                await _auditService.LogActionAsync(ret.ProcessedByUsername, "Create", "CreditNote", creditNote.Id, creditNote);
+            }
+
+            await _auditService.LogActionAsync(ret.ProcessedByUsername, "Process", "CustomerReturn", ret.Id, ret);
         }
 
         public async Task ProcessSupplierReturnAsync(SupplierReturn ret)
         {
+            DebitNote? debitNote = null;
             await _databaseService.Connection.RunInTransactionAsync(conn =>
             {
                 var product = conn.Find<Product>(ret.ProductId);
                 if (product == null) return;
 
-                // 1. Availability validation
                 if (ret.Quantity > product.StockQuantity)
                 {
                     throw new InvalidOperationException($"Insufficient stock for return. Available: {product.StockQuantity}, Returning: {ret.Quantity}");
                 }
 
-                // 2. Log return
+                if (ret.CreditAmount <= 0)
+                {
+                    ret.CreditAmount = ret.Quantity * product.Cost;
+                }
+
                 conn.Insert(ret);
 
-                // 3. Log Stock Movement OUT
                 var movement = new StockMovement
                 {
                     ProductId = ret.ProductId,
@@ -82,7 +97,6 @@ namespace InventoryManagementSystem.Services
                 };
                 conn.Insert(movement);
 
-                // 4. Batch Consumption (FIFO)
                 int remainingToDeduct = ret.Quantity;
                 var batches = conn.Table<PurchaseBatch>()
                                   .Where(b => b.ProductId == ret.ProductId && b.QuantityRemaining > 0)
@@ -96,7 +110,6 @@ namespace InventoryManagementSystem.Services
 
                     int deductFromThisBatch = Math.Min(batch.QuantityRemaining, remainingToDeduct);
 
-                    // Link this OUT movement to the purchase batch for proper COGS/Value tracking
                     conn.Insert(new SaleBatchUsage
                     {
                         StockMovementId = movement.Id,
@@ -116,14 +129,26 @@ namespace InventoryManagementSystem.Services
                     throw new InvalidOperationException("Batches were out of sync with product stock. Return failed.");
                 }
 
-                // 5. Update master stock
+                var previousStock = product.StockQuantity;
                 product.StockQuantity -= ret.Quantity;
                 conn.Update(product);
+                LocationStockSync.ApplyDelta(conn, product.Id, product.StockQuantity - previousStock);
+
+                PostSupplierReturnJournal(conn, ret, product);
+                debitNote = CreateDebitNote(conn, ret.SupplierId, ret.Id, null, ret.CreditAmount, ret.Reason, ret.ProcessedByUsername ?? "System");
             });
+
+            if (debitNote != null)
+            {
+                await _auditService.LogActionAsync(ret.ProcessedByUsername ?? "System", "Create", "DebitNote", debitNote.Id, debitNote);
+            }
+
+            await _auditService.LogActionAsync(ret.ProcessedByUsername ?? "System", "Process", "SupplierReturn", ret.Id, ret);
         }
 
         public async Task ProcessSalesOrderReturnAsync(int salesOrderId, List<(int itemId, int quantityToReturn, string condition, string reason, decimal refundAmount)> returns, string processedByUsername)
         {
+            var creditNotes = new List<CreditNote>();
             await _databaseService.Connection.RunInTransactionAsync(conn =>
             {
                 var so = conn.Find<SalesOrder>(salesOrderId);
@@ -141,11 +166,9 @@ namespace InventoryManagementSystem.Services
                         throw new InvalidOperationException($"Cannot return more than delivered. Delivered: {item.QuantityDelivered}, Returning: {ret.quantityToReturn}");
                     }
 
-                    // Decrement quantity delivered
                     item.QuantityDelivered -= ret.quantityToReturn;
                     conn.Update(item);
 
-                    // Insert CustomerReturn record
                     var customerReturn = new CustomerReturn
                     {
                         ReturnNumber = $"RET-SO-{so.SONumber}-{DateTime.Now:yyyyMMddHHmmss}-{item.ProductId}",
@@ -161,9 +184,12 @@ namespace InventoryManagementSystem.Services
                     };
                     conn.Insert(customerReturn);
 
+                    var product = conn.Find<Product>(item.ProductId);
+                    if (product == null) continue;
+
+                    decimal restockValue = 0;
                     if (ret.condition == "Resaleable")
                     {
-                        // Add stock back via StockMovement IN
                         var movement = new StockMovement
                         {
                             ProductId = item.ProductId,
@@ -176,17 +202,21 @@ namespace InventoryManagementSystem.Services
                         };
                         conn.Insert(movement);
 
-                        // Update product total stock
-                        var product = conn.Find<Product>(item.ProductId);
-                        if (product != null)
-                        {
-                            product.StockQuantity += ret.quantityToReturn;
-                            conn.Update(product);
-                        }
+                        var previousStock = product.StockQuantity;
+                        product.StockQuantity += ret.quantityToReturn;
+                        conn.Update(product);
+                        LocationStockSync.ApplyDelta(conn, product.Id, product.StockQuantity - previousStock);
+                        restockValue = ret.quantityToReturn * product.Cost;
+                    }
+
+                    PostCustomerReturnJournal(conn, customerReturn, product, restockValue);
+                    if (ret.refundAmount > 0)
+                    {
+                        var note = CreateCreditNote(conn, so.CustomerId, customerReturn.Id, salesOrderId, ret.refundAmount, ret.reason, processedByUsername);
+                        creditNotes.Add(note);
                     }
                 }
 
-                // Re-evaluate SalesOrder Status
                 var allItems = conn.Table<SalesOrderItem>().Where(i => i.SalesOrderId == salesOrderId).ToList();
                 bool allDelivered = allItems.All(i => i.QuantityDelivered >= i.QuantityOrdered);
 
@@ -195,20 +225,21 @@ namespace InventoryManagementSystem.Services
                     ? (allDelivered ? "Delivered" : "Partially Delivered")
                     : "Pending";
 
-                if (so.Status == "Delivered")
-                {
-                    so.DeliveryDate = DateTime.Now;
-                }
-                else
-                {
-                    so.DeliveryDate = null;
-                }
+                so.DeliveryDate = so.Status == "Delivered" ? DateTime.Now : null;
                 conn.Update(so);
             });
+
+            foreach (var note in creditNotes)
+            {
+                await _auditService.LogActionAsync(processedByUsername, "Create", "CreditNote", note.Id, note);
+            }
+
+            await _auditService.LogActionAsync(processedByUsername, "Process", "SalesOrderReturn", salesOrderId, new { salesOrderId, lines = returns.Count });
         }
 
         public async Task ProcessPurchaseOrderReturnAsync(int purchaseOrderId, List<(int itemId, int quantityToReturn, string reason, decimal creditAmount)> returns, string processedByUsername)
         {
+            var debitNotes = new List<DebitNote>();
             await _databaseService.Connection.RunInTransactionAsync(conn =>
             {
                 var po = conn.Find<PurchaseOrder>(purchaseOrderId);
@@ -234,11 +265,11 @@ namespace InventoryManagementSystem.Services
                         throw new InvalidOperationException($"Insufficient stock for return. Available: {product.StockQuantity}, Returning: {ret.quantityToReturn}");
                     }
 
-                    // Decrement quantity received
                     item.QuantityReceived -= ret.quantityToReturn;
                     conn.Update(item);
 
-                    // Insert SupplierReturn record
+                    var creditAmount = ret.creditAmount > 0 ? ret.creditAmount : ret.quantityToReturn * item.UnitCost;
+
                     var supplierReturn = new SupplierReturn
                     {
                         ReturnNumber = $"RET-PO-{po.PONumber}-{DateTime.Now:yyyyMMddHHmmss}-{item.ProductId}",
@@ -247,18 +278,18 @@ namespace InventoryManagementSystem.Services
                         Quantity = ret.quantityToReturn,
                         Reason = ret.reason,
                         Status = "Credited",
-                        CreditAmount = ret.creditAmount,
+                        CreditAmount = creditAmount,
                         ProcessedByUsername = processedByUsername,
                         ReturnDate = DateTime.Now,
                         OriginalReceiptId = purchaseOrderId.ToString()
                     };
                     conn.Insert(supplierReturn);
 
-                    // Update product total stock
+                    var previousStock = product.StockQuantity;
                     product.StockQuantity -= ret.quantityToReturn;
                     conn.Update(product);
+                    LocationStockSync.ApplyDelta(conn, product.Id, product.StockQuantity - previousStock);
 
-                    // Log Stock Movement OUT
                     var movement = new StockMovement
                     {
                         ProductId = item.ProductId,
@@ -271,7 +302,6 @@ namespace InventoryManagementSystem.Services
                     };
                     conn.Insert(movement);
 
-                    // Batch Consumption (FIFO)
                     int remainingToDeduct = ret.quantityToReturn;
                     var batches = conn.Table<PurchaseBatch>()
                                       .Where(b => b.ProductId == item.ProductId && b.QuantityRemaining > 0)
@@ -303,9 +333,11 @@ namespace InventoryManagementSystem.Services
                     {
                         throw new InvalidOperationException("Batches were out of sync with product stock. Return failed.");
                     }
+
+                    PostSupplierReturnJournal(conn, supplierReturn, product);
+                    debitNotes.Add(CreateDebitNote(conn, po.SupplierId, supplierReturn.Id, purchaseOrderId, creditAmount, ret.reason, processedByUsername));
                 }
 
-                // Re-evaluate PurchaseOrder Status
                 var allItems = conn.Table<PurchaseOrderItem>().Where(i => i.PurchaseOrderId == purchaseOrderId).ToList();
                 bool allReceived = allItems.All(i => i.QuantityReceived >= i.QuantityOrdered);
 
@@ -314,15 +346,183 @@ namespace InventoryManagementSystem.Services
                     ? (allReceived ? "Received" : "Partially Received")
                     : "Pending";
 
-                if (po.Status == "Received")
-                {
-                    po.ActualDeliveryDate = DateTime.Now;
-                }
-                else
-                {
-                    po.ActualDeliveryDate = null;
-                }
+                po.ActualDeliveryDate = po.Status == "Received" ? DateTime.Now : null;
                 conn.Update(po);
+            });
+
+            foreach (var note in debitNotes)
+            {
+                await _auditService.LogActionAsync(processedByUsername, "Create", "DebitNote", note.Id, note);
+            }
+
+            await _auditService.LogActionAsync(processedByUsername, "Process", "PurchaseOrderReturn", purchaseOrderId, new { purchaseOrderId, lines = returns.Count });
+        }
+
+        private static CreditNote CreateCreditNote(SQLiteConnection conn, int customerId, int customerReturnId, int? salesOrderId, decimal amount, string reason, string username)
+        {
+            var count = conn.Table<CreditNote>().Count() + 1;
+            var note = new CreditNote
+            {
+                CreditNoteNumber = $"CN-{DateTime.Now:yyyyMMdd}-{count:D4}",
+                CustomerId = customerId,
+                CustomerReturnId = customerReturnId,
+                SalesOrderId = salesOrderId,
+                Amount = amount,
+                IssueDate = DateTime.Now,
+                Status = "Posted",
+                Reason = reason,
+                CreatedByUsername = username
+            };
+            conn.Insert(note);
+            return note;
+        }
+
+        private static DebitNote CreateDebitNote(SQLiteConnection conn, int supplierId, int supplierReturnId, int? purchaseOrderId, decimal amount, string reason, string username)
+        {
+            var count = conn.Table<DebitNote>().Count() + 1;
+            var note = new DebitNote
+            {
+                DebitNoteNumber = $"DN-{DateTime.Now:yyyyMMdd}-{count:D4}",
+                SupplierId = supplierId,
+                SupplierReturnId = supplierReturnId,
+                PurchaseOrderId = purchaseOrderId,
+                Amount = amount,
+                IssueDate = DateTime.Now,
+                Status = "Posted",
+                Reason = reason,
+                CreatedByUsername = username
+            };
+            conn.Insert(note);
+            return note;
+        }
+
+        private static void PostCustomerReturnJournal(SQLiteConnection conn, CustomerReturn ret, Product product, decimal restockValue)
+        {
+            if (ret.RefundAmount <= 0 && restockValue <= 0) return;
+
+            var journal = conn.Table<Journal>().Where(j => j.Type == "Sales").FirstOrDefault();
+            if (journal == null) return;
+
+            var entryCount = conn.Table<JournalEntry>().Where(e => e.JournalId == journal.Id).Count();
+            var entry = new JournalEntry
+            {
+                EntryNumber = $"{journal.SequencePrefix}/{DateTime.Now.Year}/{(entryCount + 1):D5}",
+                JournalId = journal.Id,
+                Date = DateTime.Now,
+                Reference = $"Customer Return: {ret.ReturnNumber}",
+                State = "Posted"
+            };
+            conn.Insert(entry);
+
+            var cashAccount = conn.Table<Account>().Where(a => a.Code == "101000").FirstOrDefault();
+            int cashAccountId = cashAccount?.Id ?? 1;
+
+            int revenueAccountId = product.IncomeAccountId ?? 0;
+            if (revenueAccountId == 0)
+            {
+                var revAccount = conn.Table<Account>().Where(a => a.Code == "401000").FirstOrDefault();
+                revenueAccountId = revAccount?.Id ?? 13;
+            }
+
+            if (ret.RefundAmount > 0)
+            {
+                conn.Insert(new JournalLine
+                {
+                    JournalEntryId = entry.Id,
+                    AccountId = revenueAccountId,
+                    ProductId = product.Id,
+                    Label = $"Sales Return - {product.Name}",
+                    Debit = ret.RefundAmount,
+                    Credit = 0
+                });
+
+                conn.Insert(new JournalLine
+                {
+                    JournalEntryId = entry.Id,
+                    AccountId = cashAccountId,
+                    ProductId = product.Id,
+                    Label = $"Customer Refund - {ret.ReturnNumber}",
+                    Debit = 0,
+                    Credit = ret.RefundAmount
+                });
+            }
+
+            if (restockValue > 0)
+            {
+                var inventoryAccount = conn.Table<Account>().Where(a => a.Code == "120000").FirstOrDefault();
+                int assetAccountId = inventoryAccount?.Id ?? 4;
+
+                int cogsAccountId = product.ExpenseAccountId ?? 0;
+                if (cogsAccountId == 0)
+                {
+                    var expAccount = conn.Table<Account>().Where(a => a.Code == "501000").FirstOrDefault();
+                    cogsAccountId = expAccount?.Id ?? 16;
+                }
+
+                conn.Insert(new JournalLine
+                {
+                    JournalEntryId = entry.Id,
+                    AccountId = assetAccountId,
+                    ProductId = product.Id,
+                    Label = $"Restock from Return - {product.Name}",
+                    Debit = restockValue,
+                    Credit = 0
+                });
+
+                conn.Insert(new JournalLine
+                {
+                    JournalEntryId = entry.Id,
+                    AccountId = cogsAccountId,
+                    ProductId = product.Id,
+                    Label = $"COGS Reversal - {product.Name}",
+                    Debit = 0,
+                    Credit = restockValue
+                });
+            }
+        }
+
+        private static void PostSupplierReturnJournal(SQLiteConnection conn, SupplierReturn ret, Product product)
+        {
+            if (ret.CreditAmount <= 0) return;
+
+            var journal = conn.Table<Journal>().Where(j => j.Type == "Purchase").FirstOrDefault();
+            if (journal == null) return;
+
+            var entryCount = conn.Table<JournalEntry>().Where(e => e.JournalId == journal.Id).Count();
+            var entry = new JournalEntry
+            {
+                EntryNumber = $"{journal.SequencePrefix}/{DateTime.Now.Year}/{(entryCount + 1):D5}",
+                JournalId = journal.Id,
+                Date = DateTime.Now,
+                Reference = $"Supplier Return: {ret.ReturnNumber}",
+                State = "Posted"
+            };
+            conn.Insert(entry);
+
+            var apAccount = conn.Table<Account>().Where(a => a.Code == "201000").FirstOrDefault();
+            int apAccountId = apAccount?.Id ?? 7;
+
+            var inventoryAccount = conn.Table<Account>().Where(a => a.Code == "120000").FirstOrDefault();
+            int assetAccountId = inventoryAccount?.Id ?? 4;
+
+            conn.Insert(new JournalLine
+            {
+                JournalEntryId = entry.Id,
+                AccountId = apAccountId,
+                ProductId = product.Id,
+                Label = $"Supplier Credit - {ret.ReturnNumber}",
+                Debit = ret.CreditAmount,
+                Credit = 0
+            });
+
+            conn.Insert(new JournalLine
+            {
+                JournalEntryId = entry.Id,
+                AccountId = assetAccountId,
+                ProductId = product.Id,
+                Label = $"Inventory Return - {product.Name}",
+                Debit = 0,
+                Credit = ret.CreditAmount
             });
         }
 
@@ -339,5 +539,17 @@ namespace InventoryManagementSystem.Services
                 .Where(r => r.ReturnDate >= from && r.ReturnDate <= to)
                 .ToListAsync();
         }
+
+        public async Task<List<CreditNote>> GetCreditNotesAsync() =>
+            await _databaseService.Connection.Table<CreditNote>()
+                .Where(c => !c.IsDeleted)
+                .OrderByDescending(c => c.IssueDate)
+                .ToListAsync();
+
+        public async Task<List<DebitNote>> GetDebitNotesAsync() =>
+            await _databaseService.Connection.Table<DebitNote>()
+                .Where(d => !d.IsDeleted)
+                .OrderByDescending(d => d.IssueDate)
+                .ToListAsync();
     }
 }

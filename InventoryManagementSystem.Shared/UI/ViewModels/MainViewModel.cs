@@ -38,6 +38,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly IndustryTemplateService _industryTemplateService;
     private readonly CustomFieldService _customFieldService;
     private readonly CustomerService _customerService;
+    private readonly BarcodeService _barcodeService;
+    private readonly AgingReportService _agingReportService;
 
     public IndustryTemplateService IndustryTemplateService => _industryTemplateService;
     public CustomFieldService CustomFieldService => _customFieldService;
@@ -110,7 +112,9 @@ public partial class MainViewModel : ViewModelBase
         PaymentService paymentService,
         IndustryTemplateService industryTemplateService,
         CustomFieldService customFieldService,
-        CustomerService customerService)
+        CustomerService customerService,
+        BarcodeService barcodeService,
+        AgingReportService agingReportService)
     {
         _inventoryService = inventoryService;
         _userService = userService;
@@ -143,6 +147,8 @@ public partial class MainViewModel : ViewModelBase
         _industryTemplateService = industryTemplateService;
         _customFieldService = customFieldService;
         _customerService = customerService;
+        _barcodeService = barcodeService;
+        _agingReportService = agingReportService;
 
         // Check for updates on startup (fire and forget, silent)
         _ = CheckForUpdatesInternal(false);
@@ -158,15 +164,18 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        // 2. If License is valid, AUTO-LOGIN as Admin (Bypass Login Screen)
-        if (UserSession.CurrentUser == null)
-        {
-            // Create a default admin session if none exists
-            var defaultUser = new Domain.User { Username = "Admin", Role = "Admin" };
-            UserSession.Login(defaultUser);
-        }
+        // 2. Show login screen — each user signs in with username/password
+        ShowLoginScreen();
+    }
 
-        OnLoginSuccess();
+    private void ShowLoginScreen()
+    {
+        UserSession.Logout();
+        _navigationStack.Clear();
+        CanGoBack = false;
+        IsLoggedIn = false;
+        SidebarGridLength = new Avalonia.Controls.GridLength(0);
+        CurrentPage = new LoginViewModel(_userService, _auditService, OnLoginSuccess);
     }
 
     private void OnLoginSuccess()
@@ -239,6 +248,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanAccessAdvancedAnalytics));
         OnPropertyChanged(nameof(CanAccessAnalytics));
         OnPropertyChanged(nameof(CanAccessCloudSync));
+        OnPropertyChanged(nameof(CanManageUsers));
+        OnPropertyChanged(nameof(CanAccessSettings));
 
         OnPropertyChanged(nameof(SidebarGridLength));
     }
@@ -404,23 +415,28 @@ public partial class MainViewModel : ViewModelBase
     private bool IsModuleEnabled(string key) =>
         !_settingsService.CurrentSettings.EnabledModules.TryGetValue(key, out var enabled) || enabled;
 
-    // Permission flags for UI
-    public bool CanAccessPOS => _licenseService.CanAccessPOS() && IsModuleEnabled("POS");
-    public bool CanAccessReports => _licenseService.CanAccessAdvancedReports();
-    public bool CanAccessInventory => true; // Basic free tier
-    public bool CanAccessSuppliers => _licenseService.CanAccessSupplierManagement();
-    public bool CanAccessCustomers => true; // Basic free tier
-    public bool CanAccessPurchaseOrders => _licenseService.CanAccessPurchaseOrders();
-    public bool CanAccessForecasting => _licenseService.CanAccessForecasting();
-    public bool CanAccessExpiry => _licenseService.CanAccessExpiryTracking() && IsModuleEnabled("Expiry");
-    public bool CanAccessLocations => _licenseService.CanAccessMultiLocation() && IsModuleEnabled("MultiLocation");
-    public bool CanAccessReturns => _licenseService.CanAccessReturns();
-    public bool CanAccessBundles => _licenseService.CanAccessKitting() && IsModuleEnabled("BOM");
-    public bool CanAccessAudit => _licenseService.CanAccessAuditTrail();
-    public bool CanAccessAdvancedAnalytics => _licenseService.CanAccessAdvancedAnalytics();
-    public bool CanAccessAnalytics => _licenseService.CanAccessAnalytics();
-    public bool CanAccessManufacturing => IsModuleEnabled("Manufacturing");
-    public bool CanAccessCloudSync => _licenseService.CanAccessCloudSync();
+    private bool HasRolePermission(string permission) =>
+        UserSession.HasPermission(permission);
+
+    // Permission flags for UI (license + role)
+    public bool CanAccessPOS => _licenseService.CanAccessPOS() && IsModuleEnabled("POS") && HasRolePermission(RolePermissions.AccessPOS);
+    public bool CanAccessReports => _licenseService.CanAccessAdvancedReports() && HasRolePermission(RolePermissions.ViewReports);
+    public bool CanAccessInventory => HasRolePermission(RolePermissions.ManageInventory) || HasRolePermission(RolePermissions.ViewInventory);
+    public bool CanAccessSuppliers => _licenseService.CanAccessSupplierManagement() && HasRolePermission(RolePermissions.ManageSuppliers);
+    public bool CanAccessCustomers => HasRolePermission(RolePermissions.ManageCustomers) || HasRolePermission(RolePermissions.ViewInventory);
+    public bool CanAccessPurchaseOrders => _licenseService.CanAccessPurchaseOrders() && HasRolePermission(RolePermissions.ManagePurchasing);
+    public bool CanAccessForecasting => _licenseService.CanAccessForecasting() && HasRolePermission(RolePermissions.ManagePurchasing);
+    public bool CanAccessExpiry => _licenseService.CanAccessExpiryTracking() && IsModuleEnabled("Expiry") && HasRolePermission(RolePermissions.ManageInventory);
+    public bool CanAccessLocations => _licenseService.CanAccessMultiLocation() && IsModuleEnabled("MultiLocation") && HasRolePermission(RolePermissions.ManageInventory);
+    public bool CanAccessReturns => _licenseService.CanAccessReturns() && HasRolePermission(RolePermissions.ProcessReturns);
+    public bool CanAccessBundles => _licenseService.CanAccessKitting() && IsModuleEnabled("BOM") && HasRolePermission(RolePermissions.ManageInventory);
+    public bool CanAccessAudit => _licenseService.CanAccessAuditTrail() && HasRolePermission(RolePermissions.ViewAudit);
+    public bool CanAccessAdvancedAnalytics => _licenseService.CanAccessAdvancedAnalytics() && HasRolePermission(RolePermissions.ViewReports);
+    public bool CanAccessAnalytics => _licenseService.CanAccessAnalytics() && HasRolePermission(RolePermissions.ViewReports);
+    public bool CanAccessManufacturing => IsModuleEnabled("Manufacturing") && HasRolePermission(RolePermissions.ManageManufacturing);
+    public bool CanAccessCloudSync => _licenseService.CanAccessCloudSync() && HasRolePermission(RolePermissions.ManageSettings);
+    public bool CanManageUsers => HasRolePermission(RolePermissions.ManageUsers);
+    public bool CanAccessSettings => HasRolePermission(RolePermissions.ManageSettings);
 
     [ObservableProperty]
     private string _syncStatusText = "Cloud sync unavailable";
@@ -454,6 +470,12 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    public void SwitchUser()
+    {
+        ShowLoginScreen();
+    }
+
+    [RelayCommand]
     public void Logout()
     {
         _navigationStack.Clear(); // Clear history on logout
@@ -480,7 +502,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, CustomFieldService));
+    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, CustomFieldService, _barcodeService));
 
     [RelayCommand]
     public void GoToManufacturing() => NavigateTo(new ManufacturingViewModel(_manufacturingService, _inventoryService, Language));
@@ -536,7 +558,7 @@ public partial class MainViewModel : ViewModelBase
             GoToLicense(); 
             return;
         }
-        NavigateTo(new ReportsViewModel(_inventoryService, _licenseService, _settingsService, Language, _accountingReportService));
+        NavigateTo(new ReportsViewModel(_inventoryService, _licenseService, _settingsService, Language, _accountingReportService, _agingReportService));
     }
 
     [RelayCommand]
@@ -548,7 +570,7 @@ public partial class MainViewModel : ViewModelBase
             GoToLicense();
             return;
         }
-        NavigateTo(new POSViewModel(_inventoryService, _licenseService, _receiptService, _settingsService, Language, _salesOrderService, _customerService, _journalService, _taxService));
+        NavigateTo(new POSViewModel(_inventoryService, _licenseService, _receiptService, _settingsService, Language, _salesOrderService, _customerService, _journalService, _taxService, _barcodeService));
     }
 
     [RelayCommand]
@@ -566,7 +588,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToUsers()
     {
-        if (IsAdmin)
+        if (CanManageUsers)
         {
             NavigateTo(new UsersViewModel(_userService));
         }
@@ -575,6 +597,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToSettings()
     {
+        if (!CanAccessSettings) return;
         NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService, _paymentService, _customFieldService, RunSetupWizardFromSettings, RefreshModuleGatedAccessProperties));
     }
 
@@ -696,13 +719,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void OnActivationSuccess()
     {
-        // After activation, Bypass Login -> Auto-Login and Go to Dashboard
-        if (UserSession.CurrentUser == null)
-        {
-            var defaultUser = new Domain.User { Username = "Admin", Role = "Admin" };
-            UserSession.Login(defaultUser);
-        }
-        OnLoginSuccess();
+        ShowLoginScreen();
     }
 
     [RelayCommand]

@@ -22,6 +22,8 @@
                 
                 <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF5252" TextWrapping="Wrap" />
                 
+                <TextBlock Text="Default admin: admin / admin123" FontSize="11" Foreground="#888" HorizontalAlignment="Center"/>
+                
                 <Button Content="Login" Command="{Binding LoginCommand}" 
                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" 
                         Background="#007ACC" Foreground="White" Margin="0,10,0,0"/>

@@ -178,8 +178,10 @@ namespace InventoryManagementSystem.Services
 
                     // Convert quantities if units differ
                     double convertedQty = UnitConverter.Convert(line.ActualQuantity, line.Unit, componentProduct.Unit, units);
+                    var componentPreviousStock = componentProduct.StockQuantity;
                     componentProduct.StockQuantity -= (int)Math.Round(convertedQty);
                     conn.Update(componentProduct);
+                    LocationStockSync.ApplyDelta(conn, componentProduct.Id, componentProduct.StockQuantity - componentPreviousStock);
 
                     conn.Insert(new StockMovement
                     {
@@ -206,8 +208,10 @@ namespace InventoryManagementSystem.Services
                 }
 
                 // 2. Add finished product quantity to stock and insert IN stock movement
+                var finishedPreviousStock = finishedProduct.StockQuantity;
                 finishedProduct.StockQuantity += (int)Math.Round(actualQty);
                 conn.Update(finishedProduct);
+                LocationStockSync.ApplyDelta(conn, finishedProduct.Id, finishedProduct.StockQuantity - finishedPreviousStock);
 
                 decimal unitCostOfFinishedProduct = actualQty > 0 ? totalCostSum / (decimal)actualQty : 0m;
                 

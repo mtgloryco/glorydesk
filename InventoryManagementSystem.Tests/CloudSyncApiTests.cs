@@ -11,6 +11,11 @@ public class CloudSyncApiTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;
 
+    static CloudSyncApiTests()
+    {
+        Environment.SetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER", "1");
+    }
+
     public CloudSyncApiTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory.WithWebHostBuilder(_ => { });

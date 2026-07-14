@@ -18,5 +18,8 @@ namespace InventoryManagementSystem.Services
         }
 
         public static bool IsAdmin => CurrentUser?.Role == "Admin";
+
+        public static bool HasPermission(string permission) =>
+            UserAccessService.HasPermission(CurrentUser, permission);
     }
 }

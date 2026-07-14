@@ -531,6 +531,7 @@ namespace InventoryManagementSystem.Services
                 .Where(l => entryIds.Contains(l.JournalEntryId))
                 .ToListAsync();
 
+            var customers = await db.Table<Customer>().ToListAsync();
             var suppliers = await db.Table<Supplier>().ToListAsync();
             var salesOrders = await db.Table<SalesOrder>().ToListAsync();
             var purchaseOrders = await db.Table<PurchaseOrder>().ToListAsync();
@@ -552,11 +553,23 @@ namespace InventoryManagementSystem.Services
                         var so = salesOrders.FirstOrDefault(s => string.Equals(s.SONumber, soNumber, StringComparison.OrdinalIgnoreCase));
                         if (so != null)
                         {
-                            var cust = suppliers.FirstOrDefault(s => s.Id == so.CustomerId);
+                            var cust = customers.FirstOrDefault(c => c.Id == so.CustomerId);
                             if (cust != null)
                             {
                                 partnerName = cust.Name;
                             }
+                            matchingRef = so.SONumber;
+                        }
+                    }
+                    else if (refStr.StartsWith("POS Invoice:", StringComparison.OrdinalIgnoreCase)
+                             || refStr.StartsWith("POS Payment:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var soNumber = refStr.Contains(':') ? refStr.Split(':')[1].Trim() : string.Empty;
+                        var so = salesOrders.FirstOrDefault(s => string.Equals(s.SONumber, soNumber, StringComparison.OrdinalIgnoreCase));
+                        if (so != null)
+                        {
+                            var cust = customers.FirstOrDefault(c => c.Id == so.CustomerId);
+                            partnerName = cust?.Name ?? "Walk-in Customer";
                             matchingRef = so.SONumber;
                         }
                     }

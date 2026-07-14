@@ -88,3 +88,6 @@ license-manager-web/public/downloads/
 *.class
 *.keystore
 /.kiro
+
+# Local planning notes (not for version control)
+industry-roadmap.txt
