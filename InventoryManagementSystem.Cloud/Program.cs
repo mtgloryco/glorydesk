@@ -41,7 +41,7 @@ app.UseAuthorization();
 
 app.MapGet("/", () => Results.Ok(new
 {
-    service = "Inventory Management System Cloud API",
+    service = "Glory Desk Cloud API",
     tenancy = "organization/workspace",
     docs = "/health"
 }));

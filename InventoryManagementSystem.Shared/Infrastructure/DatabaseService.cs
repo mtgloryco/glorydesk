@@ -17,16 +17,8 @@ namespace InventoryManagementSystem.Infrastructure
 
         public DatabaseService()
         {
-            // Standard User Data Location: %AppData%/InventoryManagementSystem
-            // This ensures data survives application updates/reinstalls in the same location
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var folder = Path.Combine(appData, "InventoryManagementSystem");
-
-            if (!Directory.Exists(folder))
-            {
-                Directory.CreateDirectory(folder);
-            }
-            
+            // Standard user data location: %LocalAppData%/GloryDesk (legacy: InventoryManagementSystem)
+            var folder = AppPaths.GetLocalAppDataFolder();
             _databasePath = Path.Combine(folder, "inventory.db");
             
             // Legacy path check (where the app runs from)

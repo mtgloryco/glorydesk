@@ -184,11 +184,7 @@ namespace InventoryManagementSystem.Services
 
         private async Task WriteLocalOutboxAsync(string eventType, string payloadJson)
         {
-            var folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "InventoryManagementSystem",
-                "Webhooks");
-            Directory.CreateDirectory(folder);
+            var folder = AppPaths.EnsureDocumentsSubfolder("Webhooks");
 
             var fileName = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}_{eventType.Replace('.', '_')}.json";
             var path = Path.Combine(folder, fileName);

@@ -1,17 +1,17 @@
 [Setup]
 ; Basic Information
-AppName=Inventory Management System
+AppName=Glory Desk
 AppVersion=1.2.2
-AppPublisher=IMS Professional
-AppPublisherURL=https://mwimule.com/ims
-AppSupportURL=https://mwimule.com/support
-AppUpdatesURL=https://mwimule.com/updates
+AppPublisher=MT GLORY CO
+AppPublisherURL=https://glorydesk.mtglory.com
+AppSupportURL=https://glorydesk.mtglory.com
+AppUpdatesURL=https://glorydesk.mtglory.com
 
 ; Destination
-DefaultDirName={autopf}\InventoryManagementSystem
-DefaultGroupName=Inventory Management System
+DefaultDirName={autopf}\GloryDesk
+DefaultGroupName=Glory Desk
 OutputDir=../Releases
-OutputBaseFilename=IMS_Setup_v1.2.2_Windows
+OutputBaseFilename=GloryDesk_Setup_v1.2.2_Windows
 Compression=zip
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
@@ -41,13 +41,13 @@ Source: "../Releases/Windows/*"; DestDir: "{app}"; Flags: ignoreversion recurses
 Source: "./redist/vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: VCRedistNeedsInstall
 
 [Icons]
-Name: "{group}\Inventory Management System"; Filename: "{app}\InventoryManagementSystem.Desktop.exe"
-Name: "{group}\{cm:UninstallProgram,Inventory Management System}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Inventory Management System"; Filename: "{app}\InventoryManagementSystem.Desktop.exe"; Tasks: desktopicon
+Name: "{group}\Glory Desk"; Filename: "{app}\InventoryManagementSystem.Desktop.exe"
+Name: "{group}\{cm:UninstallProgram,Glory Desk}"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\Glory Desk"; Filename: "{app}\InventoryManagementSystem.Desktop.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing required Visual C++ Runtime components..."; Check: VCRedistNeedsInstall; Flags: waituntilterminated
-Filename: "{app}\InventoryManagementSystem.Desktop.exe"; Description: "{cm:LaunchProgram,Inventory Management System}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\InventoryManagementSystem.Desktop.exe"; Description: "{cm:LaunchProgram,Glory Desk}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 // Detects whether the VC++ 2015-2022 (v14) x64 runtime is already installed on the

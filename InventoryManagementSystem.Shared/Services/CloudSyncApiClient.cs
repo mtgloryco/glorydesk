@@ -136,7 +136,8 @@ namespace InventoryManagementSystem.Services
 
         public static string ResolveApiBaseUrl()
         {
-            var fromEnv = Environment.GetEnvironmentVariable("IMS_CLOUD_API_URL");
+            var fromEnv = Environment.GetEnvironmentVariable(AppBranding.CloudApiEnvVar)
+                ?? Environment.GetEnvironmentVariable(AppBranding.LegacyCloudApiEnvVar);
             return string.IsNullOrWhiteSpace(fromEnv) ? DefaultApiBaseUrl : fromEnv.TrimEnd('/');
         }
     }

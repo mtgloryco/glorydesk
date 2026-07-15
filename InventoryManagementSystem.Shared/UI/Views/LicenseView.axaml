@@ -60,7 +60,7 @@
                              FontWeight="Bold"
                              CornerRadius="6"/>
 
-                     <Button Content="Continue to System Dashboard" 
+                     <Button Content="Continue to Glory Desk" 
                              Command="{Binding ContinueToLoginCommand}" 
                              IsVisible="{Binding IsActivatedSuccessfully}"
                              HorizontalAlignment="Stretch" 
@@ -73,7 +73,7 @@
                  </StackPanel>
             </Border>
             
-            <TextBlock Text="Need help? Contact support@inventorysystem.local" Foreground="#999" FontSize="12" HorizontalAlignment="Center"/>
+            <TextBlock Text="Need help? Visit glorydesk.mtglory.com or email support@mtglory.com" Foreground="#999" FontSize="12" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -27,8 +27,7 @@ namespace InventoryManagementSystem.Services
 
         public SettingsService()
         {
-            var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "InventoryManagementSystem");
-            Directory.CreateDirectory(folder);
+            var folder = AppPaths.GetRoamingAppDataFolder();
             _settingsFilePath = Path.Combine(folder, "settings.json");
             LoadSettings();
         }

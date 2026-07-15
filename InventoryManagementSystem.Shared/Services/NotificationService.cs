@@ -125,11 +125,7 @@ namespace InventoryManagementSystem.Services
                 .Where(n => n.Status == "Pending")
                 .ToListAsync();
 
-            var folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "InventoryManagementSystem",
-                "Notifications");
-            Directory.CreateDirectory(folder);
+            var folder = AppPaths.EnsureDocumentsSubfolder("Notifications");
 
             var sent = 0;
             foreach (var notification in pending)

@@ -334,8 +334,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         private string GetLogosDirectory()
         {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var path = Path.Combine(appData, "InventoryManagementSystem", "SupplierLogos");
+            var path = Path.Combine(AppPaths.GetRoamingAppDataFolder(), "SupplierLogos");
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);

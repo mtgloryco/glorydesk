@@ -31,7 +31,7 @@
         <Grid RowDefinitions="Auto, Auto, Auto, Auto" Margin="40,30" MaxWidth="760" HorizontalAlignment="Center">
             <!-- Header -->
             <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,20">
-                <TextBlock Text="Welcome — Let's Set Up Your Business" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                <TextBlock Text="Welcome to Glory Desk" FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
                 <TextBlock Text="This quick setup configures categories, terminology and modules for your type of business." Foreground="{DynamicResource TextSecondaryColor}"/>
             </StackPanel>
 

@@ -66,7 +66,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private decimal _averageOrderValue;
 
         [ObservableProperty]
-        private string _welcomeMessage = "Welcome to IMS";
+        private string _welcomeMessage = $"Welcome to {AppBranding.DisplayName}";
 
         [ObservableProperty] private string _licenseStatusDisplay = "Checking...";
         [ObservableProperty] private string _licenseTypeDisplay = "Unknown";

@@ -23,10 +23,7 @@ namespace InventoryManagementSystem.Services
         {
             var date = DateTime.Now;
             var filename = $"Receipt_{date:yyyyMMdd_HHmmss}.pdf";
-            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "IMS_Receipts", filename);
-
-            // Ensure directory exists
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var path = Path.Combine(AppPaths.EnsureDocumentsSubfolder("Receipts"), filename);
 
             Document.Create(container =>
             {
@@ -115,10 +112,8 @@ namespace InventoryManagementSystem.Services
         {
             var date = DateTime.Now;
             var filename = $"Receipt_{date:yyyyMMdd_HHmmss}.pdf";
-            var outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "IMS_Receipts");
+            var outputFolder = AppPaths.EnsureDocumentsSubfolder("Receipts");
             var path = Path.Combine(outputFolder, filename);
-
-            Directory.CreateDirectory(outputFolder);
 
             Document.Create(container =>
             {

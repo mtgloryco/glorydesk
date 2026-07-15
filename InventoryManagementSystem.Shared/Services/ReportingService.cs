@@ -36,7 +36,7 @@ namespace InventoryManagementSystem.Services
             var products = await _databaseService.Connection.Table<Product>().ToListAsync();
 
             var filename = $"PO_{po.PONumber}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-            var outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "IMS_Reports", "PurchaseOrders");
+            var outputFolder = AppPaths.EnsureDocumentsSubfolder("Reports", "PurchaseOrders");
             var path = Path.Combine(outputFolder, filename);
             Directory.CreateDirectory(outputFolder);
 
@@ -125,7 +125,7 @@ namespace InventoryManagementSystem.Services
         public async Task<string> ExportToCsvAsync<T>(IEnumerable<T> records, string reportName)
         {
             var filename = $"{reportName}_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-            var outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "IMS_Reports", "Exports");
+            var outputFolder = AppPaths.EnsureDocumentsSubfolder("Reports", "Exports");
             var path = Path.Combine(outputFolder, filename);
             Directory.CreateDirectory(outputFolder);
 

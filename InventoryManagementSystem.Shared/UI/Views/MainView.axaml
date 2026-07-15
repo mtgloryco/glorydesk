@@ -16,7 +16,8 @@
         <Border Grid.Column="0" Background="{DynamicResource PageBackgroundColor}" Padding="20" IsVisible="{Binding IsLoggedIn}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="IMS" FontWeight="Bold" FontSize="24" Margin="0,30,0,20"/>
+                    <TextBlock Text="Glory Desk" FontWeight="Bold" FontSize="20" Margin="0,30,0,4"/>
+                    <TextBlock Text="MT GLORY CO" FontSize="11" Foreground="#888" Margin="0,0,0,20"/>
                     <TextBlock Text="{Binding CurrentUserName}" FontWeight="SemiBold" Margin="0,0,0,20"/>
                     
                     <Button Content="{Binding Language.Resources[Dashboard]}" Command="{Binding GoToDashboardCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>

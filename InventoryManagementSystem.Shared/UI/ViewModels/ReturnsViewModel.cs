@@ -132,7 +132,7 @@ public partial class ReturnsViewModel : ViewModelBase
 
     private static async Task<string> WriteNoteFileAsync(string docNumber, params string[] lines)
     {
-        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "InventoryManagementSystem", "Notes");
+        var dir = AppPaths.EnsureDocumentsSubfolder("Notes");
         Directory.CreateDirectory(dir);
         var safeName = docNumber.Replace('/', '-').Replace('\\', '-');
         var path = Path.Combine(dir, $"{safeName}.txt");

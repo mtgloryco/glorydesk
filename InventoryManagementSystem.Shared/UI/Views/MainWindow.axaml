@@ -8,7 +8,7 @@
         x:Class="InventoryManagementSystem.UI.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Inventory Management System"
+        Title="Glory Desk"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
         MinWidth="900" MinHeight="600"
