@@ -97,6 +97,8 @@ jobs:
                   }
                   $res = Invoke-RestMethod -Method Post -Uri $env:WEBHOOK_URL -Headers $headers -Body $payload
                   Write-Host ($res | ConvertTo-Json -Compress)
+
+    build-linux:
         name: Build Linux
         runs-on: ubuntu-latest
         steps:
