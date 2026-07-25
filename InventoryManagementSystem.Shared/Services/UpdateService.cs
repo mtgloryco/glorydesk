@@ -1,7 +1,6 @@
 using System;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Velopack;
 using Velopack.Sources;
@@ -10,7 +9,11 @@ namespace InventoryManagementSystem.Services
 {
     public class AppConfig
     {
-        public string updateUrl { get; set; } = "https://ims-lilac-beta.vercel.app/updates";
+        /// <summary>Velopack update feed — GitHub repo URL or static web updates folder.</summary>
+        public string updateUrl { get; set; } = AppBranding.GitHubReleasesRepoUrl;
+
+        /// <summary>Optional base URL for human-readable release notes (glorydesk.mtglory.com/releases).</summary>
+        public string releaseNotesBaseUrl { get; set; } = $"{AppBranding.WebsiteUrl}/releases";
     }
 
     public class UpdateResult
@@ -35,10 +38,15 @@ namespace InventoryManagementSystem.Services
         public string CurrentVersion { get; private set; } = "1.0.0";
         private bool _isInitialized = false;
         private readonly HttpClient _httpClient;
+        private string _releaseNotesBaseUrl = $"{AppBranding.WebsiteUrl}/releases";
 
         public UpdateService()
         {
-            _httpClient = new HttpClient();
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(15)
+            };
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"{AppBranding.ShortName}/UpdateService");
         }
 
         public async Task InitializeAsync()
@@ -50,27 +58,44 @@ namespace InventoryManagementSystem.Services
             {
                 CurrentVersion = "1.0-Mobile";
                 _isInitialized = true;
-                return; 
+                return;
             }
 
-            string updateUrl = "https://ims-lilac-beta.vercel.app/updates"; // Default fallback
+            // Default: Velopack assets published on the glorydesk GitHub releases feed
+            string updateUrl = AppBranding.GitHubReleasesRepoUrl;
+            _releaseNotesBaseUrl = $"{AppBranding.WebsiteUrl}/releases";
 
             try
             {
-                var config = await _httpClient.GetFromJsonAsync<AppConfig>("https://ims-lilac-beta.vercel.app/api/public/config");
-                if (config != null && !string.IsNullOrWhiteSpace(config.updateUrl))
+                var config = await _httpClient.GetFromJsonAsync<AppConfig>(AppBranding.PublicConfigUrl);
+                if (config != null)
                 {
-                    updateUrl = config.updateUrl;
+                    if (!string.IsNullOrWhiteSpace(config.updateUrl))
+                    {
+                        updateUrl = config.updateUrl.Trim();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(config.releaseNotesBaseUrl))
+                    {
+                        _releaseNotesBaseUrl = config.releaseNotesBaseUrl.Trim().TrimEnd('/');
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to fetch remote config: {ex.Message}. Using default URL.");
+                Console.WriteLine($"Failed to fetch Glory Desk public config: {ex.Message}. Using GitHub releases default.");
+            }
+
+            // Never fall back to the retired ims-lilac-beta feed
+            if (updateUrl.Contains("ims-lilac-beta", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("Ignoring legacy ims-lilac-beta update URL; using glorydesk GitHub releases.");
+                updateUrl = AppBranding.GitHubReleasesRepoUrl;
             }
 
             Console.WriteLine($"Initializing UpdateManager with Source: {updateUrl}");
 
-            try 
+            try
             {
                 IUpdateSource source;
                 if (updateUrl.Contains("github.com", StringComparison.OrdinalIgnoreCase))
@@ -83,7 +108,7 @@ namespace InventoryManagementSystem.Services
                 }
 
                 _mgr = new UpdateManager(source);
-                CurrentVersion = _mgr.CurrentVersion?.ToString() ?? "1.2.1";
+                CurrentVersion = _mgr.CurrentVersion?.ToString() ?? "1.0.0";
                 _isInitialized = true;
             }
             catch (Exception ex)
@@ -97,10 +122,10 @@ namespace InventoryManagementSystem.Services
         {
             if (!_isInitialized) await InitializeAsync();
 
-             // Skip for mobile for now
+            // Skip for mobile for now
             if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
             {
-                 return new UpdateResult(Success: false);
+                return new UpdateResult(Success: false);
             }
 
             try
@@ -114,7 +139,7 @@ namespace InventoryManagementSystem.Services
                 }
 
                 string targetVersion = newVersion.TargetFullRelease.Version.ToString();
-                string releaseNotesUrl = $"https://ims-lilac-beta.vercel.app/releases/{targetVersion}";
+                string releaseNotesUrl = BuildReleaseNotesUrl(targetVersion);
 
                 return new UpdateResult(Success: true, Version: targetVersion, ReleaseNotesUrl: releaseNotesUrl);
             }
@@ -125,10 +150,8 @@ namespace InventoryManagementSystem.Services
                     Console.WriteLine("Update check skipped (App is not installed/packaged).");
                     return new UpdateResult(Success: false, IsDevMode: true);
                 }
-                else
-                {
-                    Console.WriteLine($"Error checking for updates: {ex.Message}");
-                }
+
+                Console.WriteLine($"Error checking for updates: {ex.Message}");
                 return new UpdateResult(Success: false);
             }
         }
@@ -136,7 +159,7 @@ namespace InventoryManagementSystem.Services
         public async Task DownloadAndRestartAsync()
         {
             if (!_isInitialized) await InitializeAsync();
-            
+
             try
             {
                 if (_mgr == null) return;
@@ -150,8 +173,30 @@ namespace InventoryManagementSystem.Services
             }
             catch (Exception ex)
             {
-                 Console.WriteLine($"Error applying updates: {ex.Message}");
+                Console.WriteLine($"Error applying updates: {ex.Message}");
             }
+        }
+
+        private string BuildReleaseNotesUrl(string version)
+        {
+            var clean = (version ?? string.Empty).Trim().TrimStart('v', 'V');
+            if (string.IsNullOrWhiteSpace(_releaseNotesBaseUrl))
+            {
+                return AppBranding.ReleaseNotesUrlForVersion(clean);
+            }
+
+            // Prefer Glory Desk site pages; append version when using the download page
+            if (_releaseNotesBaseUrl.Contains("glorydesk.", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_releaseNotesBaseUrl.Contains("/releases", StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"{_releaseNotesBaseUrl.TrimEnd('/')}/{Uri.EscapeDataString(clean)}";
+                }
+
+                return $"{_releaseNotesBaseUrl}?v={Uri.EscapeDataString(clean)}";
+            }
+
+            return AppBranding.ReleaseNotesUrlForVersion(clean);
         }
     }
 }

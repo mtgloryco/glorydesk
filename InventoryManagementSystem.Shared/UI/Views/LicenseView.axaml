@@ -3,77 +3,92 @@
              xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
              x:Class="InventoryManagementSystem.UI.Views.LicenseView"
              x:DataType="vm:LicenseViewModel"
-             Background="White">
+             Background="#F4F7FB">
     
     <ScrollViewer>
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30" Width="500" Margin="40">
-            <StackPanel Spacing="5" HorizontalAlignment="Center">
-                <TextBlock Text="License Management" FontSize="32" FontWeight="Bold" Foreground="#333" HorizontalAlignment="Center"/>
-                <TextBlock Text="Manage your subscription and premium features" Foreground="#666" HorizontalAlignment="Center"/>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24" Width="540" Margin="40">
+            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                <Image Source="/Assets/glorydesk-logo.png"
+                       Width="260"
+                       Height="72"
+                       Stretch="Uniform"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,4"/>
+                <TextBlock Text="Glory Desk License" FontSize="28" FontWeight="Bold" Foreground="#0B1F3A" HorizontalAlignment="Center" FontFamily="Segoe UI"/>
+                <TextBlock Text="Activate your licensed tier — Basic, Medium, Pro, or Enterprise" Foreground="#5A6578" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" FontSize="13"/>
             </StackPanel>
+
+            <Border Background="#FFF8E6" CornerRadius="8" Padding="16,12" BorderBrush="#E8A317" BorderThickness="1"
+                    IsVisible="{Binding IsTrial}">
+                <TextBlock Text="{Binding TrialNotice}" Foreground="#7A5200" FontSize="13" TextWrapping="Wrap"/>
+            </Border>
             
-            <Border Background="White" CornerRadius="12" Padding="30" BoxShadow="0 8 30 0 #15000000">
-                <StackPanel Spacing="20">
-                    <TextBlock Text="Current License Information" FontWeight="SemiBold" FontSize="18" Foreground="#333"/>
-                    <Separator Height="1" Background="#EEE"/>
+            <Border Background="White" CornerRadius="10" Padding="28" BorderBrush="#D8DEE9" BorderThickness="1">
+                <StackPanel Spacing="18">
+                    <TextBlock Text="Current license" FontWeight="SemiBold" FontSize="16" Foreground="#0B1F3A"/>
+                    <Separator Height="1" Background="#EEF2F8"/>
                     
                     <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto, Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="License Tier:" Foreground="#777" Margin="0,0,20,15" VerticalAlignment="Center"/>
-                        <Border Grid.Row="0" Grid.Column="1" Background="#E3F2FD" CornerRadius="4" Padding="10,4" HorizontalAlignment="Left" Margin="0,0,0,15">
-                             <TextBlock Text="{Binding LicenseType}" FontWeight="Bold" Foreground="#1976D2"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Tier:" Foreground="#5A6578" Margin="0,0,20,12" VerticalAlignment="Center" FontSize="13"/>
+                        <Border Grid.Row="0" Grid.Column="1" Background="#E8F2FC" CornerRadius="6" Padding="10,5" HorizontalAlignment="Left" Margin="0,0,0,12">
+                             <TextBlock Text="{Binding LicenseType}" FontWeight="SemiBold" Foreground="#0066CC" FontSize="13"/>
                         </Border>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Current Status:" Foreground="#777" Margin="0,0,20,15" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LicenseStatus}" Foreground="#4CAF50" FontWeight="Medium" Margin="0,0,0,15"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Status:" Foreground="#5A6578" Margin="0,0,20,12" VerticalAlignment="Center" FontSize="13"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LicenseStatus}" Foreground="#0D7D4D" FontWeight="Medium" Margin="0,0,0,12" FontSize="13"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Expiry Date:" Foreground="#777" Margin="0,0,20,15" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ExpirationDate}" Foreground="#333" Margin="0,0,0,15"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Expires:" Foreground="#5A6578" Margin="0,0,20,12" VerticalAlignment="Center" FontSize="13"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ExpirationDate}" Foreground="#1A2332" Margin="0,0,0,12" FontSize="13"/>
                         
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Hardware ID:" Foreground="#777" VerticalAlignment="Center"/>
-                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding HardwareId}" IsReadOnly="True" Background="#F9F9F9" BorderThickness="1" BorderBrush="#EEE" Foreground="#888" FontSize="11" Padding="8,4"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Hardware ID:" Foreground="#5A6578" VerticalAlignment="Top" Margin="0,6,20,0" FontSize="13"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding HardwareId}" IsReadOnly="True" Background="#F4F7FB" BorderThickness="1" BorderBrush="#D8DEE9" Foreground="#1A2332" FontSize="11" Padding="10,8" TextWrapping="Wrap" MinHeight="44"/>
                     </Grid>
+                    <TextBlock Text="Copy this ID to get a free 5-day trial at glorydesk.mtglory.com/trial, or request a paid key at glorydesk.mtglory.com/activate" Foreground="#5A6578" FontSize="11" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
-            <Border Background="White" CornerRadius="12" Padding="30" BoxShadow="0 8 30 0 #15000000">
-                 <StackPanel Spacing="15">
-                     <TextBlock Text="Activation" FontWeight="SemiBold" FontSize="18" Foreground="#333"/>
-                     <TextBlock Text="Unlock all features by entering your premium token below." Foreground="#666" FontSize="13" TextWrapping="Wrap"/>
+            <Border Background="White" CornerRadius="10" Padding="28" BorderBrush="#D8DEE9" BorderThickness="1">
+                 <StackPanel Spacing="14">
+                     <TextBlock Text="Activate license key" FontWeight="SemiBold" FontSize="16" Foreground="#0B1F3A"/>
+                     <TextBlock Text="Paste the RSA-signed key issued by MT GLORY for this computer." Foreground="#5A6578" FontSize="13" TextWrapping="Wrap"/>
                      
                      <TextBox Text="{Binding InputToken}" 
-                              Watermark="PREMIUM-XXXX-XXXX" 
-                              Height="45" 
+                              Watermark="Paste your Glory Desk license key" 
+                              Height="48" 
                               VerticalContentAlignment="Center"
-                              BorderBrush="#DDD"
+                              BorderBrush="#D8DEE9"
+                              FontSize="13"
                               IsVisible="{Binding !IsActivatedSuccessfully}"/>
                               
-                     <TextBlock Text="{Binding ActivationMessage}" Foreground="#1976D2" FontSize="13" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                     <TextBlock Text="{Binding ActivationMessage}" Foreground="#0066CC" FontSize="13" TextWrapping="Wrap" HorizontalAlignment="Center"/>
                      
-                     <Button Content="Activate Professional Software" 
+                     <Button Content="Activate License" 
                              Command="{Binding ActivateCommand}" 
                              IsVisible="{Binding !IsActivatedSuccessfully}"
                              HorizontalAlignment="Stretch" 
                              HorizontalContentAlignment="Center"
-                             Height="45"
-                             Background="#007ACC" 
+                             Height="48"
+                             Background="#0066CC" 
                              Foreground="White"
-                             FontWeight="Bold"
-                             CornerRadius="6"/>
+                             FontWeight="SemiBold"
+                             FontSize="14"
+                             CornerRadius="8"/>
 
                      <Button Content="Continue to Glory Desk" 
                              Command="{Binding ContinueToLoginCommand}" 
                              IsVisible="{Binding IsActivatedSuccessfully}"
                              HorizontalAlignment="Stretch" 
                              HorizontalContentAlignment="Center"
-                             Height="45"
-                             Background="#4CAF50" 
+                             Height="48"
+                             Background="#0D7D4D" 
                              Foreground="White"
-                             FontWeight="Bold"
-                             CornerRadius="6"/>
+                             FontWeight="SemiBold"
+                             FontSize="14"
+                             CornerRadius="8"/>
                  </StackPanel>
             </Border>
             
-            <TextBlock Text="Need help? Visit glorydesk.mtglory.com or email support@mtglory.com" Foreground="#999" FontSize="12" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+            <TextBlock Text="Request a key: glorydesk.mtglory.com/activate  ·  support@mtglory.com" Foreground="#5A6578" FontSize="11" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

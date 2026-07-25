@@ -18,6 +18,18 @@ namespace InventoryManagementSystem.Services
         public bool SetupCompleted { get; set; } = false;
         public Dictionary<string, bool> EnabledModules { get; set; } = new();
         public Dictionary<string, string> TerminologyOverrides { get; set; } = new();
+
+        /// <summary>FIFO (default) or WeightedAverage.</summary>
+        public string CostingMethod { get; set; } = "FIFO";
+
+        public bool UseSmtp { get; set; } = false;
+        public string SmtpHost { get; set; } = "";
+        public int SmtpPort { get; set; } = 587;
+        public string SmtpUsername { get; set; } = "";
+        public string SmtpPassword { get; set; } = "";
+        public string SmtpFromAddress { get; set; } = "";
+        public string SmtpFromName { get; set; } = "";
+        public bool SmtpEnableSsl { get; set; } = true;
     }
 
     public class SettingsService

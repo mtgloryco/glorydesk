@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pricing — Glory Desk</title>
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <div class="topbar">Annual perpetual licenses · Prices in RWF · VAT may apply</div>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="/"><div class="logo-mark">GD</div><div class="logo-text"><strong>Glory Desk</strong><span>MT GLORY CO</span></div></a>
+      <nav class="main-nav">
+        <a href="/" data-nav>Product</a>
+        <a href="/pricing.html" data-nav>Pricing</a>
+        <a href="/download.html" data-nav>Download</a>
+        <a href="/activate.html" data-nav>Activate</a>
+        <a href="/docs.html" data-nav>Docs</a>
+        <a href="/account/login.html" data-nav>Account</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero hero-compact">
+    <div class="hero-inner">
+      <h1>Transparent licensing</h1>
+      <p class="hero-lead">Choose the tier that matches your operation. All plans include updates for the license period and email support.</p>
+    </div>
+  </section>
+
+  <main>
+    <div class="container">
+      <div class="grid-4 mb-2" id="pricingCards"></div>
+
+      <div class="card">
+        <h2>Feature comparison</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Feature</th><th>Basic</th><th>Medium</th><th>Pro</th><th>Enterprise</th></tr></thead>
+            <tbody>
+              <tr><td>Max products</td><td>50</td><td>500</td><td>Unlimited</td><td>Unlimited</td></tr>
+              <tr><td>Locations</td><td>1</td><td>3</td><td>Unlimited</td><td>Unlimited</td></tr>
+              <tr><td>POS &amp; receipts</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+              <tr><td>Purchase orders</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+              <tr><td>Reports &amp; P&amp;L</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+              <tr><td>Audit trail</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+              <tr><td>Cloud sync</td><td class="cross">—</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="alert alert-warn">
+        <strong>Payment:</strong> Online checkout via bank transfer or Mobile Money is arranged at purchase. Submit a license request on the <a href="/activate.html">Activate</a> page — MT GLORY CO confirms payment and issues your signed key within 1–2 business days.
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer"><div class="footer-bottom">© 2026 MT GLORY CO · <a href="/legal/terms.html">Terms</a></div></footer>
+  <script src="/js/site.js"></script>
+  <script>
+    const highlights = {
+      Basic: ['Core inventory', '1 location', '50 products', 'Email support'],
+      Medium: ['POS &amp; PO', '3 locations', '500 products', 'Returns module'],
+      Pro: ['Unlimited scale', 'Full reports', 'Audit trail', 'Manufacturing'],
+      Enterprise: ['Cloud sync', 'Enterprise hub', 'Bulk import', 'Priority support']
+    };
+    (async () => {
+      const { data } = await api('/api/pricing');
+      if (!data?.tiers) return;
+      document.getElementById('pricingCards').innerHTML = data.tiers.map((t, i) => `
+        <div class="price-card ${t.name === 'Pro' ? 'featured' : ''}">
+          ${t.name === 'Pro' ? '<span class="badge">Popular</span>' : ''}
+          <h3>${t.name}</h3>
+          <div class="price">${t.price === 'Contact sales' ? 'Custom' : t.price + ' RWF'}<br /><small>per ${t.period}</small></div>
+          <ul>${(highlights[t.name] || []).map(h => `<li>${h}</li>`).join('')}</ul>
+          <a class="btn ${t.name === 'Enterprise' ? 'btn-navy' : ''}" href="/activate.html?tier=${t.name}">${t.name === 'Enterprise' ? 'Contact sales' : 'Request license'}</a>
+        </div>`).join('');
+    })();
+  </script>
+</body>
+</html>

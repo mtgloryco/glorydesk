@@ -312,6 +312,8 @@ namespace InventoryManagementSystem.Services
                 CustomerReturnId = customerReturnId,
                 SalesOrderId = salesOrderId,
                 Amount = amount,
+                AppliedAmount = salesOrderId.HasValue ? amount : 0,
+                AppliedToSalesOrderId = salesOrderId,
                 IssueDate = DateTime.Now,
                 Status = "Posted",
                 Reason = reason,
@@ -331,6 +333,8 @@ namespace InventoryManagementSystem.Services
                 SupplierReturnId = supplierReturnId,
                 PurchaseOrderId = purchaseOrderId,
                 Amount = amount,
+                AppliedAmount = purchaseOrderId.HasValue ? amount : 0,
+                AppliedToPurchaseOrderId = purchaseOrderId,
                 IssueDate = DateTime.Now,
                 Status = "Posted",
                 Reason = reason,
@@ -496,6 +500,84 @@ namespace InventoryManagementSystem.Services
                 .OrderByDescending(d => d.IssueDate)
                 .ToListAsync();
 
+        public async Task ApplyCreditNoteAsync(int creditNoteId, int salesOrderId, decimal amount, string username)
+        {
+            if (amount <= 0) throw new InvalidOperationException("Apply amount must be greater than zero.");
+
+            var note = await _databaseService.Connection.FindAsync<CreditNote>(creditNoteId)
+                ?? throw new InvalidOperationException("Credit note not found.");
+            if (note.IsDeleted || note.Status != "Posted")
+            {
+                throw new InvalidOperationException("Credit note is not available to apply.");
+            }
+
+            var remaining = note.Amount - note.AppliedAmount;
+            if (amount > remaining + 0.01m)
+            {
+                throw new InvalidOperationException($"Amount exceeds remaining credit ({remaining:N2}).");
+            }
+
+            var so = await _databaseService.Connection.FindAsync<SalesOrder>(salesOrderId)
+                ?? throw new InvalidOperationException("Sales order not found.");
+            if (so.BillingStatus != "Invoiced")
+            {
+                throw new InvalidOperationException("Credit can only be applied to invoiced sales orders.");
+            }
+
+            if (note.CustomerId > 0 && so.CustomerId != note.CustomerId)
+            {
+                throw new InvalidOperationException("Credit note customer does not match the sales order.");
+            }
+
+            note.AppliedAmount += amount;
+            note.AppliedToSalesOrderId = salesOrderId;
+            if (note.SalesOrderId == null) note.SalesOrderId = salesOrderId;
+            note.UpdatedAt = DateTime.UtcNow;
+            await _databaseService.Connection.UpdateAsync(note);
+
+            await _auditService.LogActionAsync(username, "ApplyCreditNote", "CreditNote", note.Id,
+                new { creditNoteId, salesOrderId, amount });
+        }
+
+        public async Task ApplyDebitNoteAsync(int debitNoteId, int purchaseOrderId, decimal amount, string username)
+        {
+            if (amount <= 0) throw new InvalidOperationException("Apply amount must be greater than zero.");
+
+            var note = await _databaseService.Connection.FindAsync<DebitNote>(debitNoteId)
+                ?? throw new InvalidOperationException("Debit note not found.");
+            if (note.IsDeleted || note.Status != "Posted")
+            {
+                throw new InvalidOperationException("Debit note is not available to apply.");
+            }
+
+            var remaining = note.Amount - note.AppliedAmount;
+            if (amount > remaining + 0.01m)
+            {
+                throw new InvalidOperationException($"Amount exceeds remaining debit ({remaining:N2}).");
+            }
+
+            var po = await _databaseService.Connection.FindAsync<PurchaseOrder>(purchaseOrderId)
+                ?? throw new InvalidOperationException("Purchase order not found.");
+            if (po.BillingStatus != "Billed")
+            {
+                throw new InvalidOperationException("Debit can only be applied to billed purchase orders.");
+            }
+
+            if (note.SupplierId > 0 && po.SupplierId != note.SupplierId)
+            {
+                throw new InvalidOperationException("Debit note supplier does not match the purchase order.");
+            }
+
+            note.AppliedAmount += amount;
+            note.AppliedToPurchaseOrderId = purchaseOrderId;
+            if (note.PurchaseOrderId == null) note.PurchaseOrderId = purchaseOrderId;
+            note.UpdatedAt = DateTime.UtcNow;
+            await _databaseService.Connection.UpdateAsync(note);
+
+            await _auditService.LogActionAsync(username, "ApplyDebitNote", "DebitNote", note.Id,
+                new { debitNoteId, purchaseOrderId, amount });
+        }
+
         public async Task<List<CreditNoteDisplayRow>> GetCreditNoteDisplayRowsAsync()
         {
             var notes = await GetCreditNotesAsync();
@@ -506,8 +588,9 @@ namespace InventoryManagementSystem.Services
             return notes.Select(n =>
             {
                 var customer = customers.FirstOrDefault(c => c.Id == n.CustomerId);
-                var so = n.SalesOrderId.HasValue
-                    ? salesOrders.FirstOrDefault(s => s.Id == n.SalesOrderId.Value)
+                var soId = n.AppliedToSalesOrderId ?? n.SalesOrderId;
+                var so = soId.HasValue
+                    ? salesOrders.FirstOrDefault(s => s.Id == soId.Value)
                     : null;
                 var ret = n.CustomerReturnId.HasValue
                     ? returns.FirstOrDefault(r => r.Id == n.CustomerReturnId.Value)
@@ -561,6 +644,7 @@ namespace InventoryManagementSystem.Services
         public string DocumentNumber => Note.CreditNoteNumber;
         public DateTime IssueDate => Note.IssueDate;
         public decimal Amount => Note.Amount;
+        public decimal RemainingAmount => Note.RemainingAmount;
         public string Status => Note.Status;
         public string Reason => Note.Reason;
         public string CreatedBy => Note.CreatedByUsername;
@@ -576,6 +660,7 @@ namespace InventoryManagementSystem.Services
         public string DocumentNumber => Note.DebitNoteNumber;
         public DateTime IssueDate => Note.IssueDate;
         public decimal Amount => Note.Amount;
+        public decimal RemainingAmount => Note.RemainingAmount;
         public string Status => Note.Status;
         public string Reason => Note.Reason;
         public string CreatedBy => Note.CreatedByUsername;

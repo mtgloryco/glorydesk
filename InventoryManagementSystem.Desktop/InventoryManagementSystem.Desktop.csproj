@@ -6,7 +6,8 @@
     <Version>1.0.1</Version>
     <Product>Glory Desk</Product>
     <AssemblyTitle>Glory Desk</AssemblyTitle>
-    <Description>Stock, sales and accounts in one place — by MT GLORY CO</Description>
+    <Description>Stock, sales and accounts in one place — by MT GLORY</Description>
+    <ApplicationIcon>glorydesk.ico</ApplicationIcon>
     <!-- Manifest omitted for cross-platform publish reliability on Windows clean PCs -->
   </PropertyGroup>
 

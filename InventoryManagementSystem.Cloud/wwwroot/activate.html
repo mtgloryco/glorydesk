@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Activate — Glory Desk</title>
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="/"><div class="logo-mark">GD</div><div class="logo-text"><strong>Glory Desk</strong><span>MT GLORY CO</span></div></a>
+      <nav class="main-nav">
+        <a href="/" data-nav>Product</a>
+        <a href="/pricing.html" data-nav>Pricing</a>
+        <a href="/download.html" data-nav>Download</a>
+        <a href="/activate.html" data-nav>Activate</a>
+        <a href="/docs.html" data-nav>Docs</a>
+        <a href="/account/login.html" data-nav>Account</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero hero-compact">
+    <div class="hero-inner">
+      <h1>License activation</h1>
+      <p class="hero-lead">Each license is cryptographically signed and bound to one computer. Activate inside the Glory Desk desktop app.</p>
+    </div>
+  </section>
+
+  <main>
+    <div class="container">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Activation steps</h2>
+          <ol class="steps">
+            <li><a href="/download.html">Install Glory Desk</a> on the target Windows PC.</li>
+            <li>Open the app → sidebar <strong>License</strong>.</li>
+            <li>Copy your <strong>Hardware ID</strong> from that screen.</li>
+            <li>Submit the form below (or email <a href="mailto:support@mtglory.com">support@mtglory.com</a>).</li>
+            <li>Paste the signed key MT GLORY CO sends you → <strong>Activate License</strong>.</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h2>Request a license key</h2>
+          <form id="requestForm">
+            <label for="email">Business email</label>
+            <input id="email" type="email" required placeholder="finance@yourcompany.com" />
+            <label for="company">Company / shop name</label>
+            <input id="company" required placeholder="Your registered business name" />
+            <label for="tier">License tier</label>
+            <select id="tier" required>
+              <option value="Basic">Basic — 150,000 RWF/yr</option>
+              <option value="Medium">Medium — 350,000 RWF/yr</option>
+              <option value="Pro" selected>Pro — 650,000 RWF/yr</option>
+              <option value="Enterprise">Enterprise — Contact sales</option>
+            </select>
+            <label for="hardwareId">Hardware ID (from desktop app)</label>
+            <textarea id="hardwareId" rows="3" required placeholder="24-character ID from Glory Desk → License"></textarea>
+            <button class="btn btn-navy" type="submit">Submit license request</button>
+          </form>
+          <p id="formResult"></p>
+        </div>
+      </div>
+
+      <div class="alert alert-warn">
+        <strong>One machine per key.</strong> Hardware transfer requires support approval. Sharing keys across locations is a license violation.
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer"><div class="footer-bottom">© 2026 MT GLORY CO · <a href="/legal/eula.html">EULA</a></div></footer>
+  <script src="/js/site.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    if (params.get('tier')) document.getElementById('tier').value = params.get('tier');
+    document.getElementById('requestForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const el = document.getElementById('formResult');
+      el.className = 'alert alert-info';
+      el.textContent = 'Submitting…';
+      const { ok, data } = await api('/api/license/request', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: document.getElementById('email').value,
+          company: document.getElementById('company').value,
+          tier: document.getElementById('tier').value,
+          hardwareId: document.getElementById('hardwareId').value
+        })
+      });
+      el.className = ok ? 'alert alert-success' : 'alert alert-error';
+      el.textContent = data.message || (ok ? 'Request received.' : 'Request failed.');
+      if (ok) e.target.reset();
+    });
+  </script>
+</body>
+</html>

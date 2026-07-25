@@ -11,11 +11,19 @@ namespace InventoryManagementSystem.Services
     {
         private readonly DatabaseService _databaseService;
         private readonly AuditService? _auditService;
+        private readonly CurrencyService? _currencyService;
+        private readonly SettingsService? _settingsService;
 
-        public PaymentService(DatabaseService databaseService, AuditService? auditService = null)
+        public PaymentService(
+            DatabaseService databaseService,
+            AuditService? auditService = null,
+            CurrencyService? currencyService = null,
+            SettingsService? settingsService = null)
         {
             _databaseService = databaseService;
             _auditService = auditService;
+            _currencyService = currencyService;
+            _settingsService = settingsService;
         }
 
         // Bank CRUD
@@ -103,17 +111,21 @@ namespace InventoryManagementSystem.Services
             if (documentType == "SalesOrder")
             {
                 var notes = await _databaseService.Connection.Table<CreditNote>()
-                    .Where(c => !c.IsDeleted && c.Status == "Posted" && c.SalesOrderId == documentId)
+                    .Where(c => !c.IsDeleted && c.Status == "Posted")
                     .ToListAsync();
-                return notes.Sum(c => c.Amount);
+                return notes
+                    .Where(c => c.AppliedToSalesOrderId == documentId)
+                    .Sum(c => c.AppliedAmount > 0 ? c.AppliedAmount : c.Amount);
             }
 
             if (documentType == "PurchaseOrder")
             {
                 var notes = await _databaseService.Connection.Table<DebitNote>()
-                    .Where(d => !d.IsDeleted && d.Status == "Posted" && d.PurchaseOrderId == documentId)
+                    .Where(d => !d.IsDeleted && d.Status == "Posted")
                     .ToListAsync();
-                return notes.Sum(d => d.Amount);
+                return notes
+                    .Where(d => d.AppliedToPurchaseOrderId == documentId)
+                    .Sum(d => d.AppliedAmount > 0 ? d.AppliedAmount : d.Amount);
             }
 
             return 0;
@@ -205,12 +217,176 @@ namespace InventoryManagementSystem.Services
                 PostPaymentJournalEntry(conn, payment, docNumber);
             });
 
+            await TryPostFxDifferenceAsync(payment, docNumber, username);
+
             if (_auditService != null)
             {
                 await _auditService.LogActionAsync(username, "PaymentRecorded", documentType, documentId, payment);
             }
 
             return payment;
+        }
+
+        private async Task TryPostFxDifferenceAsync(InvoicePayment payment, string docNumber, string username)
+        {
+            if (_currencyService == null || _settingsService == null) return;
+
+            var baseCurrency = _settingsService.CurrentSettings.CurrencySymbol ?? "RWF";
+            if (string.Equals(payment.Currency, baseCurrency, StringComparison.OrdinalIgnoreCase)) return;
+
+            try
+            {
+                // Invoice/document currency amount converted at payment-date rate vs order-date rate approximation:
+                // use payment amount in doc currency → base at payment date, compare to same amount at a stored rate of 1:1 baseline using latest rate before payment.
+                var rateToday = await _currencyService.GetRateAsync(payment.Currency, baseCurrency, payment.PaymentDate);
+                // Without historical invoice rate stored, treat "document rate" as rate on document date when available.
+                DateTime docDate = payment.PaymentDate;
+                if (payment.DocumentType == "SalesOrder")
+                {
+                    var so = await _databaseService.Connection.FindAsync<SalesOrder>(payment.DocumentId);
+                    if (so != null) docDate = so.OrderDate;
+                }
+                else if (payment.DocumentType == "PurchaseOrder")
+                {
+                    var po = await _databaseService.Connection.FindAsync<PurchaseOrder>(payment.DocumentId);
+                    if (po != null) docDate = po.OrderDate;
+                }
+
+                var rateAtDoc = await _currencyService.GetRateAsync(payment.Currency, baseCurrency, docDate);
+                var baseAtDoc = Math.Round(payment.Amount * rateAtDoc, 4);
+                var baseAtPay = Math.Round(payment.Amount * rateToday, 4);
+                var diff = baseAtPay - baseAtDoc;
+                if (Math.Abs(diff) < 0.01m) return;
+
+                await _databaseService.Connection.RunInTransactionAsync(conn =>
+                {
+                    PostFxJournal(conn, payment, docNumber, diff, baseCurrency);
+                });
+
+                if (_auditService != null)
+                {
+                    await _auditService.LogActionAsync(username, "FxGainLossPosted", payment.DocumentType, payment.DocumentId,
+                        new { payment.PaymentNumber, diff, baseCurrency });
+                }
+            }
+            catch
+            {
+                // Missing exchange rates — skip FX posting without failing the payment
+            }
+        }
+
+        private static void PostFxJournal(SQLite.SQLiteConnection conn, InvoicePayment payment, string docNumber, decimal diff, string baseCurrency)
+        {
+            var journal = conn.Table<Journal>().FirstOrDefault(j => j.SequencePrefix == "EXCH")
+                ?? conn.Table<Journal>().FirstOrDefault(j => j.Type == "Miscellaneous");
+            if (journal == null) return;
+
+            var gain = conn.Table<Account>().FirstOrDefault(a => a.Code == "491000");
+            var loss = conn.Table<Account>().FirstOrDefault(a => a.Code == "591000");
+            var ar = conn.Table<Account>().FirstOrDefault(a => a.Code == "111000");
+            var ap = conn.Table<Account>().FirstOrDefault(a => a.Code == "201000");
+            if (gain == null || loss == null) return;
+
+            var entryCount = conn.Table<JournalEntry>().Count(e => e.JournalId == journal.Id);
+            var entry = new JournalEntry
+            {
+                EntryNumber = $"{journal.SequencePrefix}/{DateTime.Now.Year}/{(entryCount + 1):D5}",
+                JournalId = journal.Id,
+                Date = payment.PaymentDate,
+                Reference = $"FX on payment {payment.PaymentNumber} - {docNumber}",
+                State = "Posted"
+            };
+            conn.Insert(entry);
+
+            var abs = Math.Abs(diff);
+            var isGain = diff > 0;
+            var counterpartId = payment.DocumentType == "SalesOrder" ? (ar?.Id ?? 3) : (ap?.Id ?? 7);
+            var fxAccountId = isGain ? gain.Id : loss.Id;
+
+            if (payment.DocumentType == "SalesOrder")
+            {
+                // Gain: Dr AR, Cr FX Gain  | Loss: Dr FX Loss, Cr AR
+                if (isGain)
+                {
+                    conn.Insert(new JournalLine { JournalEntryId = entry.Id, AccountId = counterpartId, Label = "FX gain", Debit = abs, Credit = 0 });
+                    conn.Insert(new JournalLine { JournalEntryId = entry.Id, AccountId = fxAccountId, Label = "FX gain", Debit = 0, Credit = abs });
+                }
+                else
+                {
+                    conn.Insert(new JournalLine { JournalEntryId = entry.Id, AccountId = fxAccountId, Label = "FX loss", Debit = abs, Credit = 0 });
+                    conn.Insert(new JournalLine { JournalEntryId = entry.Id, AccountId = counterpartId, Label = "FX loss", Debit = 0, Credit = abs });
+                }
+            }
+            else
+            {
+                if (isGain)
+                {
+                    conn.Insert(new JournalLine { JournalEntryId = entry.Id, AccountId = fxAccountId, Label = "FX gain", Debit = 0, Credit = abs });
+                    conn.Insert(new JournalLine { JournalEntryId = entry.Id, AccountId = counterpartId, Label = "FX gain", Debit = abs, Credit = 0 });
+                }
+                else
+                {
+                    conn.Insert(new JournalLine { JournalEntryId = entry.Id, AccountId = counterpartId, Label = "FX loss", Debit = 0, Credit = abs });
+                    conn.Insert(new JournalLine { JournalEntryId = entry.Id, AccountId = fxAccountId, Label = "FX loss", Debit = abs, Credit = 0 });
+                }
+            }
+        }
+
+        public async Task<int> RevalueOpenForeignBalancesAsync(string username)
+        {
+            if (_currencyService == null || _settingsService == null)
+            {
+                throw new InvalidOperationException("Currency service is not configured.");
+            }
+
+            var baseCurrency = _settingsService.CurrentSettings.CurrencySymbol ?? "RWF";
+            var asOf = DateTime.Today;
+            var posted = 0;
+
+            var openSales = await _databaseService.Connection.Table<SalesOrder>()
+                .Where(s => !s.IsDeleted && s.BillingStatus == "Invoiced")
+                .ToListAsync();
+
+            foreach (var so in openSales)
+            {
+                if (string.Equals(so.Currency, baseCurrency, StringComparison.OrdinalIgnoreCase)) continue;
+                var open = await GetOpenBalanceAsync("SalesOrder", so.Id);
+                if (open <= 0) continue;
+
+                try
+                {
+                    var rateDoc = await _currencyService.GetRateAsync(so.Currency, baseCurrency, so.OrderDate);
+                    var rateNow = await _currencyService.GetRateAsync(so.Currency, baseCurrency, asOf);
+                    var diff = Math.Round(open * (rateNow - rateDoc), 4);
+                    if (Math.Abs(diff) < 0.01m) continue;
+
+                    var paymentStub = new InvoicePayment
+                    {
+                        PaymentNumber = $"REVAL-{so.SONumber}",
+                        DocumentType = "SalesOrder",
+                        DocumentId = so.Id,
+                        Amount = open,
+                        Currency = so.Currency,
+                        PaymentDate = asOf
+                    };
+                    await _databaseService.Connection.RunInTransactionAsync(conn =>
+                    {
+                        PostFxJournal(conn, paymentStub, so.SONumber, diff, baseCurrency);
+                    });
+                    posted++;
+                }
+                catch
+                {
+                    // skip docs without rates
+                }
+            }
+
+            if (_auditService != null && posted > 0)
+            {
+                await _auditService.LogActionAsync(username, "FxRevaluation", "ExchangeRate", 0, new { posted, asOf });
+            }
+
+            return posted;
         }
 
         private void PostPaymentJournalEntry(SQLite.SQLiteConnection conn, InvoicePayment payment, string docNumber)
@@ -414,5 +590,176 @@ namespace InventoryManagementSystem.Services
                 .OrderByDescending(s => s.StatementDate)
                 .ToListAsync();
         }
+
+        public static List<(DateTime date, string description, decimal amount, string reference)> ParseBankStatementCsv(string csvContent)
+        {
+            var results = new List<(DateTime date, string description, decimal amount, string reference)>();
+            if (string.IsNullOrWhiteSpace(csvContent)) return results;
+
+            var lines = csvContent.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var raw in lines)
+            {
+                var line = raw.Trim();
+                if (line.Length == 0) continue;
+                if (line.StartsWith("Date", StringComparison.OrdinalIgnoreCase)
+                    || line.StartsWith("Transaction", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue; // header
+                }
+
+                var parts = SplitCsvLine(line);
+                if (parts.Count < 3) continue;
+
+                if (!DateTime.TryParse(parts[0], out var date)) continue;
+                var description = parts[1].Trim();
+                if (!decimal.TryParse(parts[2].Replace(",", ""), System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out var amount)
+                    && !decimal.TryParse(parts[2], out amount))
+                {
+                    continue;
+                }
+
+                var reference = parts.Count > 3 ? parts[3].Trim() : string.Empty;
+                results.Add((date, description, amount, reference));
+            }
+
+            return results;
+        }
+
+        private static List<string> SplitCsvLine(string line)
+        {
+            var result = new List<string>();
+            var current = new System.Text.StringBuilder();
+            var inQuotes = false;
+            foreach (var ch in line)
+            {
+                if (ch == '"')
+                {
+                    inQuotes = !inQuotes;
+                    continue;
+                }
+
+                if (ch == ',' && !inQuotes)
+                {
+                    result.Add(current.ToString());
+                    current.Clear();
+                    continue;
+                }
+
+                current.Append(ch);
+            }
+
+            result.Add(current.ToString());
+            return result;
+        }
+
+        public async Task<BankStatement> ImportBankStatementCsvAsync(
+            int bankAccountId,
+            string csvContent,
+            DateTime? statementDate = null,
+            decimal openingBalance = 0,
+            decimal closingBalance = 0,
+            string reference = "CSV Import")
+        {
+            var lines = ParseBankStatementCsv(csvContent);
+            if (lines.Count == 0)
+            {
+                throw new InvalidOperationException("No valid CSV rows found. Expected: Date,Description,Amount,Reference");
+            }
+
+            return await ImportBankStatementAsync(
+                bankAccountId,
+                statementDate ?? lines.Max(l => l.date).Date,
+                openingBalance,
+                closingBalance,
+                lines,
+                reference);
+        }
+
+        public async Task<List<BankMatchSuggestion>> SuggestMatchesAsync(int bankAccountId, int dateWindowDays = 5)
+        {
+            var payments = await GetUnreconciledPaymentsAsync(bankAccountId);
+            var lines = await GetUnreconciledStatementLinesAsync(bankAccountId);
+            var suggestions = new List<BankMatchSuggestion>();
+
+            foreach (var line in lines.Where(l => l.StatementLine != null))
+            {
+                var candidates = payments
+                    .Where(p => p.Payment != null)
+                    .Select(p =>
+                    {
+                        var amountScore = Math.Abs(Math.Abs(line.Amount) - p.Amount) < 0.01m ? 50 : 0;
+                        var dayDiff = Math.Abs((line.Date.Date - p.Date.Date).TotalDays);
+                        var dateScore = dayDiff <= dateWindowDays ? (int)(30 - dayDiff * 3) : 0;
+                        var refScore = 0;
+                        if (!string.IsNullOrWhiteSpace(line.StatementLine!.Reference)
+                            && !string.IsNullOrWhiteSpace(p.Payment!.Reference)
+                            && line.StatementLine.Reference.Contains(p.Payment.Reference, StringComparison.OrdinalIgnoreCase))
+                        {
+                            refScore = 20;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(line.Label)
+                                 && line.Label.Contains(p.Payment!.PaymentNumber, StringComparison.OrdinalIgnoreCase))
+                        {
+                            refScore = 15;
+                        }
+
+                        return new { Payment = p, Score = amountScore + dateScore + refScore };
+                    })
+                    .Where(x => x.Score >= 50)
+                    .OrderByDescending(x => x.Score)
+                    .ToList();
+
+                var best = candidates.FirstOrDefault();
+                if (best != null)
+                {
+                    suggestions.Add(new BankMatchSuggestion
+                    {
+                        StatementLine = line,
+                        Payment = best.Payment,
+                        Score = best.Score,
+                        Reason = best.Score >= 80 ? "Strong match" : "Suggested match"
+                    });
+                }
+            }
+
+            return suggestions.OrderByDescending(s => s.Score).ToList();
+        }
+
+        public async Task<int> AcceptSuggestedMatchesAsync(int bankAccountId, string username)
+        {
+            var suggestions = await SuggestMatchesAsync(bankAccountId);
+            var matched = 0;
+            var usedPayments = new HashSet<int>();
+            var usedLines = new HashSet<int>();
+
+            foreach (var suggestion in suggestions)
+            {
+                var paymentId = suggestion.Payment?.Payment?.Id ?? 0;
+                var lineId = suggestion.StatementLine?.StatementLine?.Id ?? 0;
+                if (paymentId <= 0 || lineId <= 0) continue;
+                if (!usedPayments.Add(paymentId) || !usedLines.Add(lineId)) continue;
+
+                try
+                {
+                    await MatchPaymentToStatementLineAsync(paymentId, lineId, username);
+                    matched++;
+                }
+                catch
+                {
+                    // Skip conflicts
+                }
+            }
+
+            return matched;
+        }
+    }
+
+    public class BankMatchSuggestion
+    {
+        public ReconciliationCandidate? StatementLine { get; set; }
+        public ReconciliationCandidate? Payment { get; set; }
+        public int Score { get; set; }
+        public string Reason { get; set; } = string.Empty;
     }
 }

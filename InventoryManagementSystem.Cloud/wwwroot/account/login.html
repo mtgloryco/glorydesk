@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in — Glory Desk Account</title>
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="/"><div class="logo-mark">GD</div><div class="logo-text"><strong>Glory Desk</strong><span>Customer portal</span></div></a>
+    </div>
+  </header>
+  <main>
+    <div class="container container-narrow">
+      <div class="card" style="max-width:420px;margin:2rem auto;">
+        <h2>Sign in</h2>
+        <p class="text-muted">View issued licenses and cloud workspace access.</p>
+        <form id="loginForm">
+          <label>Email</label>
+          <input id="email" type="email" required />
+          <label>Password</label>
+          <input id="password" type="password" required />
+          <button class="btn btn-navy" type="submit" style="width:100%;">Sign in</button>
+        </form>
+        <p id="msg" style="margin-top:1rem;"></p>
+        <p class="text-muted" style="font-size:0.875rem;">No account? <a href="/account/register.html">Register</a></p>
+      </div>
+    </div>
+  </main>
+  <script src="/js/site.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const { ok, data } = await api('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.value, password: password.value })
+      });
+      if (ok && data.token) {
+        setToken(data.token);
+        localStorage.setItem('gd_email', data.email);
+        location.href = '/account/dashboard.html';
+      } else {
+        msg.className = 'alert alert-error';
+        msg.textContent = 'Invalid email or password.';
+      }
+    });
+  </script>
+</body>
+</html>

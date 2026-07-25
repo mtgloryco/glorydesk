@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My licenses — Glory Desk</title>
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="/"><div class="logo-mark">GD</div><div class="logo-text"><strong>Glory Desk</strong><span>Customer portal</span></div></a>
+      <nav class="main-nav">
+        <a href="/account/dashboard.html">Licenses</a>
+        <a href="/activate.html">Request license</a>
+        <a href="#" id="logout">Sign out</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <div class="container">
+      <h1>Your licenses</h1>
+      <p class="text-muted">Issued keys for your account email. Paste into Glory Desk → License on the matching PC.</p>
+      <div id="content"><p>Loading…</p></div>
+    </div>
+  </main>
+  <script src="/js/site.js"></script>
+  <script>
+    if (!getToken()) location.href = '/account/login.html';
+    logout.onclick = (e) => { e.preventDefault(); setToken(''); location.href = '/account/login.html'; };
+    (async () => {
+      const res = await fetch('/api/account/licenses', { headers: authHeaders() });
+      if (res.status === 401) { setToken(''); location.href = '/account/login.html'; return; }
+      const licenses = await res.json();
+      const el = document.getElementById('content');
+      if (!licenses.length) {
+        el.innerHTML = '<div class="alert alert-info">No issued licenses yet. <a href="/activate.html">Submit a license request</a>.</div>';
+        return;
+      }
+      el.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Tier</th><th>Company</th><th>Hardware ID</th><th>Expires</th><th>License key</th></tr></thead>
+        <tbody>${licenses.map(l => `<tr>
+          <td><strong>${l.tier}</strong></td>
+          <td>${l.company}</td>
+          <td><code style="font-size:0.75rem;">${l.hardwareId}</code></td>
+          <td>${l.expiry ? l.expiry.substring(0,10) : '—'}</td>
+          <td>${l.licenseKey ? `<code style="font-size:0.7rem;word-break:break-all;">${l.licenseKey}</code>` : '—'}</td>
+        </tr>`).join('')}</tbody></table></div>`;
+    })();
+  </script>
+</body>
+</html>

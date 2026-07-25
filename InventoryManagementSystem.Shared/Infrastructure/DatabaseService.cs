@@ -13,7 +13,7 @@ namespace InventoryManagementSystem.Infrastructure
         private readonly string _databasePath;
         private readonly string _legacyDatabasePath;
         private SQLiteAsyncConnection _connection;
-        private const int CurrentDatabaseVersion = 7;
+        private const int CurrentDatabaseVersion = 8;
 
         public DatabaseService()
         {
@@ -124,6 +124,11 @@ namespace InventoryManagementSystem.Infrastructure
             await _connection.CreateTableAsync<MobileSyncQueue>();
             await _connection.CreateTableAsync<SecurityPolicy>();
             await _connection.CreateTableAsync<BackupSlaLog>();
+            await _connection.CreateTableAsync<DeliveryNote>();
+            await _connection.CreateTableAsync<DeliveryNoteLine>();
+            await _connection.CreateTableAsync<RecurringInvoice>();
+            await _connection.CreateTableAsync<RecurringInvoiceLine>();
+            await _connection.CreateTableAsync<DocumentAttachment>();
 
             // 3. Perform Schema Migrations
             await PerformMigrationsAsync();
@@ -184,6 +189,11 @@ namespace InventoryManagementSystem.Infrastructure
                 if (metaVersion < 7)
                 {
                     await MigrateToV7Async();
+                }
+
+                if (metaVersion < 8)
+                {
+                    await MigrateToV8Async();
                 }
 
                 await _connection.ExecuteAsync($"PRAGMA user_version = {CurrentDatabaseVersion}");
@@ -291,6 +301,54 @@ namespace InventoryManagementSystem.Infrastructure
         private async Task MigrateToV7Async()
         {
             await AddColumnIfNotExistsAsync("Location", "BranchId", "INTEGER NOT NULL DEFAULT 0");
+        }
+
+        private async Task MigrateToV8Async()
+        {
+            await AddColumnIfNotExistsAsync("CreditNote", "AppliedAmount", "REAL NOT NULL DEFAULT 0");
+            await AddColumnIfNotExistsAsync("CreditNote", "AppliedToSalesOrderId", "INTEGER NULL");
+            await AddColumnIfNotExistsAsync("DebitNote", "AppliedAmount", "REAL NOT NULL DEFAULT 0");
+            await AddColumnIfNotExistsAsync("DebitNote", "AppliedToPurchaseOrderId", "INTEGER NULL");
+
+            // Backfill: credit/debit notes already linked to a document count as fully applied.
+            await _connection.ExecuteAsync(
+                "UPDATE CreditNote SET AppliedAmount = Amount, AppliedToSalesOrderId = SalesOrderId " +
+                "WHERE SalesOrderId IS NOT NULL AND SalesOrderId > 0 AND IFNULL(AppliedAmount, 0) = 0");
+            await _connection.ExecuteAsync(
+                "UPDATE DebitNote SET AppliedAmount = Amount, AppliedToPurchaseOrderId = PurchaseOrderId " +
+                "WHERE PurchaseOrderId IS NOT NULL AND PurchaseOrderId > 0 AND IFNULL(AppliedAmount, 0) = 0");
+
+            await EnsureFxAccountsAsync();
+        }
+
+        private async Task EnsureFxAccountsAsync()
+        {
+            var currency = (await _connection.Table<Account>().FirstOrDefaultAsync())?.Currency ?? "RWF";
+            if (await _connection.Table<Account>().Where(a => a.Code == "491000").FirstOrDefaultAsync() == null)
+            {
+                await _connection.InsertAsync(new Account
+                {
+                    Code = "491000",
+                    Name = "Foreign Exchange Gain",
+                    Type = "Income: Other Incomes",
+                    Currency = currency,
+                    IsActive = true,
+                    Description = "Realized / unrealized FX gains"
+                });
+            }
+
+            if (await _connection.Table<Account>().Where(a => a.Code == "591000").FirstOrDefaultAsync() == null)
+            {
+                await _connection.InsertAsync(new Account
+                {
+                    Code = "591000",
+                    Name = "Foreign Exchange Loss",
+                    Type = "Expense: Other Expenses",
+                    Currency = currency,
+                    IsActive = true,
+                    Description = "Realized / unrealized FX losses"
+                });
+            }
         }
 
         private async Task MigrateToV5Async()
@@ -469,12 +527,14 @@ namespace InventoryManagementSystem.Infrastructure
                     new Account { Code = "401000", Name = "Product Sales Revenue", Type = "Income: Income", Currency = defaultCurrency, IsActive = true, Description = "Revenue from product sales" },
                     new Account { Code = "402000", Name = "Service Revenue", Type = "Income: Income", Currency = defaultCurrency, IsActive = true, Description = "Revenue from service contracts" },
                     new Account { Code = "490000", Name = "Other Income", Type = "Income: Other Incomes", Currency = defaultCurrency, IsActive = true, Description = "Non-operating revenues" },
+                    new Account { Code = "491000", Name = "Foreign Exchange Gain", Type = "Income: Other Incomes", Currency = defaultCurrency, IsActive = true, Description = "Realized / unrealized FX gains" },
                     
                     // 5. Expense
                     new Account { Code = "501000", Name = "Cost of Goods Sold (COGS)", Type = "Expense: Cost of Revenue", Currency = defaultCurrency, IsActive = true, Description = "Direct costs of goods sold to customers" },
                     new Account { Code = "511000", Name = "General Expenses", Type = "Expense: Expenses", Currency = defaultCurrency, IsActive = true, Description = "Operational overhead expenses" },
                     new Account { Code = "520000", Name = "Inventory Adjustment Expense", Type = "Expense: Expenses", Currency = defaultCurrency, IsActive = true, Description = "Expenses from inventory write-offs or adjustments" },
-                    new Account { Code = "590000", Name = "Other Expenses", Type = "Expense: Other Expenses", Currency = defaultCurrency, IsActive = true, Description = "Non-operating expenses" }
+                    new Account { Code = "590000", Name = "Other Expenses", Type = "Expense: Other Expenses", Currency = defaultCurrency, IsActive = true, Description = "Non-operating expenses" },
+                    new Account { Code = "591000", Name = "Foreign Exchange Loss", Type = "Expense: Other Expenses", Currency = defaultCurrency, IsActive = true, Description = "Realized / unrealized FX losses" }
                 });
             }
 

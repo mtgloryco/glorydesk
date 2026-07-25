@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Register — Glory Desk Account</title>
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="/"><div class="logo-mark">GD</div><div class="logo-text"><strong>Glory Desk</strong><span>Customer portal</span></div></a>
+    </div>
+  </header>
+  <main>
+    <div class="container container-narrow">
+      <div class="card" style="max-width:420px;margin:2rem auto;">
+        <h2>Create account</h2>
+        <p class="text-muted">Use the same email as your license request to track issued keys.</p>
+        <form id="regForm">
+          <label>Organization name</label>
+          <input id="org" required placeholder="Your company" />
+          <label>Email</label>
+          <input id="email" type="email" required />
+          <label>Password</label>
+          <input id="password" type="password" required minlength="8" />
+          <button class="btn btn-navy" type="submit" style="width:100%;">Create account</button>
+        </form>
+        <p id="msg"></p>
+        <p class="text-muted" style="font-size:0.875rem;">Already registered? <a href="/account/login.html">Sign in</a></p>
+      </div>
+    </div>
+  </main>
+  <script src="/js/site.js"></script>
+  <script>
+    document.getElementById('regForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const { ok, data } = await api('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.value, password: password.value, organizationName: org.value })
+      });
+      if (ok && data.token) {
+        setToken(data.token);
+        location.href = '/account/dashboard.html';
+      } else {
+        msg.className = 'alert alert-error';
+        msg.textContent = data.error || 'Registration failed.';
+      }
+    });
+  </script>
+</body>
+</html>

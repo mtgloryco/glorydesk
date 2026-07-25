@@ -22,6 +22,9 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly BudgetReportService _budgetReportService;
     private readonly Action? _onRequestShowWizard;
     private readonly Action? _onModulesChanged;
+    private readonly NotificationService? _notificationService;
+
+    public ObservableCollection<string> CostingMethodOptions { get; } = new() { "Oldest first (FIFO)", "Average cost" };
 
     // Tabs
     [ObservableProperty]
@@ -597,6 +600,33 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isSudoModeEnabled;
 
+    [ObservableProperty]
+    private string _costingMethod = "FIFO";
+
+    [ObservableProperty]
+    private bool _useSmtp;
+
+    [ObservableProperty]
+    private string _smtpHost = string.Empty;
+
+    [ObservableProperty]
+    private int _smtpPort = 587;
+
+    [ObservableProperty]
+    private string _smtpUsername = string.Empty;
+
+    [ObservableProperty]
+    private string _smtpPassword = string.Empty;
+
+    [ObservableProperty]
+    private string _smtpFromAddress = string.Empty;
+
+    [ObservableProperty]
+    private string _smtpFromName = string.Empty;
+
+    [ObservableProperty]
+    private bool _smtpEnableSsl = true;
+
     // Taxes Properties
     [ObservableProperty]
     private ObservableCollection<Tax> _taxes = new();
@@ -666,7 +696,8 @@ public partial class SettingsViewModel : ViewModelBase
         CurrencyService currencyService,
         BudgetReportService budgetReportService,
         Action? onRequestShowWizard = null,
-        Action? onModulesChanged = null)
+        Action? onModulesChanged = null,
+        NotificationService? notificationService = null)
     {
         _settingsService = settingsService;
         Language = languageService;
@@ -680,6 +711,7 @@ public partial class SettingsViewModel : ViewModelBase
         _budgetReportService = budgetReportService;
         _onRequestShowWizard = onRequestShowWizard;
         _onModulesChanged = onModulesChanged;
+        _notificationService = notificationService;
 
         var s = _settingsService.CurrentSettings;
         _storeName = s.StoreName;
@@ -687,6 +719,15 @@ public partial class SettingsViewModel : ViewModelBase
         _currencySymbol = s.CurrencySymbol;
         _printerName = s.PrinterName;
         _isSudoModeEnabled = s.IsSudoModeEnabled;
+        _costingMethod = ToFriendlyCostingLabel(s.CostingMethod);
+        _useSmtp = s.UseSmtp;
+        _smtpHost = s.SmtpHost;
+        _smtpPort = s.SmtpPort;
+        _smtpUsername = s.SmtpUsername;
+        _smtpPassword = s.SmtpPassword;
+        _smtpFromAddress = s.SmtpFromAddress;
+        _smtpFromName = s.SmtpFromName;
+        _smtpEnableSsl = s.SmtpEnableSsl;
         _statusMessage = "";
 
         foreach (var template in IndustryTemplateService.GetAvailableTemplates())
@@ -717,6 +758,15 @@ public partial class SettingsViewModel : ViewModelBase
             s.CurrencySymbol = CurrencySymbol;
             s.PrinterName = PrinterName;
             s.IsSudoModeEnabled = IsSudoModeEnabled;
+            s.CostingMethod = FromFriendlyCostingLabel(CostingMethod);
+            s.UseSmtp = UseSmtp;
+            s.SmtpHost = SmtpHost;
+            s.SmtpPort = SmtpPort;
+            s.SmtpUsername = SmtpUsername;
+            s.SmtpPassword = SmtpPassword;
+            s.SmtpFromAddress = SmtpFromAddress;
+            s.SmtpFromName = SmtpFromName;
+            s.SmtpEnableSsl = SmtpEnableSsl;
 
             _settingsService.SaveSettings();
             StatusMessage = "Settings saved successfully!";
@@ -724,6 +774,41 @@ public partial class SettingsViewModel : ViewModelBase
         catch
         {
             StatusMessage = "Failed to save settings.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task SendPendingNotifications()
+    {
+        if (_notificationService == null)
+        {
+            StatusMessage = "Notification service unavailable.";
+            return;
+        }
+
+        try
+        {
+            var sent = await _notificationService.ProcessPendingNotificationsAsync();
+            StatusMessage = $"Processed notifications. Sent: {sent}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RevalueForeignBalances()
+    {
+        try
+        {
+            var count = await _paymentService.RevalueOpenForeignBalancesAsync(
+                UserSession.CurrentUser?.Username ?? "System");
+            StatusMessage = $"FX revaluation posted for {count} open document(s).";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
         }
     }
 
@@ -2543,7 +2628,21 @@ public partial class SettingsViewModel : ViewModelBase
         ("Supplier", "Supplier"),
         ("Category", "Category"),
         ("Order", "Order"),
-        ("Invoice", "Invoice")
+        ("Invoice", "Customer Bill"),
+        ("SalesOrder", "Customer Order"),
+        ("SalesQuotation", "Price Quote"),
+        ("PurchaseOrder", "Buy Order"),
+        ("Rfq", "Ask Supplier for Price"),
+        ("CreditNote", "Customer Refund Credit"),
+        ("DebitNote", "Supplier Refund"),
+        ("DeliveryNote", "Delivery Slip"),
+        ("AccountsReceivable", "Money Customers Owe You"),
+        ("AccountsPayable", "Money You Owe Suppliers"),
+        ("Vat", "Sales Tax"),
+        ("Cogs", "Cost of Stock Sold"),
+        ("Journal", "Money Record"),
+        ("BankReconciliation", "Match Bank to Payments"),
+        ("RecurringInvoice", "Repeat Bill")
     };
 
     public ObservableCollection<TerminologyTermItem> TerminologyTerms { get; } = new();
@@ -2567,6 +2666,41 @@ public partial class SettingsViewModel : ViewModelBase
         TerminologyStatusMessage = string.Empty;
     }
 
+    private static string ToFriendlyCostingLabel(string? method) =>
+        BatchTrackingService.IsWeightedAverage(method) ? "Average cost" : "Oldest first (FIFO)";
+
+    private static string FromFriendlyCostingLabel(string? label) =>
+        BatchTrackingService.IsWeightedAverage(label) ||
+        string.Equals(label, "Average cost", StringComparison.OrdinalIgnoreCase)
+            ? "WeightedAverage"
+            : "FIFO";
+
+    [RelayCommand]
+    private void ApplySimpleEnglishLabels()
+    {
+        ApplyTerminologyPreset(PlainLanguagePresets.SimpleEnglish, "Simple everyday English labels applied.");
+    }
+
+    [RelayCommand]
+    private void ApplyAccountingLabels()
+    {
+        ApplyTerminologyPreset(PlainLanguagePresets.AccountingTerms, "Classic accounting labels applied.");
+    }
+
+    private void ApplyTerminologyPreset(System.Collections.Generic.IReadOnlyDictionary<string, string> preset, string successMessage)
+    {
+        var overrides = _settingsService.CurrentSettings.TerminologyOverrides;
+        foreach (var kvp in preset)
+        {
+            overrides[kvp.Key] = kvp.Value;
+        }
+
+        _settingsService.SaveSettings();
+        Language.SetTerminologyOverrides(overrides);
+        LoadTerminologyTerms();
+        TerminologyStatusMessage = successMessage;
+    }
+
     [RelayCommand]
     private void SaveTerminology()
     {
@@ -2587,11 +2721,11 @@ public partial class SettingsViewModel : ViewModelBase
 
             _settingsService.SaveSettings();
             Language.SetTerminologyOverrides(overrides);
-            TerminologyStatusMessage = "Terminology saved successfully!";
+            TerminologyStatusMessage = "Word labels saved successfully!";
         }
         catch (Exception ex)
         {
-            TerminologyStatusMessage = $"Failed to save terminology: {ex.Message}";
+            TerminologyStatusMessage = $"Failed to save labels: {ex.Message}";
         }
     }
 

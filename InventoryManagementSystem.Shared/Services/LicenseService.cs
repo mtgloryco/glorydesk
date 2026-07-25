@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -173,6 +174,29 @@ namespace InventoryManagementSystem.Services
             // Allow string contains for flexibility (e.g. "Basic Starter" contains "Basic")
             return (CurrentLicense.Type?.Contains(tier, StringComparison.OrdinalIgnoreCase) ?? false);
         }
+
+        // --- Evaluation licences ---
+        // Trial keys are ordinary signed licences whose tier is prefixed with
+        // "Trial-" (e.g. "Trial-Pro"), so they inherit that tier's capabilities
+        // and expire through the normal expiry check.
+
+        public bool IsTrial =>
+            CurrentLicense.Type?.StartsWith("Trial", StringComparison.OrdinalIgnoreCase) ?? false;
+
+        /// <summary>Whole days left on a trial; 0 once it has run out.</summary>
+        public int TrialDaysRemaining
+        {
+            get
+            {
+                if (!IsTrial) return 0;
+                var remaining = CurrentLicense.ExpirationDate - DateTime.UtcNow;
+                return remaining.TotalDays <= 0 ? 0 : (int)Math.Ceiling(remaining.TotalDays);
+            }
+        }
+
+        /// <summary>Tier the trial grants, e.g. "Pro" for a "Trial-Pro" licence.</summary>
+        public string TrialUnlockedTier =>
+            IsTrial ? (CurrentLicense.Type ?? string.Empty).Split('-').LastOrDefault() ?? "Pro" : string.Empty;
 
         // --- Permission Helpers ---
 

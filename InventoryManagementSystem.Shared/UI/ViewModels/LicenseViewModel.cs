@@ -35,6 +35,12 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty]
         private bool _isActivatedSuccessfully;
 
+        [ObservableProperty]
+        private bool _isTrial;
+
+        [ObservableProperty]
+        private string _trialNotice = "";
+
         private readonly Action _onActivationSuccess;
 
         public LicenseViewModel(LicenseService licenseService, HardwareIdService hardwareIdService, Action onActivationSuccess)
@@ -61,6 +67,20 @@ namespace InventoryManagementSystem.UI.ViewModels
             }
 
             Fingerprint = lic.DeviceFingerprint;
+
+            IsTrial = _licenseService.IsTrial;
+            if (IsTrial)
+            {
+                var days = _licenseService.TrialDaysRemaining;
+                LicenseType = $"Trial ({_licenseService.TrialUnlockedTier} features)";
+                TrialNotice = days > 0
+                    ? $"Trial: {days} day{(days == 1 ? "" : "s")} remaining. Activate a paid licence to keep working after {ExpirationDate}."
+                    : "Your trial has ended. Activate a paid licence to continue — your data is safe on this computer.";
+            }
+            else
+            {
+                TrialNotice = "";
+            }
         }
 
         [RelayCommand]
@@ -78,9 +98,11 @@ namespace InventoryManagementSystem.UI.ViewModels
             switch (result)
             {
                 case LicenseValidationResult.Valid:
-                    ActivationMessage = "Success! Professional license activated.";
-                    IsActivatedSuccessfully = true;
                     RefreshLicenseInfo();
+                    ActivationMessage = IsTrial
+                        ? $"Trial activated — {_licenseService.TrialDaysRemaining} days of {_licenseService.TrialUnlockedTier} features."
+                        : $"Success! {LicenseType} license activated.";
+                    IsActivatedSuccessfully = true;
                     break;
                 case LicenseValidationResult.Expired:
                     ActivationMessage = "This license key has expired.";

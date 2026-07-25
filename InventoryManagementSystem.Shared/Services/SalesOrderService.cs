@@ -12,13 +12,22 @@ namespace InventoryManagementSystem.Services
         private readonly DatabaseService _databaseService;
         private readonly InventoryService _inventoryService;
         private readonly AuditService? _auditService;
+        private readonly SettingsService? _settingsService;
 
-        public SalesOrderService(DatabaseService databaseService, InventoryService inventoryService, AuditService? auditService = null)
+        public SalesOrderService(
+            DatabaseService databaseService,
+            InventoryService inventoryService,
+            AuditService? auditService = null,
+            SettingsService? settingsService = null)
         {
             _databaseService = databaseService;
             _inventoryService = inventoryService;
             _auditService = auditService;
+            _settingsService = settingsService;
         }
+
+        private string CostingMethod =>
+            _settingsService?.CurrentSettings.CostingMethod ?? "FIFO";
 
         // --- PAYMENT TERMS ---
         public async Task<List<PaymentTerm>> GetAllPaymentTermsAsync()
@@ -279,7 +288,7 @@ namespace InventoryManagementSystem.Services
                         if (product.ProductType == "Good")
                         {
                             cogsAmount = BatchTrackingService.DeductBatchesOnIssue(
-                                conn, product, line.quantityDelivered, movement.Id);
+                                conn, product, line.quantityDelivered, movement.Id, costingMethod: CostingMethod);
                         }
 
                         // --- Double Entry Journal Entry ---
@@ -445,6 +454,79 @@ namespace InventoryManagementSystem.Services
                 }
                 conn.Update(so);
             });
+
+            // Create delivery note for shipped quantities
+            var shipped = deliveryLines.Where(l => l.quantityDelivered > 0).ToList();
+            if (shipped.Count > 0)
+            {
+                await CreateDeliveryNoteAsync(soId, shipped, carrier: "", trackingNumber: "", notes: "");
+            }
+        }
+
+        public async Task<DeliveryNote> CreateDeliveryNoteAsync(
+            int salesOrderId,
+            List<(int itemId, int quantityDelivered)> deliveryLines,
+            string carrier = "",
+            string trackingNumber = "",
+            string notes = "")
+        {
+            var so = await _databaseService.Connection.FindAsync<SalesOrder>(salesOrderId)
+                ?? throw new InvalidOperationException("Sales order not found.");
+
+            var shipped = deliveryLines.Where(l => l.quantityDelivered > 0).ToList();
+            if (shipped.Count == 0)
+            {
+                throw new InvalidOperationException("No quantities to ship.");
+            }
+
+            DeliveryNote? note = null;
+            await _databaseService.Connection.RunInTransactionAsync(conn =>
+            {
+                var count = conn.Table<DeliveryNote>().Count() + 1;
+                note = new DeliveryNote
+                {
+                    DeliveryNoteNumber = $"DN-{DateTime.Now:yyyyMMdd}-{count:D4}",
+                    SalesOrderId = salesOrderId,
+                    CustomerId = so.CustomerId,
+                    ShipDate = DateTime.Now,
+                    Carrier = carrier ?? string.Empty,
+                    TrackingNumber = trackingNumber ?? string.Empty,
+                    Status = "Shipped",
+                    Notes = notes ?? string.Empty,
+                    CreatedByUsername = UserSession.CurrentUser?.Username ?? "System"
+                };
+                conn.Insert(note);
+
+                foreach (var line in shipped)
+                {
+                    var item = conn.Find<SalesOrderItem>(line.itemId);
+                    if (item == null) continue;
+                    conn.Insert(new DeliveryNoteLine
+                    {
+                        DeliveryNoteId = note.Id,
+                        SalesOrderItemId = item.Id,
+                        ProductId = item.ProductId,
+                        Quantity = line.quantityDelivered
+                    });
+                }
+            });
+
+            return note!;
+        }
+
+        public async Task<List<DeliveryNote>> GetDeliveryNotesForOrderAsync(int salesOrderId)
+        {
+            return await _databaseService.Connection.Table<DeliveryNote>()
+                .Where(d => !d.IsDeleted && d.SalesOrderId == salesOrderId)
+                .OrderByDescending(d => d.ShipDate)
+                .ToListAsync();
+        }
+
+        public async Task<List<DeliveryNoteLine>> GetDeliveryNoteLinesAsync(int deliveryNoteId)
+        {
+            return await _databaseService.Connection.Table<DeliveryNoteLine>()
+                .Where(l => l.DeliveryNoteId == deliveryNoteId)
+                .ToListAsync();
         }
 
         // --- SEQUENCE GENERATORS ---

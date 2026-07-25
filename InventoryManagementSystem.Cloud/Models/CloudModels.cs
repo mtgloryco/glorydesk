@@ -26,6 +26,9 @@ public record SyncPullResponse(List<SyncChangeRecord> Changes, DateTime ServerTi
 
 public record BackupInfoResponse(bool Exists, DateTime? UploadedAt, long SizeBytes);
 
+public record LicenseRequestDto(string Email, string Company, string Tier, string HardwareId);
+public record LicenseRequestResponse(bool Success, string Message);
+
 public class CloudUser
 {
     public Guid Id { get; set; }

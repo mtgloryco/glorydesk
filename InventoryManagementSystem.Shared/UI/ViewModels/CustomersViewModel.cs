@@ -12,11 +12,18 @@ namespace InventoryManagementSystem.UI.ViewModels
     public partial class CustomersViewModel : ViewModelBase
     {
         private readonly CustomerService _customerService;
+        private readonly DocumentAttachmentService? _attachmentService;
 
         public LanguageService Language { get; }
 
         [ObservableProperty]
         private ObservableCollection<Customer> _customers = new();
+
+        [ObservableProperty]
+        private ObservableCollection<DocumentAttachment> _customerAttachments = new();
+
+        [ObservableProperty]
+        private string _attachmentStatusMessage = string.Empty;
 
         [ObservableProperty]
         private Customer _currentCustomer = new();
@@ -47,10 +54,14 @@ namespace InventoryManagementSystem.UI.ViewModels
             "Other"
         };
 
-        public CustomersViewModel(CustomerService customerService, LanguageService languageService)
+        public CustomersViewModel(
+            CustomerService customerService,
+            LanguageService languageService,
+            DocumentAttachmentService? attachmentService = null)
         {
             _customerService = customerService;
             Language = languageService;
+            _attachmentService = attachmentService;
             LoadCustomersCommand.Execute(null);
         }
 
@@ -182,6 +193,57 @@ namespace InventoryManagementSystem.UI.ViewModels
         partial void OnSelectedCustomerChanged(Customer? value)
         {
             HasWebsite = value != null && !string.IsNullOrWhiteSpace(value.WebsiteUrl);
+            _ = LoadCustomerAttachmentsAsync();
+        }
+
+        private async Task LoadCustomerAttachmentsAsync()
+        {
+            CustomerAttachments.Clear();
+            if (_attachmentService == null || SelectedCustomer == null || SelectedCustomer.Id <= 0) return;
+            var list = await _attachmentService.GetAttachmentsAsync("Customer", SelectedCustomer.Id);
+            foreach (var a in list) CustomerAttachments.Add(a);
+        }
+
+        [RelayCommand]
+        private async Task AddCustomerAttachment(string? filePath)
+        {
+            AttachmentStatusMessage = string.Empty;
+            if (_attachmentService == null || SelectedCustomer == null || SelectedCustomer.Id <= 0 || string.IsNullOrWhiteSpace(filePath))
+            {
+                AttachmentStatusMessage = "Select a saved customer and a file first.";
+                return;
+            }
+
+            try
+            {
+                await _attachmentService.AddAttachmentAsync(
+                    "Customer",
+                    SelectedCustomer.Id,
+                    filePath,
+                    UserSession.CurrentUser?.Username ?? "System");
+                await LoadCustomerAttachmentsAsync();
+                AttachmentStatusMessage = "Attachment added.";
+            }
+            catch (Exception ex)
+            {
+                AttachmentStatusMessage = ex.Message;
+            }
+        }
+
+        [RelayCommand]
+        private async Task RemoveCustomerAttachment(DocumentAttachment? attachment)
+        {
+            if (_attachmentService == null || attachment == null) return;
+            await _attachmentService.DeleteAttachmentAsync(attachment.Id, UserSession.CurrentUser?.Username ?? "System");
+            await LoadCustomerAttachmentsAsync();
+        }
+
+        [RelayCommand]
+        private void OpenCustomerAttachment(DocumentAttachment? attachment)
+        {
+            if (_attachmentService == null || attachment == null) return;
+            try { _attachmentService.OpenAttachment(attachment); }
+            catch (Exception ex) { AttachmentStatusMessage = ex.Message; }
         }
 
         partial void OnSearchTextChanged(string value)

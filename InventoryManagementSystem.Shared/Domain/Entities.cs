@@ -897,10 +897,15 @@ namespace InventoryManagementSystem.Domain
         public int? CustomerReturnId { get; set; }
         public int? SalesOrderId { get; set; }
         public decimal Amount { get; set; }
+        public decimal AppliedAmount { get; set; }
+        public int? AppliedToSalesOrderId { get; set; }
         public DateTime IssueDate { get; set; } = DateTime.Now;
         public string Status { get; set; } = "Posted";
         public string Reason { get; set; } = string.Empty;
         public string CreatedByUsername { get; set; } = string.Empty;
+
+        [Ignore]
+        public decimal RemainingAmount => Math.Max(0, Amount - AppliedAmount);
     }
 
     public class DebitNote : ISyncableEntity
@@ -915,10 +920,15 @@ namespace InventoryManagementSystem.Domain
         public int? SupplierReturnId { get; set; }
         public int? PurchaseOrderId { get; set; }
         public decimal Amount { get; set; }
+        public decimal AppliedAmount { get; set; }
+        public int? AppliedToPurchaseOrderId { get; set; }
         public DateTime IssueDate { get; set; } = DateTime.Now;
         public string Status { get; set; } = "Posted";
         public string Reason { get; set; } = string.Empty;
         public string CreatedByUsername { get; set; } = string.Empty;
+
+        [Ignore]
+        public decimal RemainingAmount => Math.Max(0, Amount - AppliedAmount);
     }
 
     public class AgingLine
@@ -1192,6 +1202,83 @@ namespace InventoryManagementSystem.Domain
         public bool Success { get; set; }
         public long SizeBytes { get; set; }
         public bool WithinSla { get; set; }
+    }
+
+    // --- PHASE 1 ERP POLISH ---
+
+    public class DeliveryNote : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public string DeliveryNoteNumber { get; set; } = string.Empty;
+        public int SalesOrderId { get; set; }
+        public int CustomerId { get; set; }
+        public DateTime ShipDate { get; set; } = DateTime.Now;
+        public string Carrier { get; set; } = string.Empty;
+        public string TrackingNumber { get; set; } = string.Empty;
+        public string Status { get; set; } = "Shipped";
+        public string Notes { get; set; } = string.Empty;
+        public string CreatedByUsername { get; set; } = string.Empty;
+    }
+
+    public class DeliveryNoteLine
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public int DeliveryNoteId { get; set; }
+        public int SalesOrderItemId { get; set; }
+        public int ProductId { get; set; }
+        public int Quantity { get; set; }
+    }
+
+    public class RecurringInvoice : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int CustomerId { get; set; }
+        public string Frequency { get; set; } = "Monthly"; // Daily, Weekly, Monthly, Yearly
+        public DateTime NextRunDate { get; set; } = DateTime.Today;
+        public DateTime? EndDate { get; set; }
+        public bool IsActive { get; set; } = true;
+        public string Currency { get; set; } = "RWF";
+        public string PaymentTerms { get; set; } = "Immediate Payment";
+        public bool IsTaxInclusive { get; set; }
+        public string Notes { get; set; } = string.Empty;
+        public DateTime? LastGeneratedAt { get; set; }
+        public int? LastSalesOrderId { get; set; }
+        public string CreatedByUsername { get; set; } = string.Empty;
+    }
+
+    public class RecurringInvoiceLine
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public int RecurringInvoiceId { get; set; }
+        public int ProductId { get; set; }
+        public int Quantity { get; set; } = 1;
+        public decimal UnitPrice { get; set; }
+        public int? TaxId { get; set; }
+    }
+
+    public class DocumentAttachment
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public string EntityType { get; set; } = string.Empty; // SalesOrder, Customer, PurchaseOrder, Product
+        public int EntityId { get; set; }
+        public string FileName { get; set; } = string.Empty;
+        public string StoredPath { get; set; } = string.Empty;
+        public string ContentType { get; set; } = string.Empty;
+        public long SizeBytes { get; set; }
+        public string UploadedByUsername { get; set; } = string.Empty;
+        public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
     }
 }
 

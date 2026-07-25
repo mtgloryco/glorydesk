@@ -51,7 +51,52 @@ jobs:
                   files: Releases/*
                   token: ${{ secrets.GITHUB_TOKEN }}
 
-    build-linux:
+            - name: Notify website download page
+              if: success()
+              shell: pwsh
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  WEBHOOK_URL: ${{ secrets.GLORYDESK_RELEASE_WEBHOOK_URL }}
+                  WEBHOOK_SECRET: ${{ secrets.GLORYDESK_RELEASE_WEBHOOK_SECRET }}
+              run: |
+                  if (-not $env:WEBHOOK_URL -or -not $env:WEBHOOK_SECRET) {
+                    Write-Host "Skipping website notify — set secrets GLORYDESK_RELEASE_WEBHOOK_URL and GLORYDESK_RELEASE_WEBHOOK_SECRET"
+                    exit 0
+                  }
+
+                  $tag = "${{ github.event.release.tag_name }}"
+                  $version = $env:VERSION
+                  $repo = "${{ github.repository }}"
+
+                  # Prefer the Velopack Setup exe from this release's assets
+                  $assetsJson = gh api "repos/$repo/releases/tags/$tag" --jq ".assets"
+                  $assets = $assetsJson | ConvertFrom-Json
+                  $setup = $assets | Where-Object { $_.name -match '\.exe$' -and $_.name -match 'Setup|setup|Install' } | Select-Object -First 1
+                  if (-not $setup) {
+                    $setup = $assets | Where-Object { $_.name -match '\.exe$' } | Select-Object -First 1
+                  }
+                  if (-not $setup) {
+                    Write-Error "No .exe asset found on release $tag — website not updated"
+                    exit 1
+                  }
+
+                  $payload = @{
+                    platform    = "Windows"
+                    version     = $version
+                    tag         = $tag
+                    fileName    = $setup.name
+                    downloadUrl = $setup.browser_download_url
+                    sizeBytes   = [int64]$setup.size
+                    publishedAt = (Get-Date).ToUniversalTime().ToString("o")
+                  } | ConvertTo-Json -Compress
+
+                  Write-Host "Notifying website: $($setup.name) ($version)"
+                  $headers = @{
+                    Authorization  = "Bearer $($env:WEBHOOK_SECRET)"
+                    "Content-Type" = "application/json"
+                  }
+                  $res = Invoke-RestMethod -Method Post -Uri $env:WEBHOOK_URL -Headers $headers -Body $payload
+                  Write-Host ($res | ConvertTo-Json -Compress)
         name: Build Linux
         runs-on: ubuntu-latest
         steps:

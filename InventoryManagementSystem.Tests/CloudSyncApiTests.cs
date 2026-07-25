@@ -84,4 +84,65 @@ public class CloudSyncApiTests : IClassFixture<WebApplicationFactory<Program>>
         var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, password));
         loginResponse.EnsureSuccessStatusCode();
     }
+
+    [Fact]
+    public async Task License_Request_And_Static_Portal_Work()
+    {
+        var client = _factory.CreateClient();
+
+        var home = await client.GetAsync("/");
+        home.EnsureSuccessStatusCode();
+        var homeHtml = await home.Content.ReadAsStringAsync();
+        Assert.Contains("Glory Desk", homeHtml);
+
+        var request = await client.PostAsJsonAsync("/api/license/request", new LicenseRequestDto(
+            "shop@example.com",
+            "Test Shop Ltd",
+            "Pro",
+            "HWID-TEST-12345678"));
+        request.EnsureSuccessStatusCode();
+        var body = await request.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(body.GetProperty("success").GetBoolean());
+
+        var badTier = await client.PostAsJsonAsync("/api/license/request", new LicenseRequestDto(
+            "shop@example.com",
+            "Test Shop Ltd",
+            "Invalid",
+            "HWID-TEST-12345678"));
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, badTier.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_Can_Issue_License_Key()
+    {
+        var client = _factory.CreateClient();
+        const string adminKey = "dev-admin-key-change-in-production";
+        var email = $"license-{Guid.NewGuid():N}@example.com";
+
+        var submit = await client.PostAsJsonAsync("/api/license/request", new LicenseRequestDto(
+            email,
+            "Issue Test Co",
+            "Basic",
+            "ABCDEF1234567890ABCDEF12"));
+        submit.EnsureSuccessStatusCode();
+
+        using var adminRequest = new HttpRequestMessage(HttpMethod.Get, "/api/admin/license-requests?status=pending");
+        adminRequest.Headers.Add("X-Admin-Key", adminKey);
+        var listResponse = await client.SendAsync(adminRequest);
+        listResponse.EnsureSuccessStatusCode();
+        var requests = await listResponse.Content.ReadFromJsonAsync<List<LicenseRequestRecord>>();
+        Assert.NotNull(requests);
+        var pending = requests.First(r => r.Email == email);
+
+        using var issueRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/admin/license-requests/{pending.Id}/issue");
+        issueRequest.Headers.Add("X-Admin-Key", adminKey);
+        issueRequest.Content = JsonContent.Create(new AdminIssueRequest(1));
+        var issueResponse = await client.SendAsync(issueRequest);
+        issueResponse.EnsureSuccessStatusCode();
+        var issue = await issueResponse.Content.ReadFromJsonAsync<AdminIssueResponse>();
+        Assert.NotNull(issue);
+        Assert.True(issue.Success);
+        Assert.False(string.IsNullOrWhiteSpace(issue.LicenseKey));
+        Assert.Contains('.', issue.LicenseKey);
+    }
 }

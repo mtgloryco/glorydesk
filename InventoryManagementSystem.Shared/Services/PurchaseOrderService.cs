@@ -14,12 +14,20 @@ namespace InventoryManagementSystem.Services
         private readonly InventoryService _inventoryService;
         private readonly AuditService? _auditService;
 
-        public PurchaseOrderService(DatabaseService databaseService, InventoryService inventoryService, AuditService? auditService = null)
+        public PurchaseOrderService(
+            DatabaseService databaseService,
+            InventoryService inventoryService,
+            AuditService? auditService = null,
+            SettingsService? settingsService = null)
         {
             _databaseService = databaseService;
             _inventoryService = inventoryService;
             _auditService = auditService;
+            _settingsService = settingsService;
         }
+
+        private readonly SettingsService? _settingsService;
+        private string CostingMethod => _settingsService?.CurrentSettings.CostingMethod ?? "FIFO";
 
         public async Task CreatePurchaseOrderAsync(PurchaseOrder po, List<PurchaseOrderItem> items)
         {
@@ -210,7 +218,8 @@ namespace InventoryManagementSystem.Services
                         unitCostWithLanded,
                         DateTime.Now,
                         detail,
-                        $"{po.PONumber}-BATCH-{item.Id}");
+                        $"{po.PONumber}-BATCH-{item.Id}",
+                        CostingMethod);
 
                     conn.Insert(new StockMovement
                     {

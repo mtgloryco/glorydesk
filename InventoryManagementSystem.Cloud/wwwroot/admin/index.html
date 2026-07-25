@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — Glory Desk Licensing</title>
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <div id="gate" class="container container-narrow">
+    <div class="card" style="margin-top:3rem;">
+      <h2>MT GLORY CO — License admin</h2>
+      <p class="text-muted">Enter the admin API key configured on the server (<code>Admin:ApiKey</code>).</p>
+      <label>Admin API key</label>
+      <input id="adminKey" type="password" placeholder="Admin API key" />
+      <button class="btn btn-navy" id="enterBtn">Enter dashboard</button>
+    </div>
+  </div>
+
+  <div id="app" class="admin-layout" style="display:none;">
+    <aside class="admin-sidebar">
+      <h2>Glory Desk Admin</h2>
+      <nav>
+        <a href="#" data-filter="pending">Pending requests</a>
+        <a href="#" data-filter="">All requests</a>
+        <a href="/" style="margin-top:2rem;">← Public site</a>
+      </nav>
+    </aside>
+    <div class="admin-main">
+      <h1>License requests</h1>
+      <p class="text-muted">Approve requests to generate RSA-signed keys. Keys are emailed when SMTP is configured.</p>
+      <div id="adminMsg"></div>
+        <table>
+          <thead><tr><th>Date</th><th>Company</th><th>Email</th><th>Tier</th><th>Hardware ID</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="7">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/site.js"></script>
+  <script>
+    let adminKey = sessionStorage.getItem('gd_admin_key') || '';
+    let filter = 'pending';
+
+    function showApp() {
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('app').style.display = 'grid';
+      loadRequests();
+    }
+
+    if (adminKey) showApp();
+
+    enterBtn.onclick = () => {
+      adminKey = document.getElementById('adminKey').value.trim();
+      if (!adminKey) return;
+      sessionStorage.setItem('gd_admin_key', adminKey);
+      showApp();
+    };
+
+    document.querySelectorAll('[data-filter]').forEach(a => {
+      a.onclick = (e) => { e.preventDefault(); filter = a.dataset.filter; loadRequests(); };
+    });
+
+    async function loadRequests() {
+      const url = filter ? `/api/admin/license-requests?status=${filter}` : '/api/admin/license-requests';
+      const res = await fetch(url, { headers: { 'X-Admin-Key': adminKey } });
+      if (res.status === 401) {
+        sessionStorage.removeItem('gd_admin_key');
+        location.reload();
+        return;
+      }
+      const items = await res.json();
+      const tbody = document.getElementById('rows');
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="7">No requests.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(r => `<tr>
+        <td>${r.createdAt.substring(0,10)}</td>
+        <td>${r.company}</td>
+        <td>${r.email}</td>
+        <td><strong>${r.tier}</strong></td>
+        <td><code style="font-size:0.7rem;">${r.hardwareId.substring(0,20)}…</code></td>
+        <td class="status-${r.status}">${r.status}</td>
+        <td>${r.status === 'pending' ? `
+          <button class="btn btn-sm" onclick="issue('${r.id}')">Issue 1yr</button>
+          <button class="btn btn-sm btn-outline" onclick="reject('${r.id}')">Reject</button>` :
+          r.licenseKey ? `<code style="font-size:0.65rem;">issued</code>` : '—'}</td>
+      </tr>`).join('');
+    }
+
+    async function issue(id) {
+      const res = await fetch(`/api/admin/license-requests/${id}/issue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+        body: JSON.stringify({ validYears: 1 })
+      });
+      const data = await res.json();
+      adminMsg.className = res.ok ? 'alert alert-success' : 'alert alert-error';
+      adminMsg.textContent = data.message + (data.licenseKey ? ' Key copied to response — also visible in customer portal.' : '');
+      loadRequests();
+    }
+
+    async function reject(id) {
+      if (!confirm('Reject this request?')) return;
+      await fetch(`/api/admin/license-requests/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+        body: JSON.stringify({ notes: 'Rejected by admin' })
+      });
+      loadRequests();
+    }
+  </script>
+</body>
+</html>

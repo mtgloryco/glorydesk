@@ -23,19 +23,19 @@ namespace InventoryManagementSystem.UI.ViewModels
     {
         private static readonly ReportNavItem[] ReportCatalog =
         {
-            new() { Key = "balance-sheet", Title = "Balance Sheet", Category = "Financial Statements", Description = "Assets, liabilities, and equity snapshot" },
-            new() { Key = "profit-loss", Title = "Profit & Loss", Category = "Financial Statements", Description = "Income and expenses for the period" },
-            new() { Key = "budget-vs-actual", Title = "Budget vs Actual", Category = "Financial Statements", Description = "Compare budgeted vs actual spending" },
-            new() { Key = "stock-status", Title = "Stock Status", Category = "Inventory", Description = "Current stock levels by product" },
-            new() { Key = "stock-history", Title = "Stock History", Category = "Inventory", Description = "Recent stock movement audit trail" },
-            new() { Key = "ar-aging", Title = "AR Aging", Category = "Receivables & Payables", Description = "Outstanding customer invoices by age" },
-            new() { Key = "ap-aging", Title = "AP Aging", Category = "Receivables & Payables", Description = "Outstanding vendor bills by age" },
-            new() { Key = "vat-return", Title = "VAT Return", Category = "Tax & Banking", Description = "Output vs input VAT for filing" },
-            new() { Key = "bank-reconciliation", Title = "Bank Reconciliation", Category = "Tax & Banking", Description = "Match payments to bank statements" },
-            new() { Key = "abc-analysis", Title = "ABC Analysis", Category = "Advanced Analytics", Description = "Revenue-based product classification (A/B/C)" },
-            new() { Key = "dead-stock", Title = "Dead Stock", Category = "Advanced Analytics", Description = "Products with stock but no recent sales" },
-            new() { Key = "margin-by-category", Title = "Margin by Category", Category = "Advanced Analytics", Description = "Gross margin breakdown by product category" },
-            new() { Key = "month-close", Title = "Month Close Summary", Category = "Advanced Analytics", Description = "Trial balance and open AR/AP for period close" },
+            new() { Key = "balance-sheet", Title = "What You Own vs Owe", Category = "Money Overview", Description = "Snapshot of assets, debts, and owner value" },
+            new() { Key = "profit-loss", Title = "Income vs Expenses", Category = "Money Overview", Description = "Money in and money out for the period" },
+            new() { Key = "budget-vs-actual", Title = "Budget vs Reality", Category = "Money Overview", Description = "Compare planned spending to what actually happened" },
+            new() { Key = "stock-status", Title = "Stock Levels", Category = "Stock", Description = "How much of each product you have now" },
+            new() { Key = "stock-history", Title = "Stock History", Category = "Stock", Description = "Recent stock additions and removals" },
+            new() { Key = "ar-aging", Title = "Unpaid Customer Bills", Category = "Money Owed", Description = "Which customers still owe you, and for how long" },
+            new() { Key = "ap-aging", Title = "Unpaid Supplier Bills", Category = "Money Owed", Description = "Which supplier bills you still need to pay" },
+            new() { Key = "vat-return", Title = "Sales Tax Summary", Category = "Tax & Bank", Description = "Sales tax collected vs tax paid on purchases" },
+            new() { Key = "bank-reconciliation", Title = "Match Bank to Payments", Category = "Tax & Bank", Description = "Connect your bank lines to recorded payments" },
+            new() { Key = "abc-analysis", Title = "Best-Selling Products", Category = "Insights", Description = "Products ranked by revenue importance (A/B/C)" },
+            new() { Key = "dead-stock", Title = "Slow-Moving Stock", Category = "Insights", Description = "Products in stock that are not selling" },
+            new() { Key = "margin-by-category", Title = "Profit by Category", Category = "Insights", Description = "How much profit each product group makes" },
+            new() { Key = "month-close", Title = "Month End Summary", Category = "Insights", Description = "Totals check and unpaid bills for month end" },
         };
 
         private readonly InventoryService _inventoryService;
@@ -49,7 +49,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly AdvancedAnalyticsService _advancedAnalyticsService;
         private readonly MonthCloseService _monthCloseService;
 
-        [ObservableProperty] private string _selectedCategory = "Financial Statements";
+        [ObservableProperty] private string _selectedCategory = "Money Overview";
         [ObservableProperty] private ReportNavItem? _selectedReportNavItem;
         [ObservableProperty] private ObservableCollection<ReportNavItem> _reportsInCategory = new();
         [ObservableProperty] private ObservableCollection<ReportLineWrapper> _balanceSheetLines = new();
@@ -63,7 +63,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private ObservableCollection<Product> _reportData = new();
         [ObservableProperty] private ObservableCollection<StockMovement> _stockHistoryData = new();
         [ObservableProperty] private ObservableCollection<MonthlyProfitReport> _monthlyProfitData = new();
-        [ObservableProperty] private string _reportTitle = "Balance Sheet";
+        [ObservableProperty] private string _reportTitle = "What You Own vs Owe";
         [ObservableProperty] private bool _isLowStockReport;
         [ObservableProperty] private bool _isHistoryReport;
         [ObservableProperty] private bool _isProfitReport;
@@ -118,6 +118,8 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private decimal _importLineAmount;
         [ObservableProperty] private string _importLineReference = string.Empty;
         [ObservableProperty] private string _importErrorMessage = string.Empty;
+        [ObservableProperty] private string _importCsvContent = string.Empty;
+        [ObservableProperty] private ObservableCollection<BankMatchSuggestion> _bankSuggestions = new();
 
         partial void OnSelectedCategoryChanged(string value)
         {
@@ -503,6 +505,71 @@ namespace InventoryManagementSystem.UI.ViewModels
         private void CloseImportStatement()
         {
             IsImportStatementModalOpen = false;
+        }
+
+        [RelayCommand]
+        private async Task ImportStatementCsv()
+        {
+            ImportErrorMessage = string.Empty;
+            if (SelectedReconBankAccount == null)
+            {
+                ReconStatusMessage = "Select a bank account first.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(ImportCsvContent))
+            {
+                ReconStatusMessage = "Paste CSV content (Date,Description,Amount,Reference).";
+                return;
+            }
+
+            try
+            {
+                await _paymentService.ImportBankStatementCsvAsync(
+                    SelectedReconBankAccount.Id,
+                    ImportCsvContent,
+                    ImportStatementDate,
+                    ImportOpeningBalance,
+                    ImportClosingBalance);
+                ReconStatusMessage = "CSV statement imported.";
+                ImportCsvContent = string.Empty;
+                await LoadBankReconciliationAsync();
+            }
+            catch (Exception ex)
+            {
+                ReconStatusMessage = ex.Message;
+            }
+        }
+
+        [RelayCommand]
+        private async Task LoadBankSuggestions()
+        {
+            BankSuggestions.Clear();
+            if (SelectedReconBankAccount == null) return;
+            var suggestions = await _paymentService.SuggestMatchesAsync(SelectedReconBankAccount.Id);
+            foreach (var s in suggestions) BankSuggestions.Add(s);
+            ReconStatusMessage = suggestions.Count == 0
+                ? "No suggestions found."
+                : $"{suggestions.Count} suggested match(es).";
+        }
+
+        [RelayCommand]
+        private async Task AcceptBankSuggestions()
+        {
+            if (SelectedReconBankAccount == null) return;
+            try
+            {
+                var count = await _paymentService.AcceptSuggestedMatchesAsync(
+                    SelectedReconBankAccount.Id,
+                    UserSession.CurrentUser?.Username ?? "System");
+                ReconStatusMessage = $"Accepted {count} suggested match(es).";
+                await LoadBankReconciliationAsync();
+                await LoadBankSuggestions();
+            }
+            catch (Exception ex)
+            {
+                ReconStatusMessage = ex.Message;
+            }
         }
 
         [RelayCommand]

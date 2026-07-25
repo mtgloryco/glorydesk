@@ -53,6 +53,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly CrmPipelineService _crmPipelineService;
     private readonly MobileFieldService _mobileFieldService;
     private readonly SecurityComplianceService _securityComplianceService;
+    private readonly DocumentAttachmentService _documentAttachmentService;
+    private readonly RecurringInvoiceService _recurringInvoiceService;
 
     public IndustryTemplateService IndustryTemplateService => _industryTemplateService;
     public CustomFieldService CustomFieldService => _customFieldService;
@@ -140,7 +142,9 @@ public partial class MainViewModel : ViewModelBase
         MrpPlanningService mrpPlanningService,
         CrmPipelineService crmPipelineService,
         MobileFieldService mobileFieldService,
-        SecurityComplianceService securityComplianceService)
+        SecurityComplianceService securityComplianceService,
+        DocumentAttachmentService documentAttachmentService,
+        RecurringInvoiceService recurringInvoiceService)
     {
         _inventoryService = inventoryService;
         _userService = userService;
@@ -188,10 +192,13 @@ public partial class MainViewModel : ViewModelBase
         _crmPipelineService = crmPipelineService;
         _mobileFieldService = mobileFieldService;
         _securityComplianceService = securityComplianceService;
+        _documentAttachmentService = documentAttachmentService;
+        _recurringInvoiceService = recurringInvoiceService;
 
         // Check for updates on startup (fire and forget, silent)
         _ = CheckForUpdatesInternal(false);
         _ = RefreshCloudSyncStatusAsync();
+        _ = RunPhase1BackgroundJobsAsync();
 
         // 1. Strict License Check: Lock app if status is not Active/Valid
         var status = _licenseService.CurrentLicense.Status;
@@ -292,6 +299,27 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanAccessEnterprise));
 
         OnPropertyChanged(nameof(SidebarGridLength));
+    }
+
+    private async Task RunPhase1BackgroundJobsAsync()
+    {
+        try
+        {
+            await _recurringInvoiceService.RunDueAsync(DateTime.Today, "System");
+        }
+        catch
+        {
+            // Best effort — do not block app startup
+        }
+
+        try
+        {
+            await _notificationService.ProcessPendingNotificationsAsync();
+        }
+        catch
+        {
+            // Best effort
+        }
     }
 
     private async Task RefreshCloudSyncStatusAsync()
@@ -575,19 +603,19 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToSalesQuotations()
     {
-        NavigateTo(new SalesViewModel(_salesOrderService, _customerService, _inventoryService, _taxService, _settingsService, _returnsService, _paymentService, _currencyService, Language, initialTab: 0));
+        NavigateTo(new SalesViewModel(_salesOrderService, _customerService, _inventoryService, _taxService, _settingsService, _returnsService, _paymentService, _currencyService, Language, initialTab: 0, _documentAttachmentService, _recurringInvoiceService));
     }
 
     [RelayCommand]
     public void GoToSalesOrders()
     {
-        NavigateTo(new SalesViewModel(_salesOrderService, _customerService, _inventoryService, _taxService, _settingsService, _returnsService, _paymentService, _currencyService, Language, initialTab: 1));
+        NavigateTo(new SalesViewModel(_salesOrderService, _customerService, _inventoryService, _taxService, _settingsService, _returnsService, _paymentService, _currencyService, Language, initialTab: 1, _documentAttachmentService, _recurringInvoiceService));
     }
 
     [RelayCommand]
     public void GoToCustomers()
     {
-        NavigateTo(new CustomersViewModel(_customerService, Language));
+        NavigateTo(new CustomersViewModel(_customerService, Language, _documentAttachmentService));
     }
 
     [RelayCommand]
@@ -639,7 +667,7 @@ public partial class MainViewModel : ViewModelBase
     public void GoToSettings()
     {
         if (!CanAccessSettings) return;
-        NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService, _paymentService, _customFieldService, _currencyService, _budgetReportService, RunSetupWizardFromSettings, RefreshModuleGatedAccessProperties));
+        NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService, _paymentService, _customFieldService, _currencyService, _budgetReportService, RunSetupWizardFromSettings, RefreshModuleGatedAccessProperties, _notificationService));
     }
 
     [RelayCommand]
@@ -734,7 +762,7 @@ public partial class MainViewModel : ViewModelBase
             GoToLicense();
             return;
         }
-        NavigateTo(new ReturnsViewModel(_returnsService, _inventoryService));
+        NavigateTo(new ReturnsViewModel(_returnsService, _inventoryService, _salesOrderService, _purchaseOrderService));
     }
 
     [RelayCommand]

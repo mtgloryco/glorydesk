@@ -17,12 +17,13 @@
                 <Grid ColumnDefinitions="*, Auto">
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <Button Content="Back to Inventory" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).GoToInventoryCommand}" Background="#007ACC" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4" />
-                        <TextBlock Text="Sales Management" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                        <TextBlock Text="Sales" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0,0,0"/>
                     </StackPanel>
                     
                     <TabStrip Grid.Column="1" SelectedIndex="{Binding SelectedTabIndex}" Margin="0,0,15,0">
-                        <TabItem Header="Sales Quotations"/>
-                        <TabItem Header="Sales Orders"/>
+                        <TabItem Header="Price Quotes"/>
+                        <TabItem Header="Customer Orders"/>
+                        <TabItem Header="Repeat Bills"/>
                     </TabStrip>
                 </Grid>
             </Border>
@@ -30,7 +31,7 @@
             <!-- Search & Actions -->
             <Grid Grid.Row="1" ColumnDefinitions="*, Auto" Margin="0,0,0,15">
                 <TextBox Text="{Binding SearchText}" Watermark="Search by SQ/SO reference or customer..." Width="350" HorizontalAlignment="Left"/>
-                <Button Grid.Column="1" Content="Create Sale Quotation" Command="{Binding OpenAddSaleCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4"/>
+                <Button Grid.Column="1" Content="New Price Quote" Command="{Binding OpenAddSaleCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4"/>
             </Grid>
 
             <!-- Sales List Content -->
@@ -66,7 +67,7 @@
                                 <DataTemplate DataType="domain:SalesOrderListItem">
                                     <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
                                         <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).OpenEditSaleCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,4" CornerRadius="3"/>
-                                        <Button Content="Confirm SO" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).ConfirmQuotationCommand}" CommandParameter="{Binding .}" Background="#2E7D32" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3"/>
+                                        <Button Content="Approve Order" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).ConfirmQuotationCommand}" CommandParameter="{Binding .}" Background="#2E7D32" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3"/>
                                         <Button Content="Print PDF" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PrintPdfCommand}" CommandParameter="{Binding .}" Background="#007ACC" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3"/>
                                         <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).DeleteOrderCommand}" CommandParameter="{Binding .}" Background="#C62828" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3"/>
                                     </StackPanel>
@@ -88,8 +89,8 @@
                         <DataGridTextColumn Header="Reference" Binding="{Binding SalesOrder.SONumber}" Width="120"/>
                         <DataGridTextColumn Header="{Binding Language.Resources[Customer]}" Binding="{Binding CustomerName}" Width="*"/>
                         <DataGridTextColumn Header="Order Date" Binding="{Binding SalesOrder.OrderDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="120"/>
-                        <DataGridTextColumn Header="Delivery Status" Binding="{Binding SalesOrder.DeliveryStatus}" Width="130"/>
-                        <DataGridTextColumn Header="Invoice Status" Binding="{Binding SalesOrder.BillingStatus}" Width="120"/>
+                        <DataGridTextColumn Header="Sent Status" Binding="{Binding SalesOrder.DeliveryStatus}" Width="130"/>
+                        <DataGridTextColumn Header="Payment Status" Binding="{Binding SalesOrder.BillingStatus}" Width="120"/>
                         <DataGridTemplateColumn Header="Total Amount" Width="130">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="domain:SalesOrderListItem">
@@ -102,17 +103,48 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         
-                        <DataGridTemplateColumn Header="Actions" Width="100">
+                        <DataGridTemplateColumn Header="Actions" Width="280">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="domain:SalesOrderListItem">
                                     <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
                                         <Button Content="Details" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).OpenDetailsCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,4" CornerRadius="3"/>
+                                        <Button Content="Delivery Slip" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PrintDeliveryNoteCommand}" CommandParameter="{Binding .}" Background="#E65100" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3" ToolTip.Tip="Print Delivery Slip"/>
+                                        <Button Content="Packing List" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PrintPackingSlipCommand}" CommandParameter="{Binding .}" Background="#6D4C41" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3" ToolTip.Tip="Print Packing List"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <!-- Recurring Invoices Tab -->
+                <StackPanel IsVisible="{Binding IsRecurringTabSelected}" Spacing="12">
+                    <Grid ColumnDefinitions="*, Auto, Auto">
+                        <TextBlock Text="Repeat bills / subscriptions" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Create From Selected Order" Command="{Binding CreateRecurringFromSelectedOrderCommand}" Background="#455A64" Foreground="White" Padding="12,6" Margin="0,0,8,0"/>
+                        <Button Grid.Column="2" Content="Create Due Bills Now" Command="{Binding RunDueRecurringCommand}" Background="#2E7D32" Foreground="White" Padding="12,6"/>
+                    </Grid>
+                    <TextBlock Text="{Binding RecurringStatusMessage}" Foreground="#1565C0"/>
+                    <DataGrid ItemsSource="{Binding RecurringInvoices}" AutoGenerateColumns="False" IsReadOnly="True" Height="400">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn Header="Customer Id" Binding="{Binding CustomerId}" Width="100"/>
+                            <DataGridTextColumn Header="Frequency" Binding="{Binding Frequency}" Width="100"/>
+                            <DataGridTextColumn Header="Next Run" Binding="{Binding NextRunDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="110"/>
+                            <DataGridTextColumn Header="Active" Binding="{Binding IsActive}" Width="70"/>
+                            <DataGridTemplateColumn Header="Actions" Width="180">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="domain:RecurringInvoice">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Button Content="Pause" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PauseRecurringCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,4"/>
+                                            <Button Content="Resume" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).ResumeRecurringCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,4"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
             </Grid>
         </Grid>
 
@@ -619,7 +651,7 @@
                     <StackPanel Grid.Row="2" Margin="0,12,0,0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
                         <TextBlock Text="{Binding DeliveryErrorMessage}" Foreground="Red" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <Button Content="Cancel" Command="{Binding CloseDeliveryModalCommand}" Background="#757575" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12"/>
-                        <Button Content="Confirm Shipment" Command="{Binding SubmitDeliveryCommand}" Background="#E65100" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12" FontWeight="SemiBold"/>
+                        <Button Content="Mark as Sent" Command="{Binding SubmitDeliveryCommand}" Background="#E65100" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Grid>
             </Border>

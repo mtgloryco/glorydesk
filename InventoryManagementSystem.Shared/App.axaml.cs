@@ -41,7 +41,8 @@ public partial class App : Application
                     services.vatExportService, services.budgetReportService, services.currencyService, services.cycleCountService,
                     services.integrationWebhookService, services.notificationService, services.monthCloseService,
                     services.companyBranchService, services.workflowApprovalService, services.mrpPlanningService,
-                    services.crmPipelineService, services.mobileFieldService, services.securityComplianceService),
+                    services.crmPipelineService, services.mobileFieldService, services.securityComplianceService,
+                    services.documentAttachmentService, services.recurringInvoiceService),
             };
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
@@ -60,7 +61,8 @@ public partial class App : Application
                     services.vatExportService, services.budgetReportService, services.currencyService, services.cycleCountService,
                     services.integrationWebhookService, services.notificationService, services.monthCloseService,
                     services.companyBranchService, services.workflowApprovalService, services.mrpPlanningService,
-                    services.crmPipelineService, services.mobileFieldService, services.securityComplianceService),
+                    services.crmPipelineService, services.mobileFieldService, services.securityComplianceService,
+                    services.documentAttachmentService, services.recurringInvoiceService),
             };
         }
 
@@ -84,7 +86,9 @@ public partial class App : Application
         MonthCloseService monthCloseService, CompanyBranchService companyBranchService,
         WorkflowApprovalService workflowApprovalService, MrpPlanningService mrpPlanningService,
         CrmPipelineService crmPipelineService, MobileFieldService mobileFieldService,
-        SecurityComplianceService securityComplianceService) InitializeServices()
+        SecurityComplianceService securityComplianceService,
+        DocumentAttachmentService documentAttachmentService,
+        RecurringInvoiceService recurringInvoiceService) InitializeServices()
     {
         // Initialize Database
         var dbService = new DatabaseService();
@@ -93,15 +97,15 @@ public partial class App : Application
         var hardwareService = new HardwareIdService();
         var cryptoService = new LicenseCryptoService();
         var licenseService = new LicenseService(dbService, hardwareService, cryptoService);
-        var inventoryService = new InventoryService(dbService, licenseService, auditService);
+        var settingsService = new SettingsService();
+        var inventoryService = new InventoryService(dbService, licenseService, auditService, settingsService);
         var analyticsService = new AnalyticsService(dbService);
         var languageService = new LanguageService();
         var updateService = new UpdateService();
-        var settingsService = new SettingsService();
         var receiptService = new ReceiptService(settingsService);
         var supplierService = new SupplierService(dbService);
-        var purchaseOrderService = new PurchaseOrderService(dbService, inventoryService, auditService);
-        var salesOrderService = new SalesOrderService(dbService, inventoryService, auditService);
+        var purchaseOrderService = new PurchaseOrderService(dbService, inventoryService, auditService, settingsService);
+        var salesOrderService = new SalesOrderService(dbService, inventoryService, auditService, settingsService);
         var forecastingService = new ForecastingService(dbService);
         var expiryService = new ExpiryService(dbService);
         
@@ -118,7 +122,6 @@ public partial class App : Application
         var journalService = new JournalService(dbService);
         var accountingReportService = new AccountingReportService(dbService);
         var manufacturingService = new ManufacturingService(dbService, auditService);
-        var paymentService = new PaymentService(dbService, auditService);
         var customFieldService = new CustomFieldService(dbService);
         var customerService = new CustomerService(dbService);
         var industryTemplateService = new IndustryTemplateService(dbService);
@@ -127,9 +130,10 @@ public partial class App : Application
         var vatExportService = new VatExportService(dbService);
         var budgetReportService = new BudgetReportService(dbService, auditService);
         var currencyService = new CurrencyService(dbService, auditService);
+        var paymentService = new PaymentService(dbService, auditService, currencyService, settingsService);
         var cycleCountService = new CycleCountService(dbService, auditService);
         var integrationWebhookService = new IntegrationWebhookService(dbService, auditService);
-        var notificationService = new NotificationService(dbService, paymentService, auditService);
+        var notificationService = new NotificationService(dbService, paymentService, auditService, settingsService);
         var monthCloseService = new MonthCloseService(dbService, accountingReportService, paymentService, auditService);
         var companyBranchService = new CompanyBranchService(dbService, auditService);
         var workflowApprovalService = new WorkflowApprovalService(dbService, purchaseOrderService, auditService);
@@ -137,9 +141,20 @@ public partial class App : Application
         var crmPipelineService = new CrmPipelineService(dbService, salesOrderService, auditService);
         var mobileFieldService = new MobileFieldService(dbService, auditService);
         var securityComplianceService = new SecurityComplianceService(dbService, auditService);
+        var documentAttachmentService = new DocumentAttachmentService(dbService, auditService);
+        var recurringInvoiceService = new RecurringInvoiceService(dbService, salesOrderService, auditService);
 
-        // Apply any previously-saved terminology overrides immediately so the UI reflects them from startup
-        languageService.SetTerminologyOverrides(settingsService.CurrentSettings.TerminologyOverrides);
+        // Apply plain-English defaults when no custom word labels are saved yet
+        var terminology = settingsService.CurrentSettings.TerminologyOverrides;
+        if (terminology.Count == 0)
+        {
+            foreach (var kvp in PlainLanguagePresets.SimpleEnglish)
+            {
+                terminology[kvp.Key] = kvp.Value;
+            }
+            settingsService.SaveSettings();
+        }
+        languageService.SetTerminologyOverrides(terminology);
 
         // Initialize services on a background thread to prevent UI thread deadlock
         Task.Run(async () =>
@@ -160,7 +175,8 @@ public partial class App : Application
             vatExportService, budgetReportService, currencyService, cycleCountService,
             integrationWebhookService, notificationService, monthCloseService,
             companyBranchService, workflowApprovalService, mrpPlanningService,
-            crmPipelineService, mobileFieldService, securityComplianceService);
+            crmPipelineService, mobileFieldService, securityComplianceService,
+            documentAttachmentService, recurringInvoiceService);
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

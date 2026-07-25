@@ -409,8 +409,23 @@
                                   <Button Content="Refresh" Command="{Binding LoadBankReconciliationCommand}" Background="#007ACC" Foreground="White" Padding="12,8" VerticalAlignment="Bottom"/>
                                   <Button Grid.Column="2" Content="Import Statement" Command="{Binding OpenImportStatementCommand}" Background="#5C6BC0" Foreground="White" Padding="12,8" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="0,0,10,0"/>
                                   <Button Grid.Column="2" Content="Match Selected" Command="{Binding MatchReconciliationCommand}" Background="#2E7D32" Foreground="White" Padding="12,8" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="140,0,0,0"/>
+                                  <Button Grid.Column="2" Content="Suggest Matches" Command="{Binding LoadBankSuggestionsCommand}" Background="#00838F" Foreground="White" Padding="12,8" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="280,0,0,0"/>
+                                  <Button Grid.Column="2" Content="Accept Suggestions" Command="{Binding AcceptBankSuggestionsCommand}" Background="#6A1B9A" Foreground="White" Padding="12,8" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="430,0,0,0"/>
                               </Grid>
                               <TextBlock Text="{Binding ReconStatusMessage}" Foreground="Gray"/>
+                              <StackPanel Spacing="6">
+                                  <TextBlock Text="Paste bank CSV (Date,Description,Amount,Reference)" FontWeight="SemiBold"/>
+                                  <TextBox Text="{Binding ImportCsvContent}" AcceptsReturn="True" Height="70" TextWrapping="Wrap"/>
+                                  <Button Content="Import CSV" Command="{Binding ImportStatementCsvCommand}" Background="#455A64" Foreground="White" HorizontalAlignment="Left" Padding="12,6"/>
+                              </StackPanel>
+                              <DataGrid ItemsSource="{Binding BankSuggestions}" AutoGenerateColumns="False" IsReadOnly="True" Height="100">
+                                  <DataGrid.Columns>
+                                      <DataGridTextColumn Header="Score" Binding="{Binding Score}" Width="70"/>
+                                      <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="120"/>
+                                      <DataGridTextColumn Header="Payment" Binding="{Binding Payment.Label}" Width="*"/>
+                                      <DataGridTextColumn Header="Statement" Binding="{Binding StatementLine.Label}" Width="*"/>
+                                  </DataGrid.Columns>
+                              </DataGrid>
                               <Grid ColumnDefinitions="*, 20, *">
                                   <StackPanel Grid.Column="0" Spacing="8">
                                       <TextBlock Text="Unreconciled Payments" FontWeight="Bold"/>

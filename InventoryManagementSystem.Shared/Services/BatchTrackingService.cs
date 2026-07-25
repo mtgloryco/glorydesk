@@ -80,9 +80,26 @@ namespace InventoryManagementSystem.Services
             decimal costPerUnit,
             DateTime purchaseDate,
             BatchReceiveDetail? detail,
-            string defaultBatchPrefix)
+            string defaultBatchPrefix,
+            string costingMethod = "FIFO")
         {
             ValidateReceiveDetails(product, quantity, detail);
+
+            if (IsWeightedAverage(costingMethod) && product.ProductType == "Good" && quantity > 0)
+            {
+                // Callers may have already incremented StockQuantity; infer pre-receipt qty.
+                var qtyAfterOrCurrent = Math.Max(0, product.StockQuantity);
+                var oldQty = qtyAfterOrCurrent >= quantity
+                    ? qtyAfterOrCurrent - quantity
+                    : qtyAfterOrCurrent;
+                var newQty = oldQty + quantity;
+                if (newQty > 0)
+                {
+                    product.Cost = ((oldQty * product.Cost) + (quantity * costPerUnit)) / newQty;
+                    conn.Update(product);
+                }
+            }
+
             var batches = new List<PurchaseBatch>();
 
             if (RequiresSerialTracking(product))
@@ -160,14 +177,27 @@ namespace InventoryManagementSystem.Services
             return batches;
         }
 
+        public static bool IsWeightedAverage(string? costingMethod) =>
+            string.Equals(costingMethod, "WeightedAverage", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(costingMethod, "Average cost", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(costingMethod, "AverageCost", StringComparison.OrdinalIgnoreCase);
+
         public static decimal DeductBatchesOnIssue(
             SQLiteConnection conn,
             Product product,
             int quantity,
             int stockMovementId,
-            IReadOnlyList<string>? specificBatchIds = null)
+            IReadOnlyList<string>? specificBatchIds = null,
+            string costingMethod = "FIFO")
         {
             if (product.ProductType != "Good" || quantity <= 0) return 0;
+
+            if (IsWeightedAverage(costingMethod))
+            {
+                // Still consume batches for lot/serial integrity; COGS uses running average cost.
+                DeductBatchesOnIssue(conn, product, quantity, stockMovementId, specificBatchIds, "FIFO");
+                return Math.Round(product.Cost * quantity, 4);
+            }
 
             decimal cogsAmount = 0;
             int remainingToDeduct = quantity;

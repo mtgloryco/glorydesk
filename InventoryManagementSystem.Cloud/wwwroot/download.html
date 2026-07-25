@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Download — Glory Desk</title>
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <div class="topbar">Official download from MT GLORY CO · Verify checksum before install</div>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="/"><div class="logo-mark">GD</div><div class="logo-text"><strong>Glory Desk</strong><span>MT GLORY CO</span></div></a>
+      <nav class="main-nav">
+        <a href="/" data-nav>Product</a>
+        <a href="/pricing.html" data-nav>Pricing</a>
+        <a href="/download.html" data-nav>Download</a>
+        <a href="/activate.html" data-nav>Activate</a>
+        <a href="/docs.html" data-nav>Docs</a>
+        <a href="/account/login.html" data-nav>Account</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero hero-compact">
+    <div class="hero-inner">
+      <h1>Download Glory Desk</h1>
+      <p class="hero-lead">Windows installer · Version <span id="ver">1.0.1</span> · ~<span id="size">102</span> MB</p>
+    </div>
+  </section>
+
+  <main>
+    <div class="container container-narrow">
+      <div class="card text-center">
+        <h2>Windows 64-bit</h2>
+        <p class="text-muted" id="fileName">GloryDesk_Setup_v1.0.1_Windows.exe</p>
+        <p><a class="btn btn-lg btn-navy" id="downloadBtn" href="#">Download installer</a></p>
+        <p class="text-muted" style="font-size:0.875rem;">Includes .NET runtime and Visual C++ redistributable.</p>
+
+        <div class="screenshot-strip" aria-hidden="false">
+          <figure class="screenshot-card">
+            <img src="/images/screenshots/dashboard.png" alt="Glory Desk dashboard" loading="lazy" decoding="async" />
+            <figcaption>Dashboard</figcaption>
+          </figure>
+          <figure class="screenshot-card">
+            <img src="/images/screenshots/pos.png" alt="Glory Desk POS" loading="lazy" decoding="async" />
+            <figcaption>POS</figcaption>
+          </figure>
+          <figure class="screenshot-card">
+            <img src="/images/screenshots/inventory.png" alt="Glory Desk inventory" loading="lazy" decoding="async" />
+            <figcaption>Inventory</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>System requirements</h2>
+        <ul id="requirements">
+          <li>Windows 10 or Windows 11 (64-bit)</li>
+          <li>4 GB RAM minimum (8 GB recommended)</li>
+          <li>500 MB free disk space</li>
+          <li>1280×720 display minimum</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>After installation</h2>
+        <ol class="steps">
+          <li>Open <strong>Glory Desk</strong> from the Start menu.</li>
+          <li>Go to <strong>License</strong> and copy your <strong>Hardware ID</strong>.</li>
+          <li><a href="/activate.html">Request or activate</a> your license tier.</li>
+          <li>Sign in and change the default password (<code>admin</code> / <code>admin123</code>).</li>
+        </ol>
+      </div>
+
+      <div class="alert alert-info">
+        <strong>Enterprise deployments:</strong> Contact <a href="mailto:support@mtglory.com">support@mtglory.com</a> for volume licensing, hardware transfer, and on-site setup in Rwanda.
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-bottom">© 2026 MT GLORY CO · <a href="/legal/eula.html">EULA</a> · <a href="mailto:support@mtglory.com">Support</a></div>
+  </footer>
+  <script src="/js/site.js"></script>
+  <script>
+    (async () => {
+      const { data } = await api('/api/downloads/info');
+      if (!data) return;
+      document.getElementById('ver').textContent = data.version;
+      document.getElementById('size').textContent = data.sizeMb;
+      document.getElementById('fileName').textContent = data.fileName;
+      const btn = document.getElementById('downloadBtn');
+      btn.href = data.downloadUrl;
+      btn.textContent = data.available ? 'Download installer' : 'Download from GitHub Releases';
+      if (data.requirements) {
+        document.getElementById('requirements').innerHTML = data.requirements.map(r => `<li>${r}</li>`).join('');
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -13,12 +13,16 @@ namespace InventoryManagementSystem.Services
         private readonly LicenseService _licenseService;
         private readonly AuditService _auditService;
 
-        public InventoryService(DatabaseService databaseService, LicenseService licenseService, AuditService auditService)
+        public InventoryService(DatabaseService databaseService, LicenseService licenseService, AuditService auditService, SettingsService? settingsService = null)
         {
             _databaseService = databaseService;
             _licenseService = licenseService;
             _auditService = auditService;
+            _settingsService = settingsService;
         }
+
+        private readonly SettingsService? _settingsService;
+        private string CostingMethod => _settingsService?.CurrentSettings.CostingMethod ?? "FIFO";
 
         private ProductHistoryService? _productHistoryService;
         public ProductHistoryService ProductHistory =>
@@ -225,7 +229,7 @@ namespace InventoryManagementSystem.Services
                     };
                     BatchTrackingService.CreateBatchesOnReceive(
                         conn, product, quantity, customCost ?? product.Cost, DateTime.Now,
-                        receiveDetail, $"BATCH-{productId}");
+                        receiveDetail, $"BATCH-{productId}", CostingMethod);
                 }
                 else if (type == "OUT")
                 {
@@ -303,16 +307,19 @@ namespace InventoryManagementSystem.Services
                             conn.Insert(usage);
 
                             cogsAmount += deductFromThisBatch * batch.CostPerUnit;
-
                             batch.QuantityRemaining -= deductFromThisBatch;
                             conn.Update(batch);
-
                             remainingToDeduct -= deductFromThisBatch;
                         }
 
                         if (remainingToDeduct > 0)
                         {
-                            throw new InvalidOperationException("Insufficient batch stock.");
+                            throw new InvalidOperationException($"Insufficient batch stock for {product.Name}.");
+                        }
+
+                        if (BatchTrackingService.IsWeightedAverage(CostingMethod))
+                        {
+                            cogsAmount = Math.Round(product.Cost * quantity, 4);
                         }
                     }
 

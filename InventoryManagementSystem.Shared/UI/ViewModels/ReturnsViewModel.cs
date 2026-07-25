@@ -13,6 +13,8 @@ public partial class ReturnsViewModel : ViewModelBase
 {
     private readonly ReturnsService _returnsService;
     private readonly InventoryService _inventoryService;
+    private readonly SalesOrderService? _salesOrderService;
+    private readonly PurchaseOrderService? _purchaseOrderService;
 
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private Product? _selectedProduct;
@@ -23,6 +25,10 @@ public partial class ReturnsViewModel : ViewModelBase
     [ObservableProperty] private CreditNoteDisplayRow? _selectedCreditNote;
     [ObservableProperty] private DebitNoteDisplayRow? _selectedDebitNote;
     [ObservableProperty] private string _statusMessage = string.Empty;
+    [ObservableProperty] private int _applyToSalesOrderId;
+    [ObservableProperty] private decimal _applyCreditAmount;
+    [ObservableProperty] private int _applyToPurchaseOrderId;
+    [ObservableProperty] private decimal _applyDebitAmount;
 
     public ObservableCollection<Product> Products { get; } = new();
     public ObservableCollection<CustomerReturn> RecentReturns { get; } = new();
@@ -30,10 +36,16 @@ public partial class ReturnsViewModel : ViewModelBase
     public ObservableCollection<CreditNoteDisplayRow> CreditNotes { get; } = new();
     public ObservableCollection<DebitNoteDisplayRow> DebitNotes { get; } = new();
 
-    public ReturnsViewModel(ReturnsService returnsService, InventoryService inventoryService)
+    public ReturnsViewModel(
+        ReturnsService returnsService,
+        InventoryService inventoryService,
+        SalesOrderService? salesOrderService = null,
+        PurchaseOrderService? purchaseOrderService = null)
     {
         _returnsService = returnsService;
         _inventoryService = inventoryService;
+        _salesOrderService = salesOrderService;
+        _purchaseOrderService = purchaseOrderService;
         _ = LoadInitialData();
     }
 
@@ -86,6 +98,76 @@ public partial class ReturnsViewModel : ViewModelBase
         RefundAmount = 0;
         StatusMessage = $"Return {ret.ReturnNumber} processed.";
         await LoadInitialData();
+    }
+
+    [RelayCommand]
+    private async Task ApplyCreditNote()
+    {
+        if (SelectedCreditNote == null)
+        {
+            StatusMessage = "Select a credit note first.";
+            return;
+        }
+
+        try
+        {
+            var amount = ApplyCreditAmount > 0 ? ApplyCreditAmount : SelectedCreditNote.RemainingAmount;
+            var soId = ApplyToSalesOrderId > 0
+                ? ApplyToSalesOrderId
+                : SelectedCreditNote.Note.SalesOrderId ?? 0;
+            if (soId <= 0)
+            {
+                StatusMessage = "Enter the sales order Id to apply against.";
+                return;
+            }
+
+            await _returnsService.ApplyCreditNoteAsync(
+                SelectedCreditNote.Note.Id,
+                soId,
+                amount,
+                UserSession.CurrentUser?.Username ?? "System");
+            StatusMessage = $"Applied {amount:N2} credit to SO #{soId}.";
+            await LoadInitialData();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ApplyDebitNote()
+    {
+        if (SelectedDebitNote == null)
+        {
+            StatusMessage = "Select a debit note first.";
+            return;
+        }
+
+        try
+        {
+            var amount = ApplyDebitAmount > 0 ? ApplyDebitAmount : SelectedDebitNote.RemainingAmount;
+            var poId = ApplyToPurchaseOrderId > 0
+                ? ApplyToPurchaseOrderId
+                : SelectedDebitNote.Note.PurchaseOrderId ?? 0;
+            if (poId <= 0)
+            {
+                StatusMessage = "Enter the purchase order Id to apply against.";
+                return;
+            }
+
+            await _returnsService.ApplyDebitNoteAsync(
+                SelectedDebitNote.Note.Id,
+                poId,
+                amount,
+                UserSession.CurrentUser?.Username ?? "System");
+            StatusMessage = $"Applied {amount:N2} debit to PO #{poId}.";
+            await LoadInitialData();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
+        }
     }
 
     [RelayCommand]

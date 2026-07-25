@@ -125,11 +125,57 @@ public class CloudDatabase
                 UploadedAt TEXT NOT NULL,
                 SizeBytes INTEGER NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS LicenseRequests (
+                Id TEXT PRIMARY KEY,
+                Email TEXT NOT NULL,
+                Company TEXT NOT NULL,
+                Tier TEXT NOT NULL,
+                HardwareId TEXT NOT NULL,
+                CreatedAt TEXT NOT NULL,
+                Status TEXT NOT NULL DEFAULT 'pending',
+                LicenseKey TEXT,
+                LicenseId TEXT,
+                Expiry TEXT,
+                ProcessedAt TEXT,
+                AdminNotes TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS IX_LicenseRequests_Created
+                ON LicenseRequests(CreatedAt);
             """;
 
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
         await cmd.ExecuteNonQueryAsync();
+
+        await MigrateSqliteLicenseRequestsAsync(conn);
+    }
+
+    private static async Task MigrateSqliteLicenseRequestsAsync(SqliteConnection conn)
+    {
+        var columns = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        await using (var info = conn.CreateCommand())
+        {
+            info.CommandText = "PRAGMA table_info(LicenseRequests)";
+            await using var reader = await info.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                columns[reader.GetString(1)] = reader.GetString(1);
+            }
+        }
+
+        foreach (var (name, type) in new[] {
+            ("LicenseKey", "TEXT"), ("LicenseId", "TEXT"), ("Expiry", "TEXT"),
+            ("ProcessedAt", "TEXT"), ("AdminNotes", "TEXT") })
+        {
+            if (!columns.ContainsKey(name))
+            {
+                await using var alter = conn.CreateCommand();
+                alter.CommandText = $"ALTER TABLE LicenseRequests ADD COLUMN {name} {type}";
+                await alter.ExecuteNonQueryAsync();
+            }
+        }
     }
 
     private static async Task ExecutePostgresSchemaAsync(NpgsqlConnection conn)
@@ -170,9 +216,47 @@ public class CloudDatabase
                 uploaded_at TIMESTAMPTZ NOT NULL,
                 size_bytes BIGINT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS license_requests (
+                id UUID PRIMARY KEY,
+                email TEXT NOT NULL,
+                company TEXT NOT NULL,
+                tier TEXT NOT NULL,
+                hardware_id TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                license_key TEXT,
+                license_id UUID,
+                expiry TIMESTAMPTZ,
+                processed_at TIMESTAMPTZ,
+                admin_notes TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_license_requests_created
+                ON license_requests(created_at);
             """;
 
         await using var cmd = new NpgsqlCommand(sql, conn);
         await cmd.ExecuteNonQueryAsync();
+
+        await MigratePostgresLicenseRequestsAsync(conn);
+    }
+
+    private static async Task MigratePostgresLicenseRequestsAsync(NpgsqlConnection conn)
+    {
+        var alters = new[]
+        {
+            "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS license_key TEXT",
+            "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS license_id UUID",
+            "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS expiry TIMESTAMPTZ",
+            "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ",
+            "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS admin_notes TEXT"
+        };
+
+        foreach (var sql in alters)
+        {
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            await cmd.ExecuteNonQueryAsync();
+        }
     }
 }

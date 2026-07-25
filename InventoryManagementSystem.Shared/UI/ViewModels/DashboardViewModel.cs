@@ -147,6 +147,12 @@ namespace InventoryManagementSystem.UI.ViewModels
                 if (license.Status == "Expired") LicenseStatusDisplay = $"Expired on {license.ExpirationDate:d}";
                 else if (license.Status == "Locked") LicenseStatusDisplay = "Software Locked. Activation Required.";
                 else if (license.Status == "HardwareMismatch") LicenseStatusDisplay = "Hardware ID Mismatch.";
+                else if (_licenseService.IsTrial)
+                {
+                    var days = _licenseService.TrialDaysRemaining;
+                    LicenseTypeDisplay = $"Trial ({_licenseService.TrialUnlockedTier})";
+                    LicenseStatusDisplay = $"Trial — {days} day{(days == 1 ? "" : "s")} left (ends {license.ExpirationDate:d})";
+                }
                 else LicenseStatusDisplay = $"Valid until {license.ExpirationDate:d}";
             }
             else

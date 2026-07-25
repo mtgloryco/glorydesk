@@ -307,5 +307,134 @@ namespace InventoryManagementSystem.Services
 
             return path;
         }
+
+        public string GenerateDeliveryNotePdf(
+            DeliveryNote note,
+            SalesOrder so,
+            List<DeliveryNoteLine> lines,
+            List<Product> allProducts,
+            Customer? customer,
+            bool asPackingSlip = false)
+        {
+            var dateStr = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var cleanRef = note.DeliveryNoteNumber.Replace("-", "_").Replace(" ", "_");
+            var prefix = asPackingSlip ? "PACK" : "DEL";
+            var filename = $"{prefix}_{cleanRef}_{dateStr}.pdf";
+            var outputFolder = AppPaths.EnsureDocumentsSubfolder("Sales");
+            var path = Path.Combine(outputFolder, filename);
+            Directory.CreateDirectory(outputFolder);
+
+            var companyName = !string.IsNullOrWhiteSpace(so.Company) ? so.Company : _settingsService.CurrentSettings.StoreName;
+            var companyAddress = _settingsService.CurrentSettings.StoreAddress;
+
+            Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(1.5f, Unit.Centimetre);
+                    page.PageColor(Colors.White);
+                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily(Fonts.Arial));
+
+                    page.Header().Column(col =>
+                    {
+                        col.Item().Row(row =>
+                        {
+                            row.RelativeItem().Column(c =>
+                            {
+                                c.Item().Text(companyName).FontSize(18).Bold().FontColor(Colors.Green.Darken4);
+                                if (!string.IsNullOrEmpty(companyAddress))
+                                    c.Item().Text(companyAddress).FontSize(9).FontColor(Colors.Grey.Darken2);
+                            });
+                            row.RelativeItem().AlignRight().Column(c =>
+                            {
+                                c.Item().Text(asPackingSlip ? "Packing Slip" : "Delivery Note").FontSize(22).Bold();
+                                c.Item().Text($"# {note.DeliveryNoteNumber}").FontSize(14).SemiBold().FontColor(Colors.Green.Darken2);
+                                c.Item().PaddingTop(8).Text($"Ship Date: {note.ShipDate:yyyy-MM-dd}").FontSize(9);
+                                c.Item().Text($"Sales Order: {so.SONumber}").FontSize(9);
+                                if (!string.IsNullOrWhiteSpace(note.Carrier))
+                                    c.Item().Text($"Carrier: {note.Carrier}").FontSize(9);
+                                if (!string.IsNullOrWhiteSpace(note.TrackingNumber))
+                                    c.Item().Text($"Tracking: {note.TrackingNumber}").FontSize(9);
+                            });
+                        });
+                        col.Item().PaddingTop(12).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+                    });
+
+                    page.Content().Column(col =>
+                    {
+                        col.Spacing(12);
+                        col.Item().PaddingTop(8).Column(c =>
+                        {
+                            c.Item().Text("Ship To:").FontSize(11).Bold().FontColor(Colors.Grey.Darken3);
+                            if (customer != null)
+                            {
+                                c.Item().Text(customer.Name).FontSize(12).Bold();
+                                if (!string.IsNullOrEmpty(customer.Address))
+                                    c.Item().Text(customer.Address).FontSize(9);
+                                if (!string.IsNullOrEmpty(customer.Phone))
+                                    c.Item().Text($"Phone: {customer.Phone}").FontSize(9);
+                            }
+                            else
+                            {
+                                c.Item().Text("Walk-in / Cash Customer").FontSize(12).Bold();
+                            }
+                        });
+
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn(4);
+                                columns.RelativeColumn(2);
+                                columns.RelativeColumn(1);
+                            });
+                            table.Header(header =>
+                            {
+                                header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("Product").Bold();
+                                header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("SKU").Bold();
+                                header.Cell().Background(Colors.Grey.Lighten3).Padding(5).AlignRight().Text("Qty").Bold();
+                            });
+
+                            foreach (var line in lines)
+                            {
+                                var product = allProducts.FirstOrDefault(p => p.Id == line.ProductId);
+                                table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(5)
+                                    .Text(product?.Name ?? $"Product #{line.ProductId}");
+                                table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(5)
+                                    .Text(product?.SKU ?? "");
+                                table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(5)
+                                    .AlignRight().Text(line.Quantity.ToString());
+                            }
+                        });
+
+                        if (!string.IsNullOrWhiteSpace(note.Notes))
+                        {
+                            col.Item().PaddingTop(10).Text($"Notes: {note.Notes}").FontSize(9);
+                        }
+
+                        if (!asPackingSlip)
+                        {
+                            col.Item().PaddingTop(30).Row(row =>
+                            {
+                                row.RelativeItem().Column(c =>
+                                {
+                                    c.Item().Text("Received by: ______________________").FontSize(9);
+                                    c.Item().PaddingTop(8).Text("Signature: ______________________").FontSize(9);
+                                });
+                                row.RelativeItem().Column(c =>
+                                {
+                                    c.Item().Text("Date: ______________").FontSize(9);
+                                });
+                            });
+                        }
+                    });
+
+                    page.Footer().AlignCenter().Text(AppBranding.GeneratedByFooter).FontSize(8).FontColor(Colors.Grey.Darken1);
+                });
+            }).GeneratePdf(path);
+
+            return path;
+        }
     }
 }

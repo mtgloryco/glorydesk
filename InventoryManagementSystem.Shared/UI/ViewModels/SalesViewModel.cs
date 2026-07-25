@@ -22,19 +22,27 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly ReturnsService _returnsService;
         private readonly PaymentService _paymentService;
         private readonly CurrencyService _currencyService;
+        private readonly DocumentAttachmentService? _attachmentService;
+        private readonly RecurringInvoiceService? _recurringInvoiceService;
 
         public LanguageService Language { get; }
         public string BaseCurrency => _settingsService.CurrentSettings.CurrencySymbol ?? "RWF";
 
-        [ObservableProperty] private int _selectedTabIndex; // 0 = Quotations, 1 = Sales Orders
+        [ObservableProperty] private int _selectedTabIndex; // 0 = Quotations, 1 = Sales Orders, 2 = Recurring
 
         public bool IsQuotationsTabSelected => SelectedTabIndex == 0;
         public bool IsSalesOrdersTabSelected => SelectedTabIndex == 1;
+        public bool IsRecurringTabSelected => SelectedTabIndex == 2;
 
         partial void OnSelectedTabIndexChanged(int value)
         {
             OnPropertyChanged(nameof(IsQuotationsTabSelected));
             OnPropertyChanged(nameof(IsSalesOrdersTabSelected));
+            OnPropertyChanged(nameof(IsRecurringTabSelected));
+            if (value == 2)
+            {
+                _ = LoadRecurringAsync();
+            }
         }
         [ObservableProperty] private ObservableCollection<SalesOrderListItem> _quotations = new();
         [ObservableProperty] private ObservableCollection<SalesOrderListItem> _salesOrders = new();
@@ -149,7 +157,9 @@ namespace InventoryManagementSystem.UI.ViewModels
             PaymentService paymentService,
             CurrencyService currencyService,
             LanguageService languageService,
-            int initialTab = 0)
+            int initialTab = 0,
+            DocumentAttachmentService? attachmentService = null,
+            RecurringInvoiceService? recurringInvoiceService = null)
         {
             _salesOrderService = salesOrderService;
             _customerService = customerService;
@@ -161,6 +171,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             _currencyService = currencyService;
             Language = languageService;
             _pdfService = new SalesOrderPdfService(_settingsService);
+            _attachmentService = attachmentService;
+            _recurringInvoiceService = recurringInvoiceService;
             SelectedTabIndex = initialTab;
 
             LoadSalesDataCommand.Execute(null);
@@ -515,6 +527,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
                 await LoadPaymentDetailsAsync();
                 await UpdateDetailedBaseCurrencyEquivalentAsync();
+                await LoadOrderAttachments();
                 IsDetailsOpen = true;
             }
             catch (Exception ex)
@@ -946,6 +959,210 @@ namespace InventoryManagementSystem.UI.ViewModels
             {
                 ErrorMessage = $"Failed to print PDF: {ex.Message}";
             }
+        }
+
+        [ObservableProperty] private ObservableCollection<DocumentAttachment> _orderAttachments = new();
+        [ObservableProperty] private ObservableCollection<RecurringInvoice> _recurringInvoices = new();
+        [ObservableProperty] private RecurringInvoice _currentRecurring = new();
+        [ObservableProperty] private string _recurringStatusMessage = string.Empty;
+        [ObservableProperty] private string _attachmentStatusMessage = string.Empty;
+
+        [RelayCommand]
+        private async Task PrintDeliveryNote(SalesOrderListItem? item)
+        {
+            await PrintDeliveryDocumentAsync(item, asPackingSlip: false);
+        }
+
+        [RelayCommand]
+        private async Task PrintPackingSlip(SalesOrderListItem? item)
+        {
+            await PrintDeliveryDocumentAsync(item, asPackingSlip: true);
+        }
+
+        private async Task PrintDeliveryDocumentAsync(SalesOrderListItem? item, bool asPackingSlip)
+        {
+            var target = item ?? SelectedOrder;
+            if (target == null) return;
+
+            try
+            {
+                var notes = await _salesOrderService.GetDeliveryNotesForOrderAsync(target.SalesOrder.Id);
+                var note = notes.FirstOrDefault();
+                if (note == null)
+                {
+                    ErrorMessage = "No delivery note found. Confirm a shipment first.";
+                    return;
+                }
+
+                var lines = await _salesOrderService.GetDeliveryNoteLinesAsync(note.Id);
+                var products = await _inventoryService.GetAllProductsAsync();
+                var customer = AllCustomers.FirstOrDefault(c => c.Id == target.SalesOrder.CustomerId);
+                var path = _pdfService.GenerateDeliveryNotePdf(note, target.SalesOrder, lines, products, customer, asPackingSlip);
+                if (File.Exists(path))
+                {
+                    new System.Diagnostics.Process
+                    {
+                        StartInfo = new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }
+                    }.Start();
+                    ErrorMessage = $"Opened {(asPackingSlip ? "packing slip" : "delivery note")}: {Path.GetFileName(path)}";
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Delivery document failed: {ex.Message}";
+            }
+        }
+
+        [RelayCommand]
+        private async Task LoadOrderAttachments()
+        {
+            OrderAttachments.Clear();
+            if (_attachmentService == null || DetailedSo == null) return;
+            var list = await _attachmentService.GetAttachmentsAsync("SalesOrder", DetailedSo.Id);
+            foreach (var a in list) OrderAttachments.Add(a);
+        }
+
+        [RelayCommand]
+        private async Task AddOrderAttachment(string? filePath)
+        {
+            AttachmentStatusMessage = string.Empty;
+            if (_attachmentService == null || DetailedSo == null || string.IsNullOrWhiteSpace(filePath))
+            {
+                AttachmentStatusMessage = "Select an order and a file first.";
+                return;
+            }
+
+            try
+            {
+                await _attachmentService.AddAttachmentAsync(
+                    "SalesOrder",
+                    DetailedSo.Id,
+                    filePath,
+                    UserSession.CurrentUser?.Username ?? "System");
+                await LoadOrderAttachments();
+                AttachmentStatusMessage = "Attachment added.";
+            }
+            catch (Exception ex)
+            {
+                AttachmentStatusMessage = ex.Message;
+            }
+        }
+
+        [RelayCommand]
+        private async Task RemoveOrderAttachment(DocumentAttachment? attachment)
+        {
+            if (_attachmentService == null || attachment == null) return;
+            try
+            {
+                await _attachmentService.DeleteAttachmentAsync(attachment.Id, UserSession.CurrentUser?.Username ?? "System");
+                await LoadOrderAttachments();
+            }
+            catch (Exception ex)
+            {
+                AttachmentStatusMessage = ex.Message;
+            }
+        }
+
+        [RelayCommand]
+        private void OpenOrderAttachment(DocumentAttachment? attachment)
+        {
+            if (_attachmentService == null || attachment == null) return;
+            try { _attachmentService.OpenAttachment(attachment); }
+            catch (Exception ex) { AttachmentStatusMessage = ex.Message; }
+        }
+
+        [RelayCommand]
+        private async Task LoadRecurringAsync()
+        {
+            RecurringInvoices.Clear();
+            if (_recurringInvoiceService == null) return;
+            var list = await _recurringInvoiceService.GetAllAsync();
+            foreach (var r in list) RecurringInvoices.Add(r);
+        }
+
+        [RelayCommand]
+        private async Task CreateRecurringFromSelectedOrder()
+        {
+            if (_recurringInvoiceService == null)
+            {
+                RecurringStatusMessage = "Recurring service unavailable.";
+                return;
+            }
+
+            var target = SelectedOrder?.SalesOrder ?? DetailedSo;
+            if (target == null || target.CustomerId <= 0)
+            {
+                RecurringStatusMessage = "Select a sales order with a customer first.";
+                return;
+            }
+
+            try
+            {
+                var items = await _salesOrderService.GetItemsAsync(target.Id);
+                var schedule = new RecurringInvoice
+                {
+                    Name = $"Recurring {target.SONumber}",
+                    CustomerId = target.CustomerId,
+                    Frequency = "Monthly",
+                    NextRunDate = DateTime.Today.AddMonths(1),
+                    IsActive = true,
+                    Currency = target.Currency,
+                    PaymentTerms = target.PaymentTerms,
+                    IsTaxInclusive = target.IsTaxInclusive,
+                    Notes = $"Created from {target.SONumber}"
+                };
+                var lines = items.Select(i => new RecurringInvoiceLine
+                {
+                    ProductId = i.ProductId,
+                    Quantity = Math.Max(1, i.QuantityOrdered),
+                    UnitPrice = i.UnitPrice,
+                    TaxId = i.TaxId
+                }).ToList();
+
+                await _recurringInvoiceService.SaveAsync(schedule, lines, UserSession.CurrentUser?.Username ?? "System");
+                RecurringStatusMessage = $"Created recurring schedule '{schedule.Name}'.";
+                SelectedTabIndex = 2;
+                await LoadRecurringAsync();
+            }
+            catch (Exception ex)
+            {
+                RecurringStatusMessage = ex.Message;
+            }
+        }
+
+        [RelayCommand]
+        private async Task RunDueRecurring()
+        {
+            if (_recurringInvoiceService == null) return;
+            try
+            {
+                var created = await _recurringInvoiceService.RunDueAsync(
+                    DateTime.Today,
+                    UserSession.CurrentUser?.Username ?? "System");
+                RecurringStatusMessage = $"Generated {created.Count} invoice(s).";
+                await LoadRecurringAsync();
+                await LoadSalesData();
+            }
+            catch (Exception ex)
+            {
+                RecurringStatusMessage = ex.Message;
+            }
+        }
+
+        [RelayCommand]
+        private async Task PauseRecurring(RecurringInvoice? schedule)
+        {
+            if (_recurringInvoiceService == null || schedule == null) return;
+            await _recurringInvoiceService.SetActiveAsync(schedule.Id, false, UserSession.CurrentUser?.Username ?? "System");
+            await LoadRecurringAsync();
+        }
+
+        [RelayCommand]
+        private async Task ResumeRecurring(RecurringInvoice? schedule)
+        {
+            if (_recurringInvoiceService == null || schedule == null) return;
+            await _recurringInvoiceService.SetActiveAsync(schedule.Id, true, UserSession.CurrentUser?.Username ?? "System");
+            await LoadRecurringAsync();
         }
 
         partial void OnSearchTextChanged(string value)

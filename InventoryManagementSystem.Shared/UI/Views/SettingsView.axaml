@@ -55,7 +55,7 @@
                     Classes="tab-btn" Classes.active-tab="{Binding IsBusinessSetupTabActive}" />
             <Button Content="Custom Fields" Command="{Binding SelectTabCommand}" CommandParameter="CustomFields"
                     Classes="tab-btn" Classes.active-tab="{Binding IsCustomFieldsTabActive}" />
-            <Button Content="Terminology" Command="{Binding SelectTabCommand}" CommandParameter="Terminology"
+            <Button Content="Word Labels" Command="{Binding SelectTabCommand}" CommandParameter="Terminology"
                     Classes="tab-btn" Classes.active-tab="{Binding IsTerminologyTabActive}" />
             <Button Content="Modules" Command="{Binding SelectTabCommand}" CommandParameter="Modules"
                     Classes="tab-btn" Classes.active-tab="{Binding IsModulesTabActive}" />
@@ -90,6 +90,28 @@
                         <StackPanel Spacing="5">
                             <TextBlock Text="{Binding Language.Resources[Settings_Printer]}" FontWeight="SemiBold"/>
                             <TextBox Text="{Binding PrinterName}" Watermark="{Binding Language.Resources[Settings_Printer]}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Inventory Costing Method" FontWeight="SemiBold"/>
+                            <ComboBox ItemsSource="{Binding CostingMethodOptions}" SelectedItem="{Binding CostingMethod}" Width="220" HorizontalAlignment="Left"/>
+                            <TextBlock Text="Oldest first: sell older stock first. Average cost: use the average of what you paid." Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Email Sending" FontSize="16" FontWeight="Bold"/>
+                            <ToggleSwitch IsChecked="{Binding UseSmtp}" OnContent="Send Real Emails" OffContent="Save Email Files Only" VerticalAlignment="Center"/>
+                            <TextBox Text="{Binding SmtpHost}" Watermark="Email server host"/>
+                            <TextBox Text="{Binding SmtpPort}" Watermark="Port" Width="120" HorizontalAlignment="Left"/>
+                            <TextBox Text="{Binding SmtpUsername}" Watermark="Username"/>
+                            <TextBox Text="{Binding SmtpPassword}" Watermark="Password" PasswordChar="*"/>
+                            <TextBox Text="{Binding SmtpFromAddress}" Watermark="From email"/>
+                            <TextBox Text="{Binding SmtpFromName}" Watermark="From display name"/>
+                            <ToggleSwitch IsChecked="{Binding SmtpEnableSsl}" OnContent="Secure Connection On" OffContent="Secure Connection Off"/>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button Content="Send Waiting Emails" Command="{Binding SendPendingNotificationsCommand}" Background="#00838F" Foreground="White" Padding="12,8"/>
+                                <Button Content="Update Currency Differences" Command="{Binding RevalueForeignBalancesCommand}" Background="#6A1B9A" Foreground="White" Padding="12,8"/>
+                            </StackPanel>
                         </StackPanel>
 
                         <StackPanel Spacing="5">
@@ -1306,14 +1328,22 @@
                     <!-- TAB 7: TERMINOLOGY -->
                     <StackPanel Spacing="20" MaxWidth="600" HorizontalAlignment="Left" IsVisible="{Binding IsTerminologyTabActive}">
                         <StackPanel Spacing="5">
-                            <TextBlock Text="Terminology" FontSize="20" FontWeight="Bold"/>
-                            <TextBlock Text="Rename common terms to match your business language. Leave blank to use the default label." Foreground="Gray" TextWrapping="Wrap"/>
+                            <TextBlock Text="Word Labels" FontSize="20" FontWeight="Bold"/>
+                            <TextBlock Text="Choose everyday English or classic accounting words. You can also rename individual terms below." Foreground="Gray" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button Content="Use Simple English" Command="{Binding ApplySimpleEnglishLabelsCommand}"
+                                    Background="#2E7D32" Foreground="White" Padding="16,10" FontWeight="SemiBold"/>
+                            <Button Content="Use Accounting Terms" Command="{Binding ApplyAccountingLabelsCommand}"
+                                    Background="#455A64" Foreground="White" Padding="16,10" FontWeight="SemiBold"/>
                         </StackPanel>
 
                         <ItemsControl ItemsSource="{Binding TerminologyTerms}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TerminologyTermItem">
                                     <StackPanel Spacing="5" Margin="0,0,0,12">
+                                        <TextBlock Text="{Binding Key}" FontSize="11" Foreground="Gray"/>
                                         <TextBlock Text="{Binding DefaultLabel}" FontWeight="SemiBold"/>
                                         <TextBox Text="{Binding OverrideText}" Watermark="{Binding DefaultLabel}"/>
                                     </StackPanel>
@@ -1322,7 +1352,7 @@
                         </ItemsControl>
 
                         <StackPanel Orientation="Horizontal" Spacing="15" Margin="0,10,0,0">
-                            <Button Content="Save Terminology" Command="{Binding SaveTerminologyCommand}"
+                            <Button Content="Save Labels" Command="{Binding SaveTerminologyCommand}"
                                     Classes="accent" Background="#2E7D32" Foreground="White" Padding="20,10" FontWeight="SemiBold"/>
                             <TextBlock Text="{Binding TerminologyStatusMessage}" VerticalAlignment="Center" Foreground="#4CAF50" FontWeight="Medium"/>
                         </StackPanel>
