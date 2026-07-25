@@ -1,6 +1,18 @@
+; These can be overridden from the command line, e.g.
+;   ISCC /DMyAppVersion=1.2.3 /DPayloadDir=C:\path\to\publish /DRedistDir=C:\path\to\redist GloryDesk_Setup_Script.iss
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.1"
+#endif
+#ifndef PayloadDir
+  #define PayloadDir "../Releases/Windows"
+#endif
+#ifndef RedistDir
+  #define RedistDir "./redist"
+#endif
+
 [Setup]
 AppName=Glory Desk
-AppVersion=1.0.1
+AppVersion={#MyAppVersion}
 AppPublisher=MT GLORY CO
 AppPublisherURL=https://glorydesk.mtglory.com
 AppSupportURL=https://glorydesk.mtglory.com
@@ -9,7 +21,7 @@ AppUpdatesURL=https://glorydesk.mtglory.com
 DefaultDirName={autopf}\GloryDesk
 DefaultGroupName=Glory Desk
 OutputDir=../Releases
-OutputBaseFilename=GloryDesk_Setup_v1.0.1_Windows
+OutputBaseFilename=GloryDesk_Setup_v{#MyAppVersion}_Windows
 Compression=lzma2/max
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
@@ -24,8 +36,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "./redist/vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "../Releases/Windows/*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#RedistDir}/vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadDir}/*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Glory Desk"; Filename: "{app}\GloryDesk.exe"

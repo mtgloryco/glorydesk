@@ -42,7 +42,38 @@ jobs:
               run: dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj -c Release -o ./publish
 
             - name: Pack Release (Velopack)
-              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "InventoryManagementSystem.Desktop.exe"
+              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "GloryDesk.exe"
+
+            - name: Install Inno Setup
+              run: choco install innosetup -y
+
+            - name: Build Inno Installer (real Windows setup)
+              shell: pwsh
+              run: |
+                  $payload = "${{ github.workspace }}\win-payload"
+                  # Self-contained + ReadyToRun so customers don't need .NET installed.
+                  dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj `
+                      -c Release -r win-x64 --self-contained true `
+                      -p:PublishSingleFile=false -p:PublishReadyToRun=true `
+                      -o $payload
+                  if ($LASTEXITCODE -ne 0) { Write-Error "Publish for installer failed"; exit 1 }
+                  if (-not (Test-Path "$payload\GloryDesk.exe")) {
+                    Write-Error "Expected $payload\GloryDesk.exe was not produced"; exit 1
+                  }
+
+                  $redist = "${{ github.workspace }}\InventoryManagementSystem.Shared\redist"
+                  New-Item -ItemType Directory -Force -Path $redist | Out-Null
+                  $redistExe = Join-Path $redist "vc_redist.x64.exe"
+                  if (-not (Test-Path $redistExe)) {
+                    Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vc_redist.x64.exe" -OutFile $redistExe
+                  }
+
+                  $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+                  & $iscc "/DMyAppVersion=$env:VERSION" "/DPayloadDir=$payload" "/DRedistDir=$redist" `
+                      "/O${{ github.workspace }}\Releases" `
+                      "InventoryManagementSystem.Shared\GloryDesk_Setup_Script.iss"
+                  if ($LASTEXITCODE -ne 0) { Write-Error "Inno Setup compile failed"; exit 1 }
+                  Write-Host "Installer built: Releases\GloryDesk_Setup_v${env:VERSION}_Windows.exe"
 
             - name: Upload Release Assets
               uses: softprops/action-gh-release@v1
@@ -68,10 +99,13 @@ jobs:
                   $version = $env:VERSION
                   $repo = "${{ github.repository }}"
 
-                  # Prefer the Velopack Setup exe from this release's assets
+                  # Prefer the Inno "real installer" (GloryDesk_Setup_*.exe); fall back to any Setup exe.
                   $assetsJson = gh api "repos/$repo/releases/tags/$tag" --jq ".assets"
                   $assets = $assetsJson | ConvertFrom-Json
-                  $setup = $assets | Where-Object { $_.name -match '\.exe$' -and $_.name -match 'Setup|setup|Install' } | Select-Object -First 1
+                  $setup = $assets | Where-Object { $_.name -match '^GloryDesk_Setup.*\.exe$' } | Select-Object -First 1
+                  if (-not $setup) {
+                    $setup = $assets | Where-Object { $_.name -match '\.exe$' -and $_.name -match 'Setup|setup|Install' } | Select-Object -First 1
+                  }
                   if (-not $setup) {
                     $setup = $assets | Where-Object { $_.name -match '\.exe$' } | Select-Object -First 1
                   }
@@ -131,7 +165,7 @@ jobs:
               run: dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj -c Release -o ./publish
 
             - name: Pack Release (Velopack)
-              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "InventoryManagementSystem.Desktop"
+              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "GloryDesk"
 
             - name: Upload Release Assets
               uses: softprops/action-gh-release@v1
