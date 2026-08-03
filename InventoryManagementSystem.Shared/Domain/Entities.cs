@@ -12,6 +12,7 @@ namespace InventoryManagementSystem.Domain
         public bool IsDeleted { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? SKU { get; set; }
+        public string? Barcode { get; set; }
         public string Unit { get; set; } = "Pcs";
         public decimal Price { get; set; }
         public decimal Cost { get; set; }
@@ -318,6 +319,57 @@ namespace InventoryManagementSystem.Domain
         public DateTime? CompletedDate { get; set; }
         public string RequestedByUsername { get; set; } = string.Empty;
         public string Notes { get; set; } = string.Empty;
+    }
+
+    public class Expense : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public string ExpenseNumber { get; set; } = string.Empty;
+        public DateTime Date { get; set; } = DateTime.Now;
+        public string Category { get; set; } = "General"; // Rent, Utilities, Salaries, Marketing, Maintenance, Supplies, Transport, General, Other
+        public string Description { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public string PaymentMethod { get; set; } = "Cash"; // Cash, Bank
+        public string PayeeName { get; set; } = string.Empty;
+        public string Reference { get; set; } = string.Empty;
+        public string CreatedByUsername { get; set; } = string.Empty;
+        public string Notes { get; set; } = string.Empty;
+    }
+
+    public class DamageWriteOff : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public string WriteOffNumber { get; set; } = string.Empty;
+        public int ProductId { get; set; }
+        public int Quantity { get; set; }
+        public string ReasonCategory { get; set; } = "Damaged"; // Damaged, Expired, Theft, Breakage, Obsolete, QualityDefect, Other
+        public string Notes { get; set; } = string.Empty;
+        public decimal UnitCost { get; set; }
+        public decimal TotalCost { get; set; }
+        public DateTime Date { get; set; } = DateTime.Now;
+        public string RecordedByUsername { get; set; } = string.Empty;
+    }
+
+    /// <summary>One tender line of a (possibly split) POS payment - e.g. part cash, part mobile money.</summary>
+    public class PosSalePayment : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public int SalesOrderId { get; set; }
+        public int PosPaymentMethodId { get; set; }
+        public decimal Amount { get; set; }
+        public DateTime Date { get; set; } = DateTime.Now;
     }
 
     // --- PHASE 5: RETURNS & REFUNDS ---
@@ -933,6 +985,7 @@ namespace InventoryManagementSystem.Domain
 
     public class AgingLine
     {
+        public int DocumentId { get; set; }
         public string PartnerName { get; set; } = string.Empty;
         public string DocumentNumber { get; set; } = string.Empty;
         public DateTime DocumentDate { get; set; }

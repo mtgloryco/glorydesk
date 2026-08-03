@@ -205,7 +205,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             ReturnsService returnsService,
             PaymentService paymentService,
             CurrencyService currencyService,
-            LanguageService languageService)
+            LanguageService languageService,
+            int? initialPurchaseOrderId = null)
         {
             _purchaseOrderService = purchaseOrderService;
             _supplierService = supplierService;
@@ -218,7 +219,26 @@ namespace InventoryManagementSystem.UI.ViewModels
             Language = languageService;
             _pdfService = new PurchaseOrderPdfService(_settingsService);
 
-            LoadPurchaseOrdersCommand.Execute(null);
+            if (initialPurchaseOrderId.HasValue)
+            {
+                _ = InitializeWithDetailsAsync(initialPurchaseOrderId.Value);
+            }
+            else
+            {
+                LoadPurchaseOrdersCommand.Execute(null);
+            }
+        }
+
+        private async Task InitializeWithDetailsAsync(int purchaseOrderId)
+        {
+            await LoadPurchaseOrders();
+
+            var match = (await _purchaseOrderService.GetAllPurchaseOrdersAsync())
+                .FirstOrDefault(po => po.PurchaseOrder.Id == purchaseOrderId);
+            if (match != null)
+            {
+                await OpenDetails(new PurchaseOrderDisplayItem(match.PurchaseOrder, match.SupplierName));
+            }
         }
 
         [RelayCommand]

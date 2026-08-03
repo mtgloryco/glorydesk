@@ -221,6 +221,18 @@ namespace InventoryManagementSystem.Services
         {
             var so = await _databaseService.Connection.FindAsync<SalesOrder>(soId);
             if (so == null) return;
+            if (so.BillingStatus == "Invoiced") return;
+
+            // Revenue/AR is only posted to the ledger as goods are delivered (see DeliverSalesOrderAsync).
+            // Invoicing ahead of delivery would put the Aging Report / AR balance out of sync with the
+            // General Ledger, and would let a payment be recorded against AR before anything was ever
+            // debited there. Require full delivery first, mirroring the Purchase Order -> Bill rule
+            // (PurchaseOrdersViewModel.CanCreateBill requires goods to be received before billing).
+            if (so.DeliveryStatus != "Delivered")
+            {
+                throw new InvalidOperationException("Cannot invoice: goods/services must be fully delivered before an invoice can be created.");
+            }
+
             so.BillingStatus = "Invoiced";
             await _databaseService.Connection.UpdateAsync(so);
 
@@ -230,7 +242,9 @@ namespace InventoryManagementSystem.Services
 
             foreach (var item in items)
             {
-                item.QuantityInvoiced = item.QuantityOrdered;
+                // Capped at QuantityDelivered (not QuantityOrdered) so invoiced quantity never exceeds
+                // what was actually recognized as revenue in the ledger.
+                item.QuantityInvoiced = item.QuantityDelivered;
                 await _databaseService.Connection.UpdateAsync(item);
             }
 

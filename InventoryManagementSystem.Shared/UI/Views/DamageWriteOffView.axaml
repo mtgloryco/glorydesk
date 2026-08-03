@@ -1,0 +1,117 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             xmlns:domain="clr-namespace:InventoryManagementSystem.Domain"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+             x:Class="InventoryManagementSystem.UI.Views.DamageWriteOffView"
+             x:DataType="vm:DamageWriteOffViewModel">
+    <Grid RowDefinitions="Auto, *">
+        <Border Grid.Row="0" Background="#E65100" Padding="20">
+            <TextBlock Text="Damage &amp; Loss Write-off" FontSize="24" FontWeight="Bold" Foreground="White"/>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="420, *" Margin="10">
+            <Border Grid.Column="0" Margin="5" Padding="20" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" BoxShadow="0 10 30 0 #10000000" VerticalAlignment="Top">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="Write Off Stock" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="Reduces stock on hand and posts the loss to Inventory Adjustment Expense." Foreground="Gray" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#D32F2F" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#2E7D32" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Product" FontSize="12" Foreground="Gray"/>
+                        <AutoCompleteBox Text="{Binding ProductSearchText, Mode=TwoWay}"
+                                         ItemsSource="{Binding MatchedProducts}"
+                                         FilterMode="None"
+                                         Watermark="Type to search products...">
+                            <AutoCompleteBox.ItemTemplate>
+                                <DataTemplate DataType="domain:Product">
+                                    <TextBlock Text="{Binding Name}"/>
+                                </DataTemplate>
+                            </AutoCompleteBox.ItemTemplate>
+                        </AutoCompleteBox>
+
+                        <!-- Autocomplete popup helper list -->
+                        <ListBox ItemsSource="{Binding MatchedProducts}" MaxHeight="140"
+                                 IsVisible="{Binding MatchedProducts.Count}" Background="{DynamicResource CardBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="domain:Product">
+                                    <Grid ColumnDefinitions="*, Auto, Auto">
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding StockQuantity, StringFormat='On hand: {0}'}" Foreground="Gray" FontSize="11" VerticalAlignment="Center" Margin="8,0"/>
+                                        <Button Grid.Column="2" Content="Select" Command="{Binding $parent[UserControl].((vm:DamageWriteOffViewModel)DataContext).SelectProductCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="5,2"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Text="{Binding SelectedProduct.Name, StringFormat='Selected: {0}'}" Foreground="#2E7D32" FontWeight="SemiBold" IsVisible="{Binding SelectedProduct, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        <TextBlock Text="{Binding SelectedProduct.StockQuantity, StringFormat='Currently in stock: {0}'}" Foreground="Gray" FontSize="12" IsVisible="{Binding SelectedProduct, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Quantity" FontSize="12" Foreground="Gray"/>
+                        <NumericUpDown Value="{Binding Quantity}" Minimum="1" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Reason" FontSize="12" Foreground="Gray"/>
+                        <ComboBox ItemsSource="{Binding ReasonCategories}" SelectedItem="{Binding ReasonCategory}" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Notes" FontSize="12" Foreground="Gray"/>
+                        <TextBox Text="{Binding Notes}" Watermark="What happened..." Height="60" AcceptsReturn="True"/>
+                    </StackPanel>
+
+                    <Button Content="Add to List" Command="{Binding AddLineCommand}" HorizontalAlignment="Stretch" Padding="10"/>
+
+                    <Border IsVisible="{Binding HasPendingLines}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="8">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Queued for write-off" FontSize="12" FontWeight="SemiBold"/>
+                            <ItemsControl ItemsSource="{Binding PendingLines}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:PendingWriteOffLine">
+                                        <Grid ColumnDefinitions="*, Auto, Auto, Auto" Margin="0,3">
+                                            <TextBlock Text="{Binding ProductName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Quantity, StringFormat='x{0}'}" VerticalAlignment="Center" Margin="8,0" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding ReasonCategory}" VerticalAlignment="Center" Foreground="Gray" FontSize="11" Margin="0,0,8,0"/>
+                                            <Button Grid.Column="3" Content="Remove" Command="{Binding $parent[UserControl].((vm:DamageWriteOffViewModel)DataContext).RemoveLineCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,2"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Content="Record Write-off(s)" Command="{Binding RecordWriteOffCommand}" IsEnabled="{Binding HasPendingLines}" HorizontalAlignment="Stretch" Padding="15" Background="#E65100" Foreground="White" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Margin="5" Padding="15" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" BoxShadow="0 10 30 0 #10000000">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Write-off History" FontSize="16" FontWeight="SemiBold"/>
+                    <DataGrid ItemsSource="{Binding WriteOffs}" AutoGenerateColumns="False" IsReadOnly="True" Height="520">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Date" Binding="{Binding WriteOff.Date, StringFormat='{}{0:yyyy-MM-dd}'}" Width="100"/>
+                            <DataGridTextColumn Header="Write-off #" Binding="{Binding WriteOff.WriteOffNumber}" Width="150"/>
+                            <DataGridTextColumn Header="Product" Binding="{Binding ProductName}" Width="*"/>
+                            <DataGridTextColumn Header="Reason" Binding="{Binding WriteOff.ReasonCategory}" Width="110"/>
+                            <DataGridTextColumn Header="Qty" Binding="{Binding WriteOff.Quantity}" Width="60"/>
+                            <DataGridTextColumn Header="Cost" Binding="{Binding WriteOff.TotalCost, StringFormat='{}{0:N2}'}" Width="100"/>
+                            <DataGridTemplateColumn Header="Actions" Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Replenish" Command="{Binding $parent[UserControl].((vm:DamageWriteOffViewModel)DataContext).ReplenishCommand}"
+                                                CommandParameter="{Binding .}" FontSize="10" Padding="8,4" CornerRadius="3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -305,6 +305,14 @@
                                       <DataGridTextColumn Header="Open Balance" Binding="{Binding OpenBalance, StringFormat='{}{0:N0}'}" Width="120"/>
                                       <DataGridTextColumn Header="Days Overdue" Binding="{Binding DaysOverdue}" Width="100"/>
                                       <DataGridTextColumn Header="Bucket" Binding="{Binding AgingBucket}" Width="80"/>
+                                      <DataGridTemplateColumn Header="Actions" Width="90">
+                                          <DataGridTemplateColumn.CellTemplate>
+                                              <DataTemplate>
+                                                  <Button Content="Open" Command="{Binding $parent[UserControl].((vm:ReportsViewModel)DataContext).OpenArBillCommand}"
+                                                          CommandParameter="{Binding .}" FontSize="10" Padding="8,4" CornerRadius="3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                              </DataTemplate>
+                                          </DataGridTemplateColumn.CellTemplate>
+                                      </DataGridTemplateColumn>
                                   </DataGrid.Columns>
                               </DataGrid>
                           </StackPanel>
@@ -330,6 +338,14 @@
                                       <DataGridTextColumn Header="Open Balance" Binding="{Binding OpenBalance, StringFormat='{}{0:N0}'}" Width="120"/>
                                       <DataGridTextColumn Header="Days Overdue" Binding="{Binding DaysOverdue}" Width="100"/>
                                       <DataGridTextColumn Header="Bucket" Binding="{Binding AgingBucket}" Width="80"/>
+                                      <DataGridTemplateColumn Header="Actions" Width="90">
+                                          <DataGridTemplateColumn.CellTemplate>
+                                              <DataTemplate>
+                                                  <Button Content="Open" Command="{Binding $parent[UserControl].((vm:ReportsViewModel)DataContext).OpenApBillCommand}"
+                                                          CommandParameter="{Binding .}" FontSize="10" Padding="8,4" CornerRadius="3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                              </DataTemplate>
+                                          </DataGridTemplateColumn.CellTemplate>
+                                      </DataGridTemplateColumn>
                                   </DataGrid.Columns>
                               </DataGrid>
                           </StackPanel>

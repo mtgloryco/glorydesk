@@ -238,6 +238,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly Action? _goToReorderDashboard;
         private readonly Action? _goToForecasting;
         private readonly Action? _goToLocations;
+        private readonly Action? _goToDamageWriteOff;
         private readonly BarcodeService? _barcodeService;
 
         [ObservableProperty] private string _barcodeStatusMessage = string.Empty;
@@ -279,7 +280,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             Action? goToForecasting = null,
             Action? goToLocations = null,
             CustomFieldService? customFieldService = null,
-            BarcodeService? barcodeService = null)
+            BarcodeService? barcodeService = null,
+            Action? goToDamageWriteOff = null)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
@@ -297,6 +299,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             _goToReorderDashboard = goToReorderDashboard;
             _goToForecasting = goToForecasting;
             _goToLocations = goToLocations;
+            _goToDamageWriteOff = goToDamageWriteOff;
             _customFieldService = customFieldService;
             _barcodeService = barcodeService;
             _customFieldsPanel.Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasCustomFields));
@@ -394,6 +397,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         [RelayCommand] private void GoToReorderDashboardScreen() => _goToReorderDashboard?.Invoke();
         [RelayCommand] private void GoToForecastingScreen() => _goToForecasting?.Invoke();
         [RelayCommand] private void GoToLocationsScreen() => _goToLocations?.Invoke();
+        [RelayCommand] private void GoToDamageWriteOffScreen() => _goToDamageWriteOff?.Invoke();
 
         partial void OnCurrentProductChanged(Product value)
         {

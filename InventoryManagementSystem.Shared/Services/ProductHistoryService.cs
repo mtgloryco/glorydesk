@@ -213,6 +213,11 @@ namespace InventoryManagementSystem.Services
                 return "Cycle Count";
             }
 
+            if (reason.Contains("Write-off", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Damage / Write-off";
+            }
+
             if (movement.MovementType == "ADJUST" ||
                 reason.Contains("Adjustment", StringComparison.OrdinalIgnoreCase) ||
                 reason.Contains("Stock Adj", StringComparison.OrdinalIgnoreCase))

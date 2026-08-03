@@ -18,12 +18,13 @@ namespace InventoryManagementSystem.Services
         public const string ManageUsers = "ManageUsers";
         public const string ManageSettings = "ManageSettings";
         public const string ManageManufacturing = "ManageManufacturing";
+        public const string ManageExpenses = "ManageExpenses";
 
         private static readonly HashSet<string> AllPermissions = new(StringComparer.OrdinalIgnoreCase)
         {
             AccessPOS, ManageInventory, ViewInventory, ManageSales, ManagePurchasing,
             ManageSuppliers, ManageCustomers, ProcessReturns, ViewReports, ViewAudit,
-            ManageUsers, ManageSettings, ManageManufacturing
+            ManageUsers, ManageSettings, ManageManufacturing, ManageExpenses
         };
 
         private static readonly Dictionary<string, HashSet<string>> RoleMap = new(StringComparer.OrdinalIgnoreCase)
@@ -32,7 +33,7 @@ namespace InventoryManagementSystem.Services
             ["Manager"] = new HashSet<string>(AllPermissions, StringComparer.OrdinalIgnoreCase) { },
             ["Accountant"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                ViewInventory, ManageSales, ManagePurchasing, ViewReports, ViewAudit, ManageSettings
+                ViewInventory, ManageSales, ManagePurchasing, ViewReports, ViewAudit, ManageSettings, ManageExpenses
             },
             ["Cashier"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -41,7 +42,7 @@ namespace InventoryManagementSystem.Services
             ["Staff"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 ManageInventory, ViewInventory, ManageSales, ManagePurchasing,
-                ManageSuppliers, ManageCustomers, ProcessReturns, ViewReports, ManageManufacturing
+                ManageSuppliers, ManageCustomers, ProcessReturns, ViewReports, ManageManufacturing, ManageExpenses
             },
             ["Guest"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {

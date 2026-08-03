@@ -40,6 +40,9 @@ namespace InventoryManagementSystem.Services
             Descriptor<Location>("Location"),
             Descriptor<LocationStock>("LocationStock"),
             Descriptor<StockTransfer>("StockTransfer"),
+            Descriptor<Expense>("Expense"),
+            Descriptor<DamageWriteOff>("DamageWriteOff"),
+            Descriptor<PosSalePayment>("PosSalePayment"),
         };
 
         public static IReadOnlyList<SyncEntityDescriptor> All { get; } = BuildAll();

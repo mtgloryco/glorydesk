@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+             x:Class="InventoryManagementSystem.UI.Views.ExpenseView"
+             x:DataType="vm:ExpenseViewModel">
+    <Grid RowDefinitions="Auto, *">
+        <Border Grid.Row="0" Background="#00838F" Padding="20">
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBlock Grid.Column="0" Text="Expenses" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                <TextBlock Grid.Column="1" Text="{Binding TotalThisMonth, StringFormat='This month: {0:N2}'}" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="380, *" Margin="10">
+            <Border Grid.Column="0" Margin="5" Padding="20" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" BoxShadow="0 10 30 0 #10000000" VerticalAlignment="Top">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="Record an Expense" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#D32F2F" FontSize="12" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Date" FontSize="12" Foreground="Gray"/>
+                        <DatePicker SelectedDate="{Binding Date}" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Category" FontSize="12" Foreground="Gray"/>
+                        <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Description" FontSize="12" Foreground="Gray"/>
+                        <TextBox Text="{Binding Description}" Watermark="e.g. August office rent"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Amount" FontSize="12" Foreground="Gray"/>
+                        <NumericUpDown Value="{Binding Amount}" Minimum="0" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Paid From" FontSize="12" Foreground="Gray"/>
+                        <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedItem="{Binding PaymentMethod}" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Paid To (optional)" FontSize="12" Foreground="Gray"/>
+                        <TextBox Text="{Binding PayeeName}" Watermark="Landlord, employee, vendor..."/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Reference (optional)" FontSize="12" Foreground="Gray"/>
+                        <TextBox Text="{Binding Reference}" Watermark="Receipt / cheque number"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Notes" FontSize="12" Foreground="Gray"/>
+                        <TextBox Text="{Binding Notes}" Height="60" AcceptsReturn="True"/>
+                    </StackPanel>
+
+                    <Button Content="Record Expense" Command="{Binding RecordExpenseCommand}" HorizontalAlignment="Stretch" Padding="15" Background="#00838F" Foreground="White" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Margin="5" Padding="15" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" BoxShadow="0 10 30 0 #10000000">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Expense History" FontSize="16" FontWeight="SemiBold"/>
+                    <DataGrid ItemsSource="{Binding Expenses}" AutoGenerateColumns="False" IsReadOnly="True" Height="520">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:yyyy-MM-dd}'}" Width="100"/>
+                            <DataGridTextColumn Header="Expense #" Binding="{Binding ExpenseNumber}" Width="140"/>
+                            <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="110"/>
+                            <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
+                            <DataGridTextColumn Header="Paid From" Binding="{Binding PaymentMethod}" Width="90"/>
+                            <DataGridTextColumn Header="Paid To" Binding="{Binding PayeeName}" Width="140"/>
+                            <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat='{}{0:N2}'}" Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

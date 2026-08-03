@@ -48,6 +48,8 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly PaymentService _paymentService;
         private readonly AdvancedAnalyticsService _advancedAnalyticsService;
         private readonly MonthCloseService _monthCloseService;
+        private readonly Action<int?>? _goToPurchaseOrderDetails;
+        private readonly Action<int?>? _goToSalesOrderDetails;
 
         [ObservableProperty] private string _selectedCategory = "Money Overview";
         [ObservableProperty] private ReportNavItem? _selectedReportNavItem;
@@ -190,7 +192,9 @@ namespace InventoryManagementSystem.UI.ViewModels
             BudgetReportService budgetReportService,
             PaymentService paymentService,
             AdvancedAnalyticsService advancedAnalyticsService,
-            MonthCloseService monthCloseService)
+            MonthCloseService monthCloseService,
+            Action<int?>? goToPurchaseOrderDetails = null,
+            Action<int?>? goToSalesOrderDetails = null)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
@@ -203,8 +207,28 @@ namespace InventoryManagementSystem.UI.ViewModels
             _paymentService = paymentService;
             _advancedAnalyticsService = advancedAnalyticsService;
             _monthCloseService = monthCloseService;
+            _goToPurchaseOrderDetails = goToPurchaseOrderDetails;
+            _goToSalesOrderDetails = goToSalesOrderDetails;
 
             RefreshReportsInCategory();
+        }
+
+        [RelayCommand]
+        private void OpenApBill(AgingLine? line)
+        {
+            if (line != null)
+            {
+                _goToPurchaseOrderDetails?.Invoke(line.DocumentId);
+            }
+        }
+
+        [RelayCommand]
+        private void OpenArBill(AgingLine? line)
+        {
+            if (line != null)
+            {
+                _goToSalesOrderDetails?.Invoke(line.DocumentId);
+            }
         }
 
         public async Task LoadSelectedReportAsync()

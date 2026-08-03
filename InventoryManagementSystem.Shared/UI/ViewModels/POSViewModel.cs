@@ -9,11 +9,23 @@ using InventoryManagementSystem.Services;
 
 namespace InventoryManagementSystem.UI.ViewModels
 {
+    public partial class PosTender : ObservableObject
+    {
+        [ObservableProperty] private PosPaymentMethod _method;
+        [ObservableProperty] private decimal _amount;
+
+        public PosTender(PosPaymentMethod method, decimal amount)
+        {
+            _method = method;
+            _amount = amount;
+        }
+    }
+
     public partial class CartItem : ObservableObject
     {
         [ObservableProperty] private Product _product;
         [ObservableProperty] private int _quantity;
-        [ObservableProperty] private decimal _unitPrice; // Selling Price
+        [ObservableProperty] private decimal _unitPrice; // Selling Price - editable at checkout (price override)
 
         private readonly int _maxStock;
 
@@ -77,7 +89,6 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private ObservableCollection<CartItem> _cartItems = new();
         [ObservableProperty] private string _searchText = string.Empty;
         [ObservableProperty] private decimal _totalAmount;
-        [ObservableProperty] private decimal _amountPaid;
         [ObservableProperty] private decimal _changeDue;
         [ObservableProperty] private string _posCheckoutCurrency = "RWF";
         [ObservableProperty] private decimal _checkoutTotalAmount;
@@ -110,6 +121,14 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private string _customerSearchText = string.Empty;
         [ObservableProperty] private PosPaymentMethod? _selectedPaymentMethod;
         [ObservableProperty] private bool _autoCreateInvoice = true;
+
+        // --- Split-tender payment (part cash, part mobile money, etc.) ---
+        [ObservableProperty] private decimal _tenderAmount;
+        [ObservableProperty] private string? _paymentErrorMessage;
+        public ObservableCollection<PosTender> Tenders { get; } = new();
+        public decimal TotalTendered => Tenders.Sum(t => t.Amount);
+        public decimal RemainingDue => Math.Max(0, CheckoutTotalAmount - TotalTendered);
+        public bool CanCompleteSale => Tenders.Count > 0 && RemainingDue <= 0.001m;
 
         // --- inline Customer Creation Modal ---
         [ObservableProperty] private bool _isCreateCustomerModalOpen;
@@ -281,17 +300,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             }
 
             OnPropertyChanged(nameof(ActiveCheckoutCurrency));
-            CalculateChange();
-        }
-
-        partial void OnAmountPaidChanged(decimal value)
-        {
-            CalculateChange();
-        }
-
-        private void CalculateChange()
-        {
-            ChangeDue = AmountPaid - CheckoutTotalAmount;
+            RaiseTenderTotalsChanged();
         }
 
         [RelayCommand]
@@ -308,8 +317,48 @@ namespace InventoryManagementSystem.UI.ViewModels
             IsPaymentPanelVisible = !IsPaymentPanelVisible;
             if (IsPaymentPanelVisible)
             {
+                Tenders.Clear();
+                PaymentErrorMessage = null;
+                TenderAmount = CheckoutTotalAmount;
+                RaiseTenderTotalsChanged();
                 _ = LoadCustomersAndPaymentMethodsAsync();
             }
+        }
+
+        private void RaiseTenderTotalsChanged()
+        {
+            OnPropertyChanged(nameof(TotalTendered));
+            OnPropertyChanged(nameof(RemainingDue));
+            OnPropertyChanged(nameof(CanCompleteSale));
+            ChangeDue = Math.Max(0, TotalTendered - CheckoutTotalAmount);
+        }
+
+        [RelayCommand]
+        private void AddTender()
+        {
+            PaymentErrorMessage = null;
+            if (SelectedPaymentMethod == null)
+            {
+                PaymentErrorMessage = "Select a payment method.";
+                return;
+            }
+            if (TenderAmount <= 0)
+            {
+                PaymentErrorMessage = "Enter an amount greater than zero.";
+                return;
+            }
+
+            Tenders.Add(new PosTender(SelectedPaymentMethod, TenderAmount));
+            TenderAmount = Math.Max(0, CheckoutTotalAmount - TotalTendered);
+            RaiseTenderTotalsChanged();
+        }
+
+        [RelayCommand]
+        private void RemoveTender(PosTender? tender)
+        {
+            if (tender == null) return;
+            Tenders.Remove(tender);
+            RaiseTenderTotalsChanged();
         }
 
         private async Task LoadCustomersAndPaymentMethodsAsync()
@@ -542,11 +591,15 @@ namespace InventoryManagementSystem.UI.ViewModels
         {
             if (CartItems.Count == 0) return;
 
-            if (SelectedPaymentMethod == null)
+            PaymentErrorMessage = null;
+            if (Tenders.Count == 0)
             {
-                IsCheckoutSuccess = false;
-                LastReceiptText = "Please select a payment method before completing the sale.";
-                IsReceiptModalOpen = true;
+                PaymentErrorMessage = "Add at least one payment (cash, mobile money, etc.) before completing the sale.";
+                return;
+            }
+            if (RemainingDue > 0.001m)
+            {
+                PaymentErrorMessage = $"Payment is short by {RemainingDue:N2} {ActiveCheckoutCurrency}. Add another payment to cover the full amount.";
                 return;
             }
 
@@ -582,7 +635,7 @@ namespace InventoryManagementSystem.UI.ViewModels
                     BillingStatus = AutoCreateInvoice ? "Invoiced" : "Waiting Invoice",
                     DeliveryStatus = "Delivered",
                     IsPosSale = true,
-                    PosPaymentMethodId = SelectedPaymentMethod.Id,
+                    PosPaymentMethodId = Tenders[0].Method.Id,
                     CreatedByUsername = user
                 };
 
@@ -611,123 +664,141 @@ namespace InventoryManagementSystem.UI.ViewModels
                     itemsList.Add(orderItem);
 
                     // Add Stock Movement OUT (reduces product stock quantity and decrements FIFO batch exactly once)
+                    // Revenue/AR is always posted explicitly below (per payment tender), so the
+                    // COGS-only path here is used regardless of AutoCreateInvoice.
                     await _inventoryService.AddStockMovementAsync(
-                        item.Product.Id, 
-                        item.Quantity, 
-                        "OUT", 
-                        $"POS Sale: {order.SONumber}", 
-                        user, 
-                        customCost: null, 
+                        item.Product.Id,
+                        item.Quantity,
+                        "OUT",
+                        $"POS Sale: {order.SONumber}",
+                        user,
+                        customCost: null,
                         unitPrice: item.UnitPrice,
-                        postSalesRevenueJournal: !AutoCreateInvoice
+                        postSalesRevenueJournal: false
                     );
                 }
 
-                // 3. Double Entry Accounting Entries
-                if (AutoCreateInvoice)
+                // 3. Double Entry Accounting Entries (always posted, regardless of AutoCreateInvoice -
+                // that flag only controls which PDF is printed, not how the sale is booked)
+
+                // a) Invoice Journal Entry: Debit AR / Credit Revenue for the full sale
+                var salesJournal = await connection.Table<Journal>().Where(j => j.Type == "Sales").FirstOrDefaultAsync();
+                if (salesJournal != null)
                 {
-                    // a) Invoice Journal Entry
-                    var salesJournal = await connection.Table<Journal>().Where(j => j.Type == "Sales").FirstOrDefaultAsync();
-                    if (salesJournal != null)
+                    var entryCount = await connection.Table<JournalEntry>().Where(e => e.JournalId == salesJournal.Id).CountAsync();
+                    var entryNumber = $"{salesJournal.SequencePrefix}/{DateTime.Now.Year}/{(entryCount + 1):D5}";
+
+                    var invoiceEntry = new JournalEntry
                     {
-                        var entryCount = await connection.Table<JournalEntry>().Where(e => e.JournalId == salesJournal.Id).CountAsync();
-                        var entryNumber = $"{salesJournal.SequencePrefix}/{DateTime.Now.Year}/{(entryCount + 1):D5}";
+                        EntryNumber = entryNumber,
+                        JournalId = salesJournal.Id,
+                        Date = DateTime.Now,
+                        Reference = $"POS Invoice: {order.SONumber}",
+                        State = "Posted"
+                    };
+                    await connection.InsertAsync(invoiceEntry);
 
-                        var invoiceEntry = new JournalEntry
+                    // Accounts
+                    var arAccount = await connection.Table<Account>().Where(a => a.Code == "111000").FirstOrDefaultAsync();
+                    int arAccountId = arAccount?.Id ?? 3; // Accounts Receivable
+
+                    // Debit Accounts Receivable
+                    await connection.InsertAsync(new JournalLine
+                    {
+                        JournalEntryId = invoiceEntry.Id,
+                        AccountId = arAccountId,
+                        Label = $"POS Invoice - {order.SONumber}",
+                        Debit = postedTotal,
+                        Credit = 0
+                    });
+
+                    // Credit Revenue for items
+                    foreach (var item in CartItems)
+                    {
+                        int incomeAccountId = item.Product.IncomeAccountId ?? 0;
+                        if (incomeAccountId == 0)
                         {
-                            EntryNumber = entryNumber,
-                            JournalId = salesJournal.Id,
-                            Date = DateTime.Now,
-                            Reference = $"POS Invoice: {order.SONumber}",
-                            State = "Posted"
-                        };
-                        await connection.InsertAsync(invoiceEntry);
+                            var revAccount = await connection.Table<Account>().Where(a => a.Code == "401000").FirstOrDefaultAsync();
+                            incomeAccountId = revAccount?.Id ?? 13; // Product Sales Revenue
+                        }
 
-                        // Accounts
-                        var arAccount = await connection.Table<Account>().Where(a => a.Code == "111000").FirstOrDefaultAsync();
-                        int arAccountId = arAccount?.Id ?? 3; // Accounts Receivable
-
-                        // Debit Accounts Receivable
                         await connection.InsertAsync(new JournalLine
                         {
                             JournalEntryId = invoiceEntry.Id,
-                            AccountId = arAccountId,
-                            Label = $"POS Invoice - {order.SONumber}",
-                            Debit = postedTotal,
-                            Credit = 0
-                        });
-
-                        // Credit Revenue for items
-                        foreach (var item in CartItems)
-                        {
-                            int incomeAccountId = item.Product.IncomeAccountId ?? 0;
-                            if (incomeAccountId == 0)
-                            {
-                                var revAccount = await connection.Table<Account>().Where(a => a.Code == "401000").FirstOrDefaultAsync();
-                                incomeAccountId = revAccount?.Id ?? 13; // Product Sales Revenue
-                            }
-
-                            await connection.InsertAsync(new JournalLine
-                            {
-                                JournalEntryId = invoiceEntry.Id,
-                                AccountId = incomeAccountId,
-                                ProductId = item.Product.Id,
-                                Label = $"POS Revenue - {item.Product.Name} (Qty: {item.Quantity})",
-                                Debit = 0,
-                                Credit = Math.Round(item.Subtotal * journalScale, 2)
-                            });
-                        }
-                    }
-
-                    // b) Payment Journal Entry (Debit cash/bank, Credit Accounts Receivable)
-                    var paymentJournal = await connection.Table<Journal>().Where(j => j.Id == SelectedPaymentMethod.JournalId).FirstOrDefaultAsync();
-                    if (paymentJournal != null)
-                    {
-                        var entryCount = await connection.Table<JournalEntry>().Where(e => e.JournalId == paymentJournal.Id).CountAsync();
-                        var entryNumber = $"{paymentJournal.SequencePrefix}/{DateTime.Now.Year}/{(entryCount + 1):D5}";
-
-                        var paymentEntry = new JournalEntry
-                        {
-                            EntryNumber = entryNumber,
-                            JournalId = paymentJournal.Id,
-                            Date = DateTime.Now,
-                            Reference = $"POS Payment: {order.SONumber}",
-                            State = "Posted"
-                        };
-                        await connection.InsertAsync(paymentEntry);
-
-                        // Accounts
-                        var arAccount = await connection.Table<Account>().Where(a => a.Code == "111000").FirstOrDefaultAsync();
-                        int arAccountId = arAccount?.Id ?? 3; // Accounts Receivable
-
-                        // Default/Bank Account for the payment journal
-                        int cashAccountId = paymentJournal.DefaultAccountId ?? paymentJournal.BankAccountId ?? 0;
-                        if (cashAccountId == 0)
-                        {
-                            var cashAccountObj = await connection.Table<Account>().Where(a => a.Code.StartsWith("101") || a.Code.StartsWith("102")).FirstOrDefaultAsync();
-                            cashAccountId = cashAccountObj?.Id ?? 1; // Fallback to Cash/Bank
-                        }
-
-                        // Debit Cash/Bank
-                        await connection.InsertAsync(new JournalLine
-                        {
-                            JournalEntryId = paymentEntry.Id,
-                            AccountId = cashAccountId,
-                            Label = $"POS Cash Inflow - {order.SONumber}",
-                            Debit = postedTotal,
-                            Credit = 0
-                        });
-
-                        // Credit Accounts Receivable (clears AR!)
-                        await connection.InsertAsync(new JournalLine
-                        {
-                            JournalEntryId = paymentEntry.Id,
-                            AccountId = arAccountId,
-                            Label = $"POS Payment Receipt - {order.SONumber}",
+                            AccountId = incomeAccountId,
+                            ProductId = item.Product.Id,
+                            Label = $"POS Revenue - {item.Product.Name} (Qty: {item.Quantity})",
                             Debit = 0,
-                            Credit = postedTotal
+                            Credit = Math.Round(item.Subtotal * journalScale, 2)
                         });
                     }
+                }
+
+                // b) Payment Journal Entry per tender (Debit that tender's cash/bank/momo account, Credit AR)
+                // so every payment method is separately trackable, and split payments (e.g. part cash,
+                // part mobile money) are each booked to the right account.
+                var arAccountForPayments = await connection.Table<Account>().Where(a => a.Code == "111000").FirstOrDefaultAsync();
+                int arAccountIdForPayments = arAccountForPayments?.Id ?? 3;
+                var remainingToApply = postedTotal;
+
+                foreach (var tender in Tenders)
+                {
+                    if (remainingToApply <= 0) break;
+                    var applied = Math.Min(tender.Amount, remainingToApply);
+                    if (applied <= 0) continue;
+                    remainingToApply -= applied;
+
+                    await connection.InsertAsync(new PosSalePayment
+                    {
+                        SalesOrderId = order.Id,
+                        PosPaymentMethodId = tender.Method.Id,
+                        Amount = applied,
+                        Date = DateTime.Now
+                    });
+
+                    var paymentJournal = await connection.Table<Journal>().Where(j => j.Id == tender.Method.JournalId).FirstOrDefaultAsync();
+                    if (paymentJournal == null) continue;
+
+                    var entryCount = await connection.Table<JournalEntry>().Where(e => e.JournalId == paymentJournal.Id).CountAsync();
+                    var entryNumber = $"{paymentJournal.SequencePrefix}/{DateTime.Now.Year}/{(entryCount + 1):D5}";
+
+                    var paymentEntry = new JournalEntry
+                    {
+                        EntryNumber = entryNumber,
+                        JournalId = paymentJournal.Id,
+                        Date = DateTime.Now,
+                        Reference = $"POS Payment ({tender.Method.Name}): {order.SONumber}",
+                        State = "Posted"
+                    };
+                    await connection.InsertAsync(paymentEntry);
+
+                    // Default/Bank Account for the payment journal
+                    int cashAccountId = paymentJournal.DefaultAccountId ?? paymentJournal.BankAccountId ?? 0;
+                    if (cashAccountId == 0)
+                    {
+                        var cashAccountObj = await connection.Table<Account>().Where(a => a.Code.StartsWith("101") || a.Code.StartsWith("102")).FirstOrDefaultAsync();
+                        cashAccountId = cashAccountObj?.Id ?? 1; // Fallback to Cash/Bank
+                    }
+
+                    // Debit Cash/Bank/Mobile Money
+                    await connection.InsertAsync(new JournalLine
+                    {
+                        JournalEntryId = paymentEntry.Id,
+                        AccountId = cashAccountId,
+                        Label = $"POS {tender.Method.Name} Inflow - {order.SONumber}",
+                        Debit = applied,
+                        Credit = 0
+                    });
+
+                    // Credit Accounts Receivable (clears AR!)
+                    await connection.InsertAsync(new JournalLine
+                    {
+                        JournalEntryId = paymentEntry.Id,
+                        AccountId = arAccountIdForPayments,
+                        Label = $"POS Payment Receipt ({tender.Method.Name}) - {order.SONumber}",
+                        Debit = 0,
+                        Credit = applied
+                    });
                 }
 
                 // 4. Generate A4 Tax Invoice PDF or 80mm POS Receipt PDF
@@ -749,7 +820,7 @@ namespace InventoryManagementSystem.UI.ViewModels
                 }
                 else
                 {
-                    LastReceiptPath = _receiptService.GenerateReceiptFromCart(user, CartItems, postedTotal, AmountPaid, ChangeDue);
+                    LastReceiptPath = _receiptService.GenerateReceiptFromCart(user, CartItems, postedTotal, TotalTendered, ChangeDue);
                     LastReceiptText = $"Receipt Generated Successfully!\nSaved to: {LastReceiptPath}";
                 }
 
@@ -758,7 +829,9 @@ namespace InventoryManagementSystem.UI.ViewModels
                 // Clear Cart
                 CartItems.Clear();
                 RecalculateTotal();
-                AmountPaid = 0;
+                Tenders.Clear();
+                TenderAmount = 0;
+                RaiseTenderTotalsChanged();
                 IsPaymentPanelVisible = false;
                 SelectedCustomer = null;
                 CustomerSearchText = string.Empty;
@@ -912,9 +985,28 @@ namespace InventoryManagementSystem.UI.ViewModels
                 }
 
                 var paymentRows = new List<POSDetailedPaymentRow>();
-                if (so.PosPaymentMethodId.HasValue)
+                var connection = _journalService.Database.Connection;
+                var tenderRecords = await connection.Table<PosSalePayment>()
+                    .Where(p => !p.IsDeleted && p.SalesOrderId == so.Id)
+                    .ToListAsync();
+
+                if (tenderRecords.Count > 0)
                 {
-                    var connection = _journalService.Database.Connection;
+                    var methods = await connection.Table<PosPaymentMethod>().ToListAsync();
+                    foreach (var tenderRecord in tenderRecords)
+                    {
+                        var pm = methods.FirstOrDefault(p => p.Id == tenderRecord.PosPaymentMethodId);
+                        paymentRows.Add(new POSDetailedPaymentRow
+                        {
+                            Date = tenderRecord.Date,
+                            PaymentMethod = pm?.Name ?? "Unknown POS Payment Method",
+                            Amount = tenderRecord.Amount
+                        });
+                    }
+                }
+                else if (so.PosPaymentMethodId.HasValue)
+                {
+                    // Legacy sale recorded before split-tender support: one payment method for the full amount.
                     var pm = await connection.Table<PosPaymentMethod>().Where(p => p.Id == so.PosPaymentMethodId.Value).FirstOrDefaultAsync();
                     paymentRows.Add(new POSDetailedPaymentRow
                     {

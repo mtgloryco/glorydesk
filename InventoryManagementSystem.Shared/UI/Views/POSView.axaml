@@ -169,7 +169,10 @@
                                             <Grid ColumnDefinitions="*, Auto, Auto, Auto" Margin="0,5">
                                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Product.Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding UnitPrice, StringFormat='{}{0:N0} RWF'}" FontSize="12" Foreground="Gray"/>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <TextBlock Text="Price:" FontSize="12" Foreground="Gray" VerticalAlignment="Center"/>
+                                                        <TextBox Text="{Binding UnitPrice}" FontSize="12" Width="80" Height="24" Padding="4,0" VerticalContentAlignment="Center"/>
+                                                    </StackPanel>
                                                 </StackPanel>
                                                 
                                                 <!-- Qty Controls -->
@@ -270,18 +273,6 @@
                                         </Border>
                                     </StackPanel>
 
-                                    <!-- Payment Method Dropdown -->
-                                    <StackPanel Spacing="5">
-                                        <TextBlock Text="Payment Method" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextSecondaryColor}"/>
-                                        <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedItem="{Binding SelectedPaymentMethod}" HorizontalAlignment="Stretch" Height="40">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-                                    </StackPanel>
-
                                     <!-- Auto-Create Invoice Checkbox -->
                                     <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,5">
                                         <CheckBox Content="Auto Create Invoice" IsChecked="{Binding AutoCreateInvoice}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
@@ -293,11 +284,42 @@
                                         <ComboBox ItemsSource="{Binding PosCurrencies}" SelectedItem="{Binding PosCheckoutCurrency}" HorizontalAlignment="Stretch"/>
                                     </StackPanel>
 
-                                    <!-- Amount Paid Field -->
+                                    <!-- Split-tender payment builder: add one or more payments (e.g. part cash, part mobile money) until the full amount is covered -->
                                     <StackPanel Spacing="5">
-                                        <TextBlock Text="Amount Paid" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextSecondaryColor}"/>
-                                        <TextBox Text="{Binding AmountPaid}" Watermark="e.g. 5000" Height="40" FontSize="16" FontWeight="SemiBold" VerticalContentAlignment="Center"/>
+                                        <TextBlock Text="Add Payment" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                        <Grid ColumnDefinitions="*, Auto">
+                                            <ComboBox Grid.Column="0" ItemsSource="{Binding PaymentMethods}" SelectedItem="{Binding SelectedPaymentMethod}" HorizontalAlignment="Stretch" Height="40">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*, Auto">
+                                            <TextBox Grid.Column="0" Text="{Binding TenderAmount}" Watermark="Amount" Height="40" FontSize="16" FontWeight="SemiBold" VerticalContentAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="Add" Command="{Binding AddTenderCommand}" Margin="8,0,0,0" Height="40" Padding="14,0" Classes="accent"/>
+                                        </Grid>
                                     </StackPanel>
+
+                                    <!-- Tenders already added to this sale -->
+                                    <StackPanel Spacing="6" IsVisible="{Binding Tenders.Count}">
+                                        <TextBlock Text="Payments for this sale" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                        <ItemsControl ItemsSource="{Binding Tenders}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,3">
+                                                        <TextBlock Text="{Binding Method.Name}" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Amount, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="8,0"/>
+                                                        <Button Grid.Column="2" Content="×" Command="{Binding #Root.DataContext.RemoveTenderCommand}" CommandParameter="{Binding}"
+                                                                Background="Transparent" Foreground="Red" BorderThickness="0" Padding="6,0"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <TextBlock Text="{Binding PaymentErrorMessage}" Foreground="#D32F2F" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding PaymentErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 </StackPanel>
                             </ScrollViewer>
 
@@ -313,6 +335,20 @@
                                 </Grid>
                                 <TextBlock Text="{Binding CheckoutBaseEquivalent}" FontSize="11" Foreground="Gray" IsVisible="{Binding CheckoutBaseEquivalent, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 <Grid ColumnDefinitions="*, Auto">
+                                    <TextBlock Text="Total Tendered" FontSize="14" Foreground="Gray"/>
+                                    <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold">
+                                        <Run Text="{Binding TotalTendered, StringFormat='{}{0:N0}'}"/>
+                                        <Run Text="{Binding ActiveCheckoutCurrency}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid ColumnDefinitions="*, Auto" IsVisible="{Binding !CanCompleteSale}">
+                                    <TextBlock Text="Still Due" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#D32F2F"/>
+                                    <TextBlock Grid.Column="1" FontSize="18" FontWeight="Bold" Foreground="#D32F2F">
+                                        <Run Text="{Binding RemainingDue, StringFormat='{}{0:N0}'}"/>
+                                        <Run Text="{Binding ActiveCheckoutCurrency}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid ColumnDefinitions="*, Auto" IsVisible="{Binding CanCompleteSale}">
                                     <TextBlock Text="Change Due" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AccentColor}">
                                         <Run Text="{Binding ChangeDue, StringFormat='{}{0:N0}'}"/>
@@ -322,9 +358,10 @@
                             </StackPanel>
 
                             <!-- Validate Payment / Checkout Button -->
-                            <Button Grid.Row="3" Margin="0,15,0,0" 
-                                    Content="Validate Payment" 
+                            <Button Grid.Row="3" Margin="0,15,0,0"
+                                    Content="Validate Payment"
                                     Command="{Binding CheckoutCommand}"
+                                    IsEnabled="{Binding CanCompleteSale}"
                                     Classes="accent" HorizontalAlignment="Stretch" Padding="15" FontSize="16" FontWeight="Bold"/>
                         </Grid>
                     </Panel>

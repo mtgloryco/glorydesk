@@ -138,7 +138,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         public string ArchiveDetailedSoButtonText => DetailedSoIsArchived ? "Unarchive Order" : "Archive Order";
         public bool CanDeliverDetailedSo => DetailedSo != null && DetailedSo.DeliveryStatus != "Delivered" && DetailedSo.Status != "Cancelled" && DetailedSo.Status != "Draft";
         public bool CanReturnDetailedSo => DetailedSo != null && DetailedSo.DeliveryStatus != "Pending" && DetailedSo.Status != "Cancelled";
-        public bool CanInvoiceDetailedSo => DetailedSo != null && DetailedSo.BillingStatus != "Invoiced" && DetailedSo.Status != "Cancelled" && DetailedSo.Status != "Draft";
+        public bool CanInvoiceDetailedSo => DetailedSo != null && DetailedSo.BillingStatus != "Invoiced" && DetailedSo.Status != "Cancelled" && DetailedSo.Status != "Draft" && DetailedSo.DeliveryStatus == "Delivered";
         public bool IsDetailedSoInvoiced => DetailedSo?.BillingStatus == "Invoiced";
 
         public List<Customer> AllCustomers { get; private set; } = new();
@@ -159,7 +159,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             LanguageService languageService,
             int initialTab = 0,
             DocumentAttachmentService? attachmentService = null,
-            RecurringInvoiceService? recurringInvoiceService = null)
+            RecurringInvoiceService? recurringInvoiceService = null,
+            int? initialSalesOrderId = null)
         {
             _salesOrderService = salesOrderService;
             _customerService = customerService;
@@ -175,7 +176,27 @@ namespace InventoryManagementSystem.UI.ViewModels
             _recurringInvoiceService = recurringInvoiceService;
             SelectedTabIndex = initialTab;
 
-            LoadSalesDataCommand.Execute(null);
+            if (initialSalesOrderId.HasValue)
+            {
+                _ = InitializeWithDetailsAsync(initialSalesOrderId.Value);
+            }
+            else
+            {
+                LoadSalesDataCommand.Execute(null);
+            }
+        }
+
+        private async Task InitializeWithDetailsAsync(int salesOrderId)
+        {
+            await LoadSalesData();
+
+            var match = (await _salesOrderService.GetAllSalesOrdersAsync())
+                .FirstOrDefault(o => o.SalesOrder.Id == salesOrderId);
+            if (match != null)
+            {
+                SelectedTabIndex = 1;
+                await OpenDetails(match);
+            }
         }
 
         [RelayCommand]
@@ -469,8 +490,15 @@ namespace InventoryManagementSystem.UI.ViewModels
         {
             var target = item ?? SelectedOrder;
             if (target == null) return;
-            await _salesOrderService.InvoiceSalesOrderAsync(target.SalesOrder.Id);
-            await LoadSalesData();
+            try
+            {
+                await _salesOrderService.InvoiceSalesOrderAsync(target.SalesOrder.Id);
+                await LoadSalesData();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Invoicing failed: {ex.Message}";
+            }
         }
 
         [RelayCommand]

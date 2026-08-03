@@ -55,6 +55,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly SecurityComplianceService _securityComplianceService;
     private readonly DocumentAttachmentService _documentAttachmentService;
     private readonly RecurringInvoiceService _recurringInvoiceService;
+    private readonly ExpenseService _expenseService;
+    private readonly DamageWriteOffService _damageWriteOffService;
 
     public IndustryTemplateService IndustryTemplateService => _industryTemplateService;
     public CustomFieldService CustomFieldService => _customFieldService;
@@ -144,7 +146,9 @@ public partial class MainViewModel : ViewModelBase
         MobileFieldService mobileFieldService,
         SecurityComplianceService securityComplianceService,
         DocumentAttachmentService documentAttachmentService,
-        RecurringInvoiceService recurringInvoiceService)
+        RecurringInvoiceService recurringInvoiceService,
+        ExpenseService expenseService,
+        DamageWriteOffService damageWriteOffService)
     {
         _inventoryService = inventoryService;
         _userService = userService;
@@ -194,6 +198,8 @@ public partial class MainViewModel : ViewModelBase
         _securityComplianceService = securityComplianceService;
         _documentAttachmentService = documentAttachmentService;
         _recurringInvoiceService = recurringInvoiceService;
+        _expenseService = expenseService;
+        _damageWriteOffService = damageWriteOffService;
 
         // Check for updates on startup (fire and forget, silent)
         _ = CheckForUpdatesInternal(false);
@@ -497,6 +503,8 @@ public partial class MainViewModel : ViewModelBase
     public bool CanAccessExpiry => _licenseService.CanAccessExpiryTracking() && IsModuleEnabled("Expiry") && HasRolePermission(RolePermissions.ManageInventory);
     public bool CanAccessLocations => _licenseService.CanAccessMultiLocation() && IsModuleEnabled("MultiLocation") && HasRolePermission(RolePermissions.ManageInventory);
     public bool CanAccessReturns => _licenseService.CanAccessReturns() && HasRolePermission(RolePermissions.ProcessReturns);
+    public bool CanAccessExpenses => HasRolePermission(RolePermissions.ManageExpenses);
+    public bool CanAccessDamageWriteOff => HasRolePermission(RolePermissions.ManageInventory);
     public bool CanAccessBundles => _licenseService.CanAccessKitting() && IsModuleEnabled("BOM") && HasRolePermission(RolePermissions.ManageInventory);
     public bool CanAccessAudit => _licenseService.CanAccessAuditTrail() && HasRolePermission(RolePermissions.ViewAudit);
     public bool CanAccessAdvancedAnalytics => _licenseService.CanAccessAdvancedAnalytics() && HasRolePermission(RolePermissions.ViewReports);
@@ -571,7 +579,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, GoToCycleCount, GoToReorderDashboard, GoToForecasting, GoToLocations, CustomFieldService, _barcodeService));
+    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, GoToCycleCount, GoToReorderDashboard, GoToForecasting, GoToLocations, CustomFieldService, _barcodeService, GoToDamageWriteOff));
 
     [RelayCommand]
     public void GoToManufacturing() => NavigateTo(new ManufacturingViewModel(_manufacturingService, _inventoryService, Language));
@@ -591,13 +599,18 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToPurchaseOrders()
     {
+        GoToPurchaseOrderDetails(null);
+    }
+
+    public void GoToPurchaseOrderDetails(int? purchaseOrderId)
+    {
         if (!_licenseService.CanAccessPurchaseOrders())
         {
             GoToLicense();
             return;
         }
 
-        NavigateTo(new PurchaseOrdersViewModel(_purchaseOrderService, _supplierService, _inventoryService, _taxService, _settingsService, _returnsService, _paymentService, _currencyService, Language));
+        NavigateTo(new PurchaseOrdersViewModel(_purchaseOrderService, _supplierService, _inventoryService, _taxService, _settingsService, _returnsService, _paymentService, _currencyService, Language, purchaseOrderId));
     }
 
     [RelayCommand]
@@ -609,7 +622,12 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToSalesOrders()
     {
-        NavigateTo(new SalesViewModel(_salesOrderService, _customerService, _inventoryService, _taxService, _settingsService, _returnsService, _paymentService, _currencyService, Language, initialTab: 1, _documentAttachmentService, _recurringInvoiceService));
+        GoToSalesOrderDetails(null);
+    }
+
+    public void GoToSalesOrderDetails(int? salesOrderId)
+    {
+        NavigateTo(new SalesViewModel(_salesOrderService, _customerService, _inventoryService, _taxService, _settingsService, _returnsService, _paymentService, _currencyService, Language, initialTab: 1, _documentAttachmentService, _recurringInvoiceService, salesOrderId));
     }
 
     [RelayCommand]
@@ -627,7 +645,7 @@ public partial class MainViewModel : ViewModelBase
             GoToLicense(); 
             return;
         }
-        NavigateTo(new ReportsViewModel(_inventoryService, _licenseService, _settingsService, Language, _accountingReportService, _agingReportService, _vatExportService, _budgetReportService, _paymentService, _advancedAnalyticsService, _monthCloseService));
+        NavigateTo(new ReportsViewModel(_inventoryService, _licenseService, _settingsService, Language, _accountingReportService, _agingReportService, _vatExportService, _budgetReportService, _paymentService, _advancedAnalyticsService, _monthCloseService, GoToPurchaseOrderDetails, GoToSalesOrderDetails));
     }
 
     [RelayCommand]
@@ -763,6 +781,26 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
         NavigateTo(new ReturnsViewModel(_returnsService, _inventoryService, _salesOrderService, _purchaseOrderService));
+    }
+
+    [RelayCommand]
+    public void GoToExpenses()
+    {
+        if (!CanAccessExpenses)
+        {
+            return;
+        }
+        NavigateTo(new ExpenseViewModel(_expenseService));
+    }
+
+    [RelayCommand]
+    public void GoToDamageWriteOff()
+    {
+        if (!CanAccessDamageWriteOff)
+        {
+            return;
+        }
+        NavigateTo(new DamageWriteOffViewModel(_damageWriteOffService, _inventoryService));
     }
 
     [RelayCommand]

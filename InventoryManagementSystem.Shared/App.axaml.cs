@@ -14,6 +14,28 @@ namespace InventoryManagementSystem;
 
 public partial class App : Application
 {
+    public static (
+        InventoryService inventory, UserService user, LicenseService license, HardwareIdService hardware,
+        AnalyticsService analytics, ReceiptService receipt, LanguageService language, UpdateService update,
+        SettingsService settings, SupplierService supplier, PurchaseOrderService purchaseOrder, SalesOrderService salesOrder,
+        ForecastingService forecasting, ExpiryService expiry, LocationService location, ReturnsService returns,
+        AdvancedAnalyticsService advancedAnalytics, BundleService bundle, AuditService audit,
+        ReportingService reporting, CloudSyncService cloudSync, DailyBriefingService briefing,
+        TaxService tax, AccountService account, JournalService journal, AccountingReportService accountingReport,
+        ManufacturingService manufacturing, PaymentService payment, IndustryTemplateService industryTemplateService,
+        CustomFieldService customFieldService, CustomerService customerService,
+        BarcodeService barcodeService, AgingReportService agingReportService,
+        VatExportService vatExportService, BudgetReportService budgetReportService,
+        CurrencyService currencyService, CycleCountService cycleCountService,
+        IntegrationWebhookService integrationWebhookService, NotificationService notificationService,
+        MonthCloseService monthCloseService, CompanyBranchService companyBranchService,
+        WorkflowApprovalService workflowApprovalService, MrpPlanningService mrpPlanningService,
+        CrmPipelineService crmPipelineService, MobileFieldService mobileFieldService,
+        SecurityComplianceService securityComplianceService,
+        DocumentAttachmentService documentAttachmentService,
+        RecurringInvoiceService recurringInvoiceService,
+        ExpenseService expenseService, DamageWriteOffService damageWriteOffService)? PreInitializedServices { get; set; }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -22,7 +44,7 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         // Shared Service Initialization
-        var services = InitializeServices();
+        var services = PreInitializedServices ?? InitializeServices();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -42,7 +64,8 @@ public partial class App : Application
                     services.integrationWebhookService, services.notificationService, services.monthCloseService,
                     services.companyBranchService, services.workflowApprovalService, services.mrpPlanningService,
                     services.crmPipelineService, services.mobileFieldService, services.securityComplianceService,
-                    services.documentAttachmentService, services.recurringInvoiceService),
+                    services.documentAttachmentService, services.recurringInvoiceService,
+                    services.expenseService, services.damageWriteOffService),
             };
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
@@ -62,7 +85,8 @@ public partial class App : Application
                     services.integrationWebhookService, services.notificationService, services.monthCloseService,
                     services.companyBranchService, services.workflowApprovalService, services.mrpPlanningService,
                     services.crmPipelineService, services.mobileFieldService, services.securityComplianceService,
-                    services.documentAttachmentService, services.recurringInvoiceService),
+                    services.documentAttachmentService, services.recurringInvoiceService,
+                    services.expenseService, services.damageWriteOffService),
             };
         }
 
@@ -88,7 +112,8 @@ public partial class App : Application
         CrmPipelineService crmPipelineService, MobileFieldService mobileFieldService,
         SecurityComplianceService securityComplianceService,
         DocumentAttachmentService documentAttachmentService,
-        RecurringInvoiceService recurringInvoiceService) InitializeServices()
+        RecurringInvoiceService recurringInvoiceService,
+        ExpenseService expenseService, DamageWriteOffService damageWriteOffService) InitializeServices()
     {
         // Initialize Database
         var dbService = new DatabaseService();
@@ -143,6 +168,8 @@ public partial class App : Application
         var securityComplianceService = new SecurityComplianceService(dbService, auditService);
         var documentAttachmentService = new DocumentAttachmentService(dbService, auditService);
         var recurringInvoiceService = new RecurringInvoiceService(dbService, salesOrderService, auditService);
+        var expenseService = new ExpenseService(dbService, auditService);
+        var damageWriteOffService = new DamageWriteOffService(dbService, inventoryService, purchaseOrderService, manufacturingService);
 
         // Apply plain-English defaults when no custom word labels are saved yet
         var terminology = settingsService.CurrentSettings.TerminologyOverrides;
@@ -176,7 +203,8 @@ public partial class App : Application
             integrationWebhookService, notificationService, monthCloseService,
             companyBranchService, workflowApprovalService, mrpPlanningService,
             crmPipelineService, mobileFieldService, securityComplianceService,
-            documentAttachmentService, recurringInvoiceService);
+            documentAttachmentService, recurringInvoiceService,
+            expenseService, damageWriteOffService);
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

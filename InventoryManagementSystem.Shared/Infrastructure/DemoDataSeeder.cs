@@ -333,18 +333,22 @@ namespace InventoryManagementSystem.Infrastructure
                 var poProducts = products.OrderBy(_ => rng.Next()).Take(rng.Next(2, 5)).ToList();
                 decimal total = 0;
 
+                var status = statuses[i % statuses.Length];
+                var isDraft = status == "Draft";
+
                 var po = new PurchaseOrder
                 {
                     PONumber = $"PO-DEMO-{i + 1:D3}",
                     SupplierId = supplier.Id,
-                    Status = statuses[i % statuses.Length],
+                    Status = status,
                     OrderDate = orderDate,
                     ExpectedDeliveryDate = orderDate.AddDays(supplier.DefaultLeadTimeDays),
-                    ActualDeliveryDate = statuses[i % statuses.Length] == "Approved" ? orderDate.AddDays(supplier.DefaultLeadTimeDays) : null,
+                    ActualDeliveryDate = status == "Approved" ? orderDate.AddDays(supplier.DefaultLeadTimeDays) : null,
                     CreatedByUsername = "admin",
                     Currency = "RWF",
-                    ReceiptStatus = i % 3 == 0 ? "Pending" : "Received",
-                    BillingStatus = i % 2 == 0 ? "Billed" : "Waiting Bill"
+                    // Draft/RFQ orders have not been received or billed yet - only Approved orders can progress.
+                    ReceiptStatus = isDraft ? "Pending" : (i % 3 == 0 ? "Pending" : "Received"),
+                    BillingStatus = isDraft ? "Waiting Bill" : (i % 2 == 0 ? "Billed" : "Waiting Bill")
                 };
                 SyncMetadataHelper.Touch(po);
                 conn.Insert(po);

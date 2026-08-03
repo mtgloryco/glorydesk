@@ -49,6 +49,7 @@ public class AuditTrailCoverageTests : IAsyncLifetime
             SONumber = "SO-AUDIT-1",
             CustomerId = 1,
             Status = "Delivered",
+            DeliveryStatus = "Delivered",
             BillingStatus = "Waiting Invoice",
             OrderDate = DateTime.Today,
             TotalAmount = 500

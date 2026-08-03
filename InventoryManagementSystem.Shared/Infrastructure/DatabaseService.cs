@@ -13,7 +13,7 @@ namespace InventoryManagementSystem.Infrastructure
         private readonly string _databasePath;
         private readonly string _legacyDatabasePath;
         private SQLiteAsyncConnection _connection;
-        private const int CurrentDatabaseVersion = 8;
+        private const int CurrentDatabaseVersion = 10;
 
         public DatabaseService()
         {
@@ -47,10 +47,14 @@ namespace InventoryManagementSystem.Infrastructure
 
         public async Task InitializeAsync(string defaultCurrency = "RWF")
         {
-            // 0. Enable WAL journal mode and optimize synchronicity settings for performance
+            // 0. Enable WAL journal mode and optimize synchronicity settings for performance.
+            // WAL relies on shared-memory locking that Emscripten's IDBFS does not support and
+            // throws "disk I/O error" on the browser target, so fall back to an in-memory journal there.
             try
             {
-                await _connection.ExecuteAsync("PRAGMA journal_mode = WAL;");
+                await _connection.ExecuteAsync(OperatingSystem.IsBrowser()
+                    ? "PRAGMA journal_mode = MEMORY;"
+                    : "PRAGMA journal_mode = WAL;");
                 await _connection.ExecuteAsync("PRAGMA synchronous = NORMAL;");
             }
             catch {}
@@ -129,12 +133,31 @@ namespace InventoryManagementSystem.Infrastructure
             await _connection.CreateTableAsync<RecurringInvoice>();
             await _connection.CreateTableAsync<RecurringInvoiceLine>();
             await _connection.CreateTableAsync<DocumentAttachment>();
+            await _connection.CreateTableAsync<Expense>();
+            await _connection.CreateTableAsync<DamageWriteOff>();
+            await _connection.CreateTableAsync<PosSalePayment>();
 
-            // 3. Perform Schema Migrations
+            // 3. Seed Initial Data
+            // Must run BEFORE migrations: SeedDataAsync's account/journal/etc. seed blocks are each
+            // guarded by "table is completely empty", and some migrations (e.g. EnsureFxAccountsAsync,
+            // EnsureExpenseCategoryAccountsAsync) insert their own Account rows idempotently. On a brand
+            // new database those two migrations running first would insert a couple of Account rows
+            // before the base chart-of-accounts seed runs, tripping its "already seeded" guard and
+            // silently skipping the entire core chart of accounts (Cash, Bank, AR, AP, Inventory,
+            // Revenue, COGS, ...). Seeding first guarantees the base seed always sees a truly empty
+            // table on fresh installs; migrations then no-op for anything already seeded.
+            await SeedDataAsync(defaultCurrency);
+
+            // 4. Perform Schema Migrations
+            // Kept after the core seed above (see comment on step 3) but before demo data below:
+            // data migrations like MigrateToV3Async (Supplier -> Customer split) key off "is this
+            // table still genuinely empty" and must run before any demo rows exist to see accurate state.
             await PerformMigrationsAsync();
 
-            // 4. Seed Initial Data
-            await SeedDataAsync(defaultCurrency);
+            // 5. Seed Demo Data (first-run only, empty product catalog)
+            // Deliberately last: demo seeding creates its own Customers/SalesOrders/etc., which would
+            // corrupt the "empty table" checks that data migrations above rely on if it ran any earlier.
+            await DemoDataSeeder.SeedIfEmptyAsync(_connection, defaultCurrency);
         }
 
         private async Task ImportLegacyDatabaseIfNeeded()
@@ -194,6 +217,16 @@ namespace InventoryManagementSystem.Infrastructure
                 if (metaVersion < 8)
                 {
                     await MigrateToV8Async();
+                }
+
+                if (metaVersion < 9)
+                {
+                    await MigrateToV9Async();
+                }
+
+                if (metaVersion < 10)
+                {
+                    await MigrateToV10Async();
                 }
 
                 await _connection.ExecuteAsync($"PRAGMA user_version = {CurrentDatabaseVersion}");
@@ -351,6 +384,56 @@ namespace InventoryManagementSystem.Infrastructure
             }
         }
 
+        private async Task MigrateToV10Async()
+        {
+            // A dedicated Barcode column, distinct from SKU: SKU is the business's own internal code,
+            // Barcode is the manufacturer UPC/EAN printed on the item - they aren't always the same
+            // value, and products bought in already had no way to record the printed barcode at all.
+            await AddColumnIfNotExistsAsync("Product", "Barcode", "TEXT");
+        }
+
+        private async Task MigrateToV9Async()
+        {
+            // New in this version: standalone Expense recording (rent, utilities, salaries, etc.)
+            // and categorized Damage/Loss stock write-offs. Both post to the General Ledger, so the
+            // dedicated expense accounts below must exist for installs that were seeded before this
+            // version shipped (fresh installs get them from the main SeedDataAsync account list too -
+            // guarded there the same way, by Code, so this is idempotent either way).
+            await EnsureExpenseCategoryAccountsAsync();
+        }
+
+        private async Task EnsureExpenseCategoryAccountsAsync()
+        {
+            var currency = (await _connection.Table<Account>().FirstOrDefaultAsync())?.Currency ?? "RWF";
+            var newAccounts = new (string Code, string Name, string Description)[]
+            {
+                ("512000", "Rent Expense", "Rent paid for premises/warehouse"),
+                ("513000", "Utilities Expense", "Electricity, water, internet, and similar utilities"),
+                ("514000", "Salaries & Wages Expense", "Staff salaries and wages"),
+                ("515000", "Marketing & Advertising Expense", "Advertising and promotional spend"),
+                ("516000", "Repairs & Maintenance Expense", "Equipment and premises upkeep"),
+                ("517000", "Office Supplies Expense", "Consumable office/operational supplies"),
+                ("518000", "Transport & Fuel Expense", "Transport, delivery, and fuel costs"),
+            };
+
+            foreach (var (code, name, description) in newAccounts)
+            {
+                var exists = await _connection.Table<Account>().Where(a => a.Code == code).FirstOrDefaultAsync();
+                if (exists == null)
+                {
+                    await _connection.InsertAsync(new Account
+                    {
+                        Code = code,
+                        Name = name,
+                        Type = "Expense: Expenses",
+                        Currency = currency,
+                        IsActive = true,
+                        Description = description
+                    });
+                }
+            }
+        }
+
         private async Task MigrateToV5Async()
         {
             await AddColumnIfNotExistsAsync("PaymentTerm", "DueDays", "INTEGER NOT NULL DEFAULT 0");
@@ -411,7 +494,9 @@ namespace InventoryManagementSystem.Infrastructure
                 _connection = new SQLiteAsyncConnection(_databasePath);
                 try
                 {
-                    await _connection.ExecuteAsync("PRAGMA journal_mode = WAL;");
+                    await _connection.ExecuteAsync(OperatingSystem.IsBrowser()
+                        ? "PRAGMA journal_mode = MEMORY;"
+                        : "PRAGMA journal_mode = WAL;");
                     await _connection.ExecuteAsync("PRAGMA synchronous = NORMAL;");
                 }
                 catch { }
@@ -751,7 +836,6 @@ namespace InventoryManagementSystem.Infrastructure
                     });
                 }
 
-                await DemoDataSeeder.SeedIfEmptyAsync(_connection, defaultCurrency);
             }
 
             public SQLiteAsyncConnection Connection => _connection;

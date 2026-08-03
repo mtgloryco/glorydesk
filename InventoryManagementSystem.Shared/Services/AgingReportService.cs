@@ -49,6 +49,7 @@ namespace InventoryManagementSystem.Services
 
                 lines.Add(new AgingLine
                 {
+                    DocumentId = order.Id,
                     PartnerName = customer?.Name ?? "Unknown Customer",
                     DocumentNumber = order.SONumber,
                     DocumentDate = order.OrderDate,
@@ -67,7 +68,7 @@ namespace InventoryManagementSystem.Services
         {
             var reportDate = (asOf ?? DateTime.Today).Date;
             var orders = await _databaseService.Connection.Table<PurchaseOrder>()
-                .Where(o => !o.IsDeleted && o.BillingStatus == "Billed" && o.Status != "Cancelled")
+                .Where(o => !o.IsDeleted && o.BillingStatus == "Billed" && o.Status != "Cancelled" && o.Status != "Draft" && o.Status != "Sent")
                 .ToListAsync();
             var suppliers = await _databaseService.Connection.Table<Supplier>().ToListAsync();
             var debitNotes = await _databaseService.Connection.Table<DebitNote>()
@@ -96,6 +97,7 @@ namespace InventoryManagementSystem.Services
 
                 lines.Add(new AgingLine
                 {
+                    DocumentId = order.Id,
                     PartnerName = supplier?.Name ?? "Unknown Supplier",
                     DocumentNumber = order.PONumber,
                     DocumentDate = order.OrderDate,
