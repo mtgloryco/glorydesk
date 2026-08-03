@@ -42,6 +42,7 @@
                                 <MenuItem Header="What to Reorder" Command="{Binding GoToReorderDashboardScreenCommand}"/>
                                 <MenuItem Header="Demand Forecast" Command="{Binding GoToForecastingScreenCommand}"/>
                                 <MenuItem Header="Store Locations" Command="{Binding GoToLocationsScreenCommand}"/>
+                                <MenuItem Header="Damage / Loss Write-off" Command="{Binding GoToDamageWriteOffScreenCommand}"/>
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
@@ -142,8 +143,14 @@
 
                                          <!-- SKU -->
                                          <StackPanel Spacing="5">
-                                             <TextBlock Text="SKU / Barcode" FontSize="12" FontWeight="SemiBold"/>
+                                             <TextBlock Text="SKU (internal code)" FontSize="12" FontWeight="SemiBold"/>
                                              <TextBox Watermark="e.g. SKU12345" Text="{Binding CurrentProduct.SKU}" />
+                                         </StackPanel>
+
+                                         <!-- Barcode -->
+                                         <StackPanel Spacing="5">
+                                             <TextBlock Text="Barcode (UPC/EAN, for scanning)" FontSize="12" FontWeight="SemiBold"/>
+                                             <TextBox Watermark="Scan or type the barcode printed on the item" Text="{Binding CurrentProduct.Barcode}" />
                                          </StackPanel>
 
                                          <!-- Service Level Availability Checkboxes -->

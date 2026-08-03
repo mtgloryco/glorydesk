@@ -16,7 +16,10 @@ namespace InventoryManagementSystem.Services
         {
             _settingsService = settingsService;
             // QuestPDF Community License (Free for individuals and small businesses < $1M revenue)
-            QuestPDF.Settings.License = LicenseType.Community;
+            if (!OperatingSystem.IsBrowser())
+            {
+                QuestPDF.Settings.License = LicenseType.Community;
+            }
         }
 
         public string GenerateReceiptPdf(string cashierName, IEnumerable<Domain.StockMovement> items, decimal totalAmount)

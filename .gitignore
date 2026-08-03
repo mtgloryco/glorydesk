@@ -62,6 +62,14 @@ Desktop.ini
 
 # Environment Variables
 .env
+.env.local
+.env.*.local
+
+# In-progress project, not ready to build/ship yet
+InventoryManagementSystem.Browser/
+
+# Runtime database files (not source)
+InventoryManagementSystem.Cloud/cloud.db
 
 # Publish
 *.pubxml

@@ -17,7 +17,10 @@ namespace InventoryManagementSystem.Services
         {
             _settingsService = settingsService;
             // Set QuestPDF Community license
-            QuestPDF.Settings.License = LicenseType.Community;
+            if (!OperatingSystem.IsBrowser())
+            {
+                QuestPDF.Settings.License = LicenseType.Community;
+            }
         }
 
         public string GeneratePurchaseOrderPdf(

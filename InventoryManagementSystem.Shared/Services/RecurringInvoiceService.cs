@@ -167,6 +167,15 @@ namespace InventoryManagementSystem.Services
 
             await _salesOrderService.CreateSalesQuotationAsync(so, items);
             await _salesOrderService.ConfirmQuotationAsync(so.Id);
+
+            // A recurring invoice has no physical goods movement, but it must still post the
+            // AR/Revenue journal entry that InvoiceSalesOrderAsync now requires delivery for.
+            // "Delivering" the full billed quantity here is what actually recognizes the revenue
+            // and receivable in the ledger (see SalesOrderService.DeliverSalesOrderAsync) - without
+            // this step, recurring invoices previously flipped to "Invoiced" and appeared on the
+            // Aging Report without ever posting anything to the General Ledger.
+            var deliveryLines = items.Select(i => (itemId: i.Id, quantityDelivered: i.QuantityOrdered)).ToList();
+            await _salesOrderService.DeliverSalesOrderAsync(so.Id, deliveryLines);
             await _salesOrderService.InvoiceSalesOrderAsync(so.Id);
 
             schedule.LastGeneratedAt = DateTime.Now;

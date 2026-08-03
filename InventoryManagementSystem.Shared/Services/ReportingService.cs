@@ -22,7 +22,10 @@ namespace InventoryManagementSystem.Services
         {
             _databaseService = databaseService;
             _settingsService = settingsService;
-            QuestPDF.Settings.License = LicenseType.Community;
+            if (!OperatingSystem.IsBrowser())
+            {
+                QuestPDF.Settings.License = LicenseType.Community;
+            }
         }
 
         public async Task<string> GeneratePurchaseOrderPdfAsync(int poId)

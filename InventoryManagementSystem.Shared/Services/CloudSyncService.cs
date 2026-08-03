@@ -312,6 +312,8 @@ namespace InventoryManagementSystem.Services
                 nameof(Location) => (await _databaseService.Connection.Table<Location>().Where(p => p.UpdatedAt > sinceUtc).ToListAsync()).Cast<ISyncableEntity>().ToList(),
                 nameof(LocationStock) => (await _databaseService.Connection.Table<LocationStock>().Where(p => p.UpdatedAt > sinceUtc).ToListAsync()).Cast<ISyncableEntity>().ToList(),
                 nameof(StockTransfer) => (await _databaseService.Connection.Table<StockTransfer>().Where(p => p.UpdatedAt > sinceUtc).ToListAsync()).Cast<ISyncableEntity>().ToList(),
+                nameof(Expense) => (await _databaseService.Connection.Table<Expense>().Where(p => p.UpdatedAt > sinceUtc).ToListAsync()).Cast<ISyncableEntity>().ToList(),
+                nameof(DamageWriteOff) => (await _databaseService.Connection.Table<DamageWriteOff>().Where(p => p.UpdatedAt > sinceUtc).ToListAsync()).Cast<ISyncableEntity>().ToList(),
                 _ => new List<ISyncableEntity>()
             };
         }
@@ -451,6 +453,8 @@ namespace InventoryManagementSystem.Services
                 "Location" => conn.Table<Location>().FirstOrDefault(x => x.SyncId == syncId),
                 "LocationStock" => conn.Table<LocationStock>().FirstOrDefault(x => x.SyncId == syncId),
                 "StockTransfer" => conn.Table<StockTransfer>().FirstOrDefault(x => x.SyncId == syncId),
+                "Expense" => conn.Table<Expense>().FirstOrDefault(x => x.SyncId == syncId),
+                "DamageWriteOff" => conn.Table<DamageWriteOff>().FirstOrDefault(x => x.SyncId == syncId),
                 _ => null
             };
         }
