@@ -302,7 +302,7 @@
                                     <TextBlock Text="Lot / Batch Number" FontSize="12" FontWeight="SemiBold"/>
                                     <TextBox Watermark="Required for lot-tracked products" Text="{Binding AdjustmentBatchNumber}"/>
                                     <TextBlock Text="Expiry Date" FontSize="12" FontWeight="SemiBold"/>
-                                    <DatePicker SelectedDate="{Binding AdjustmentExpiryDate}"/>
+                                    <CalendarDatePicker SelectedDate="{Binding AdjustmentExpiryDate}"/>
                                 </StackPanel>
 
                                 <StackPanel IsVisible="{Binding ShowSerialFields}" Spacing="5">
@@ -509,7 +509,7 @@
         <Grid Background="#7F000000" IsVisible="{Binding IsHistoryModalOpen}" ZIndex="20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" MinWidth="900" MinHeight="520" Width="1100" Height="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" BoxShadow="0 10 40 0 #44000000">
-                <Grid RowDefinitions="Auto,Auto,*,Auto">
+                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Spacing="4">
                             <TextBlock Text="Product Transaction History" FontSize="22" FontWeight="Bold"/>
@@ -519,7 +519,71 @@
                     </Grid>
                     <TextBlock Grid.Row="1" Text="{Binding HistoryStatusMessage}" Foreground="Gray" FontSize="12" Margin="0,8,0,12"/>
 
-                    <Grid Grid.Row="2" ColumnDefinitions="*,16,*">
+                    <!-- Replenishment forecast: on hand + incoming (open POs) - outgoing (open SOs) -->
+                    <StackPanel Grid.Row="2" Spacing="6" Margin="0,0,0,12">
+                        <Grid ColumnDefinitions="*,*,*,*">
+                            <Border Background="#E3F2FD" Padding="10" CornerRadius="8" Margin="0,0,6,0">
+                                <StackPanel><TextBlock Text="On Hand" FontSize="11" Foreground="Gray"/><TextBlock Text="{Binding CurrentForecast.OnHand}" FontWeight="Bold" FontSize="16"/></StackPanel>
+                            </Border>
+                            <Button Grid.Column="1" Command="{Binding ToggleIncomingBreakdownCommand}" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,6,0" HorizontalContentAlignment="Stretch">
+                                <Border Background="#E8F5E9" Padding="10" CornerRadius="8">
+                                    <StackPanel><TextBlock Text="Incoming (click for sources)" FontSize="11" Foreground="Gray"/><TextBlock Text="{Binding CurrentForecast.Incoming}" FontWeight="Bold" FontSize="16" Foreground="#2E7D32"/></StackPanel>
+                                </Border>
+                            </Button>
+                            <Button Grid.Column="2" Command="{Binding ToggleOutgoingBreakdownCommand}" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,6,0" HorizontalContentAlignment="Stretch">
+                                <Border Background="#FFEBEE" Padding="10" CornerRadius="8">
+                                    <StackPanel><TextBlock Text="Outgoing (click for sources)" FontSize="11" Foreground="Gray"/><TextBlock Text="{Binding CurrentForecast.Outgoing}" FontWeight="Bold" FontSize="16" Foreground="#C62828"/></StackPanel>
+                                </Border>
+                            </Button>
+                            <Border Grid.Column="3" Background="#FFF8E1" Padding="10" CornerRadius="8">
+                                <StackPanel><TextBlock Text="Forecasted Available" FontSize="11" Foreground="Gray"/><TextBlock Text="{Binding CurrentForecast.ForecastedAvailable}" FontWeight="Bold" FontSize="16"/></StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border IsVisible="{Binding IsIncomingBreakdownOpen}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="10" Background="{DynamicResource ContentBackgroundColor}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Incoming from these purchase orders:" FontSize="11" FontWeight="SemiBold" Foreground="Gray"/>
+                                <ItemsControl ItemsSource="{Binding CurrentForecast.IncomingSources}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).OpenReplenishmentSourceCommand}" CommandParameter="{Binding .}"
+                                                    Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch" Padding="4">
+                                                <Grid ColumnDefinitions="140, 100, 80, *">
+                                                    <TextBlock Text="{Binding DocumentNumber}" Foreground="#007ACC" FontWeight="SemiBold"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Status}" Foreground="Gray" FontSize="11"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Quantity, StringFormat='+{0}'}" FontWeight="SemiBold"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding Date, StringFormat='{}{0:yyyy-MM-dd}'}" Foreground="Gray" FontSize="11" HorizontalAlignment="Right"/>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <Border IsVisible="{Binding IsOutgoingBreakdownOpen}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="10" Background="{DynamicResource ContentBackgroundColor}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Outgoing on these sales orders:" FontSize="11" FontWeight="SemiBold" Foreground="Gray"/>
+                                <ItemsControl ItemsSource="{Binding CurrentForecast.OutgoingSources}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).OpenReplenishmentSourceCommand}" CommandParameter="{Binding .}"
+                                                    Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch" Padding="4">
+                                                <Grid ColumnDefinitions="140, 100, 80, *">
+                                                    <TextBlock Text="{Binding DocumentNumber}" Foreground="#007ACC" FontWeight="SemiBold"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Status}" Foreground="Gray" FontSize="11"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Quantity, StringFormat='-{0}'}" FontWeight="SemiBold"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding Date, StringFormat='{}{0:yyyy-MM-dd}'}" Foreground="Gray" FontSize="11" HorizontalAlignment="Right"/>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <Grid Grid.Row="3" ColumnDefinitions="*,16,*">
                         <StackPanel Grid.Column="0" Spacing="8">
                             <TextBlock Text="Stock Movements" FontWeight="SemiBold"/>
                             <DataGrid ItemsSource="{Binding ProductHistoryEvents}" SelectedItem="{Binding SelectedHistoryEvent}" AutoGenerateColumns="False" IsReadOnly="True" Height="420">
@@ -557,7 +621,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <Button Grid.Row="3" Content="Close" Command="{Binding CloseHistoryModalCommand}" HorizontalAlignment="Right" Margin="0,16,0,0" Width="100"/>
+                    <Button Grid.Row="4" Content="Close" Command="{Binding CloseHistoryModalCommand}" HorizontalAlignment="Right" Margin="0,16,0,0" Width="100"/>
                 </Grid>
             </Border>
         </Grid>

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using ClosedXML.Excel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using InventoryManagementSystem.Domain;
@@ -48,6 +49,17 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private ObservableCollection<SalesOrderListItem> _salesOrders = new();
         [ObservableProperty] private SalesOrderListItem? _selectedOrder;
         [ObservableProperty] private string _searchText = string.Empty;
+
+        // Advanced filters (date range / order type / product category), revealed by the Filters button
+        [ObservableProperty] private bool _isFilterPanelOpen;
+        [ObservableProperty] private DateTimeOffset? _filterStartDate;
+        [ObservableProperty] private DateTimeOffset? _filterEndDate;
+        [ObservableProperty] private string _filterOrderType = "All Types";
+        [ObservableProperty] private string _filterCategory = "All Categories";
+        [ObservableProperty] private ObservableCollection<string> _filterCategoryOptions = new() { "All Categories" };
+        public List<string> FilterOrderTypeOptions { get; } = new() { "All Types", "Regular Sale", "POS Sale" };
+        public bool HasActiveFilters => FilterStartDate.HasValue || FilterEndDate.HasValue || FilterOrderType != "All Types" || FilterCategory != "All Categories";
+        public string FilterButtonLabel => HasActiveFilters ? "Filters ●" : "Filters";
 
         // Form fields
         [ObservableProperty] private bool _isFormOpen;
@@ -203,19 +215,129 @@ namespace InventoryManagementSystem.UI.ViewModels
         public async Task LoadSalesData()
         {
             var list = await _salesOrderService.GetAllSalesOrdersAsync();
-            
+
             // Search filter
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 var query = SearchText.ToLower();
-                list = list.Where(o => 
-                    o.SalesOrder.SONumber.ToLower().Contains(query) || 
+                list = list.Where(o =>
+                    o.SalesOrder.SONumber.ToLower().Contains(query) ||
                     o.CustomerName.ToLower().Contains(query)
                 ).ToList();
             }
 
+            // Date range filter - quotations are dated by QuotationDate, everything else by OrderDate
+            if (FilterStartDate.HasValue)
+            {
+                var start = FilterStartDate.Value.Date;
+                list = list.Where(o => (o.SalesOrder.Status == "Draft" ? o.SalesOrder.QuotationDate : o.SalesOrder.OrderDate).Date >= start).ToList();
+            }
+            if (FilterEndDate.HasValue)
+            {
+                var end = FilterEndDate.Value.Date;
+                list = list.Where(o => (o.SalesOrder.Status == "Draft" ? o.SalesOrder.QuotationDate : o.SalesOrder.OrderDate).Date <= end).ToList();
+            }
+
+            // Order type filter
+            if (FilterOrderType == "POS Sale")
+            {
+                list = list.Where(o => o.SalesOrder.IsPosSale).ToList();
+            }
+            else if (FilterOrderType == "Regular Sale")
+            {
+                list = list.Where(o => !o.SalesOrder.IsPosSale).ToList();
+            }
+
+            // Product category filter - an order matches if any of its line items is in that category
+            if (FilterCategory != "All Categories")
+            {
+                var products = await _inventoryService.GetAllProductsAsync();
+                var matchingIds = new List<int>();
+                foreach (var order in list)
+                {
+                    var items = await _salesOrderService.GetItemsAsync(order.SalesOrder.Id);
+                    if (items.Any(i => products.FirstOrDefault(p => p.Id == i.ProductId)?.Category == FilterCategory))
+                    {
+                        matchingIds.Add(order.SalesOrder.Id);
+                    }
+                }
+                list = list.Where(o => matchingIds.Contains(o.SalesOrder.Id)).ToList();
+            }
+
             Quotations = new ObservableCollection<SalesOrderListItem>(list.Where(o => o.SalesOrder.Status == "Draft"));
             SalesOrders = new ObservableCollection<SalesOrderListItem>(list.Where(o => o.SalesOrder.Status != "Draft"));
+        }
+
+        [RelayCommand]
+        private async Task ExportToExcel()
+        {
+            // Exports whichever tab is currently open, using the same list already filtered by
+            // SearchText - what you see on screen is what lands in the spreadsheet.
+            var items = IsQuotationsTabSelected ? Quotations : SalesOrders;
+            if (items.Count == 0)
+            {
+                ErrorMessage = "Nothing to export.";
+                return;
+            }
+
+            if (Avalonia.Application.Current?.ApplicationLifetime is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow == null)
+            {
+                ErrorMessage = "Error: Cannot access file system.";
+                return;
+            }
+
+            var sheetName = IsQuotationsTabSelected ? "Price Quotes" : "Customer Orders";
+            var file = await desktop.MainWindow.StorageProvider.SaveFilePickerAsync(new Avalonia.Platform.Storage.FilePickerSaveOptions
+            {
+                Title = "Save as Excel",
+                DefaultExtension = ".xlsx",
+                SuggestedFileName = $"{sheetName.Replace(" ", "")}_{DateTime.Now:yyyyMMdd_HHmmss}",
+                FileTypeChoices = new[] { new Avalonia.Platform.Storage.FilePickerFileType("Excel Workbook") { Patterns = new[] { "*.xlsx" } } }
+            });
+            if (file == null) return;
+
+            using var workbook = new XLWorkbook();
+            var sheet = workbook.Worksheets.Add(sheetName);
+
+            var headers = IsQuotationsTabSelected
+                ? new[] { "Reference", "Customer", "Date", "Expiration Date", "Status", "Total Amount", "Currency" }
+                : new[] { "Reference", "Customer", "Order Date", "Sent Status", "Payment Status", "Total Amount", "Currency" };
+
+            for (var i = 0; i < headers.Length; i++)
+            {
+                sheet.Cell(1, i + 1).Value = headers[i];
+                sheet.Cell(1, i + 1).Style.Font.Bold = true;
+                sheet.Cell(1, i + 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#2E7D32");
+                sheet.Cell(1, i + 1).Style.Font.FontColor = XLColor.White;
+            }
+
+            var row = 2;
+            foreach (var item in items)
+            {
+                var so = item.SalesOrder;
+                sheet.Cell(row, 1).Value = so.SONumber;
+                sheet.Cell(row, 2).Value = item.CustomerName;
+                if (IsQuotationsTabSelected)
+                {
+                    sheet.Cell(row, 3).Value = so.QuotationDate;
+                    sheet.Cell(row, 4).Value = so.ExpirationDate;
+                    sheet.Cell(row, 5).Value = so.Status;
+                }
+                else
+                {
+                    sheet.Cell(row, 3).Value = so.OrderDate;
+                    sheet.Cell(row, 4).Value = so.DeliveryStatus;
+                    sheet.Cell(row, 5).Value = so.BillingStatus;
+                }
+                sheet.Cell(row, 6).Value = so.TotalAmount;
+                sheet.Cell(row, 7).Value = so.Currency;
+                row++;
+            }
+
+            sheet.Columns(1, headers.Length).AdjustToContents();
+            workbook.SaveAs(file.Path.LocalPath);
+
+            ErrorMessage = $"Exported {items.Count} record(s) to {Path.GetFileName(file.Path.LocalPath)}";
         }
 
         public async Task LoadFormDataAsync()
@@ -1195,6 +1317,38 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         partial void OnSearchTextChanged(string value)
         {
+            _ = LoadSalesData();
+        }
+
+        [RelayCommand]
+        private async Task ToggleFilterPanel()
+        {
+            if (!IsFilterPanelOpen && FilterCategoryOptions.Count <= 1)
+            {
+                var categories = await _inventoryService.GetCategoriesAsync();
+                FilterCategoryOptions = new ObservableCollection<string>(new[] { "All Categories" }.Concat(categories.Select(c => c.Name)));
+            }
+            IsFilterPanelOpen = !IsFilterPanelOpen;
+        }
+
+        [RelayCommand]
+        private void ClearFilters()
+        {
+            FilterStartDate = null;
+            FilterEndDate = null;
+            FilterOrderType = "All Types";
+            FilterCategory = "All Categories";
+        }
+
+        partial void OnFilterStartDateChanged(DateTimeOffset? value) => OnFilterChanged();
+        partial void OnFilterEndDateChanged(DateTimeOffset? value) => OnFilterChanged();
+        partial void OnFilterOrderTypeChanged(string value) => OnFilterChanged();
+        partial void OnFilterCategoryChanged(string value) => OnFilterChanged();
+
+        private void OnFilterChanged()
+        {
+            OnPropertyChanged(nameof(HasActiveFilters));
+            OnPropertyChanged(nameof(FilterButtonLabel));
             _ = LoadSalesData();
         }
 

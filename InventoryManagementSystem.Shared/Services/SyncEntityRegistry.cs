@@ -43,6 +43,9 @@ namespace InventoryManagementSystem.Services
             Descriptor<Expense>("Expense"),
             Descriptor<DamageWriteOff>("DamageWriteOff"),
             Descriptor<PosSalePayment>("PosSalePayment"),
+            Descriptor<PosSession>("PosSession"),
+            Descriptor<PosSessionBalance>("PosSessionBalance"),
+            Descriptor<PosCashMovement>("PosCashMovement"),
         };
 
         public static IReadOnlyList<SyncEntityDescriptor> All { get; } = BuildAll();

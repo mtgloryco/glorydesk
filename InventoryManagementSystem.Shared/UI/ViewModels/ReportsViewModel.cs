@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -26,6 +27,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             new() { Key = "balance-sheet", Title = "What You Own vs Owe", Category = "Money Overview", Description = "Snapshot of assets, debts, and owner value" },
             new() { Key = "profit-loss", Title = "Income vs Expenses", Category = "Money Overview", Description = "Money in and money out for the period" },
             new() { Key = "budget-vs-actual", Title = "Budget vs Reality", Category = "Money Overview", Description = "Compare planned spending to what actually happened" },
+            new() { Key = "general-ledger", Title = "Account Ledger", Category = "Money Overview", Description = "Every transaction posted to one account, with running balance" },
             new() { Key = "stock-status", Title = "Stock Levels", Category = "Stock", Description = "How much of each product you have now" },
             new() { Key = "stock-history", Title = "Stock History", Category = "Stock", Description = "Recent stock additions and removals" },
             new() { Key = "ar-aging", Title = "Unpaid Customer Bills", Category = "Money Owed", Description = "Which customers still owe you, and for how long" },
@@ -42,6 +44,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly LicenseService _licenseService;
         private readonly SettingsService _settingsService;
         private readonly AccountingReportService _accountingReportService;
+        private readonly AccountService _accountService;
         private readonly AgingReportService _agingReportService;
         private readonly VatExportService _vatExportService;
         private readonly BudgetReportService _budgetReportService;
@@ -62,6 +65,17 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private AgingSummary _apAgingSummary = new();
         [ObservableProperty] private bool _isLoadingReport;
 
+        // --- General Ledger (Account Ledger) ---
+        private List<Account> _allLedgerAccounts = new();
+        [ObservableProperty] private string _ledgerAccountSearchText = string.Empty;
+        [ObservableProperty] private Account? _selectedLedgerAccount;
+        [ObservableProperty] private ObservableCollection<Account> _matchedLedgerAccounts = new();
+        [ObservableProperty] private DateTimeOffset? _ledgerFromDate;
+        [ObservableProperty] private DateTimeOffset? _ledgerToDate;
+        [ObservableProperty] private ObservableCollection<AccountLedgerLine> _ledgerLines = new();
+        [ObservableProperty] private decimal _ledgerOpeningBalance;
+        [ObservableProperty] private decimal _ledgerClosingBalance;
+
         [ObservableProperty] private ObservableCollection<Product> _reportData = new();
         [ObservableProperty] private ObservableCollection<StockMovement> _stockHistoryData = new();
         [ObservableProperty] private ObservableCollection<MonthlyProfitReport> _monthlyProfitData = new();
@@ -81,6 +95,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         public bool IsVatReturnSelected => SelectedReportNavItem?.Key == "vat-return";
         public bool IsBudgetVsActualSelected => SelectedReportNavItem?.Key == "budget-vs-actual";
         public bool IsBankReconciliationSelected => SelectedReportNavItem?.Key == "bank-reconciliation";
+        public bool IsGeneralLedgerSelected => SelectedReportNavItem?.Key == "general-ledger";
 
         public List<string> ReportCategories { get; } = ReportCatalog
             .Select(r => r.Category)
@@ -163,6 +178,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             OnPropertyChanged(nameof(IsDeadStockSelected));
             OnPropertyChanged(nameof(IsMarginByCategorySelected));
             OnPropertyChanged(nameof(IsMonthCloseSelected));
+            OnPropertyChanged(nameof(IsGeneralLedgerSelected));
         }
 
         public bool IsAbcAnalysisSelected => SelectedReportNavItem?.Key == "abc-analysis";
@@ -187,6 +203,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             SettingsService settingsService, 
             LanguageService languageService,
             AccountingReportService accountingReportService,
+            AccountService accountService,
             AgingReportService agingReportService,
             VatExportService vatExportService,
             BudgetReportService budgetReportService,
@@ -194,13 +211,15 @@ namespace InventoryManagementSystem.UI.ViewModels
             AdvancedAnalyticsService advancedAnalyticsService,
             MonthCloseService monthCloseService,
             Action<int?>? goToPurchaseOrderDetails = null,
-            Action<int?>? goToSalesOrderDetails = null)
+            Action<int?>? goToSalesOrderDetails = null,
+            string? initialReportKey = null)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
             _settingsService = settingsService;
             Language = languageService;
             _accountingReportService = accountingReportService;
+            _accountService = accountService;
             _agingReportService = agingReportService;
             _vatExportService = vatExportService;
             _budgetReportService = budgetReportService;
@@ -210,8 +229,23 @@ namespace InventoryManagementSystem.UI.ViewModels
             _goToPurchaseOrderDetails = goToPurchaseOrderDetails;
             _goToSalesOrderDetails = goToSalesOrderDetails;
 
-            RefreshReportsInCategory();
+            var initialItem = !string.IsNullOrEmpty(initialReportKey)
+                ? ReportCatalog.FirstOrDefault(r => r.Key == initialReportKey)
+                : null;
+
+            if (initialItem != null)
+            {
+                SelectedCategory = initialItem.Category;
+                SelectedReportNavItem = initialItem;
+            }
+            else
+            {
+                RefreshReportsInCategory();
+            }
         }
+
+        /// <summary>Full report catalog, exposed for building deep links (e.g. a global nav search).</summary>
+        public static IReadOnlyList<ReportNavItem> AllReports => ReportCatalog;
 
         [RelayCommand]
         private void OpenApBill(AgingLine? line)
@@ -279,6 +313,9 @@ namespace InventoryManagementSystem.UI.ViewModels
                         break;
                     case "month-close":
                         await LoadMonthCloseAsync();
+                        break;
+                    case "general-ledger":
+                        await LoadGeneralLedgerAsync();
                         break;
                 }
             }
@@ -409,6 +446,67 @@ namespace InventoryManagementSystem.UI.ViewModels
             ApAgingLines = new ObservableCollection<AgingLine>(lines);
             ApAgingSummary = _agingReportService.Summarize(lines);
         }
+
+        [RelayCommand]
+        public async Task LoadGeneralLedgerAsync()
+        {
+            ReportTitle = "Account Ledger";
+
+            if (_allLedgerAccounts.Count == 0)
+            {
+                _allLedgerAccounts = await _accountService.GetAllAccountsAsync();
+                MatchedLedgerAccounts = new ObservableCollection<Account>(_allLedgerAccounts.Take(8));
+            }
+
+            if (SelectedLedgerAccount == null)
+            {
+                LedgerLines.Clear();
+                LedgerOpeningBalance = 0;
+                LedgerClosingBalance = 0;
+                return;
+            }
+
+            var result = await _accountingReportService.GetAccountLedgerAsync(
+                SelectedLedgerAccount.Id,
+                LedgerFromDate?.Date,
+                LedgerToDate?.Date);
+
+            LedgerLines = new ObservableCollection<AccountLedgerLine>(result.Lines);
+            LedgerOpeningBalance = result.OpeningBalance;
+            LedgerClosingBalance = result.ClosingBalance;
+        }
+
+        partial void OnLedgerAccountSearchTextChanged(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || (SelectedLedgerAccount != null && value == LedgerAccountDisplayName(SelectedLedgerAccount)))
+            {
+                MatchedLedgerAccounts = new ObservableCollection<Account>(_allLedgerAccounts.Take(8));
+                return;
+            }
+
+            var query = value.ToLower();
+            var matches = _allLedgerAccounts
+                .Where(a => a.Name.ToLower().Contains(query) || a.Code.ToLower().Contains(query))
+                .Take(8)
+                .ToList();
+            MatchedLedgerAccounts = new ObservableCollection<Account>(matches);
+            SelectedLedgerAccount = null;
+        }
+
+        [RelayCommand]
+        private void SelectLedgerAccount(Account? account)
+        {
+            if (account == null) return;
+            SelectedLedgerAccount = account;
+            LedgerAccountSearchText = LedgerAccountDisplayName(account);
+            MatchedLedgerAccounts.Clear();
+            _ = LoadGeneralLedgerAsync();
+        }
+
+        private static string LedgerAccountDisplayName(Account account) => $"{account.Code} - {account.Name}";
+
+        partial void OnLedgerFromDateChanged(DateTimeOffset? value) => _ = LoadGeneralLedgerAsync();
+        partial void OnLedgerToDateChanged(DateTimeOffset? value) => _ = LoadGeneralLedgerAsync();
 
         [RelayCommand]
         private async Task LoadVatReturnAsync()

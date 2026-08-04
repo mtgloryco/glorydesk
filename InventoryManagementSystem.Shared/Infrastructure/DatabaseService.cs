@@ -13,7 +13,7 @@ namespace InventoryManagementSystem.Infrastructure
         private readonly string _databasePath;
         private readonly string _legacyDatabasePath;
         private SQLiteAsyncConnection _connection;
-        private const int CurrentDatabaseVersion = 10;
+        private const int CurrentDatabaseVersion = 12;
 
         public DatabaseService()
         {
@@ -136,6 +136,9 @@ namespace InventoryManagementSystem.Infrastructure
             await _connection.CreateTableAsync<Expense>();
             await _connection.CreateTableAsync<DamageWriteOff>();
             await _connection.CreateTableAsync<PosSalePayment>();
+            await _connection.CreateTableAsync<PosSession>();
+            await _connection.CreateTableAsync<PosSessionBalance>();
+            await _connection.CreateTableAsync<PosCashMovement>();
 
             // 3. Seed Initial Data
             // Must run BEFORE migrations: SeedDataAsync's account/journal/etc. seed blocks are each
@@ -227,6 +230,16 @@ namespace InventoryManagementSystem.Infrastructure
                 if (metaVersion < 10)
                 {
                     await MigrateToV10Async();
+                }
+
+                if (metaVersion < 11)
+                {
+                    await MigrateToV11Async();
+                }
+
+                if (metaVersion < 12)
+                {
+                    await MigrateToV12Async();
                 }
 
                 await _connection.ExecuteAsync($"PRAGMA user_version = {CurrentDatabaseVersion}");
@@ -390,6 +403,59 @@ namespace InventoryManagementSystem.Infrastructure
             // Barcode is the manufacturer UPC/EAN printed on the item - they aren't always the same
             // value, and products bought in already had no way to record the printed barcode at all.
             await AddColumnIfNotExistsAsync("Product", "Barcode", "TEXT");
+        }
+
+        private async Task MigrateToV11Async()
+        {
+            // Orders that were marked Delivered without ever going through the "confirm shipment"
+            // flow (demo-seeded orders, and POS sales which mark themselves Delivered directly)
+            // never got a DeliveryNote created. Delivery Slip / Packing List printing depends on
+            // that record existing, so without this it silently finds nothing to print.
+            var deliveredOrders = await _connection.Table<SalesOrder>()
+                .Where(so => !so.IsDeleted && so.DeliveryStatus == "Delivered")
+                .ToListAsync();
+
+            foreach (var so in deliveredOrders)
+            {
+                var hasNote = await _connection.Table<DeliveryNote>()
+                    .Where(n => n.SalesOrderId == so.Id)
+                    .FirstOrDefaultAsync() != null;
+                if (hasNote) continue;
+
+                var items = await _connection.Table<SalesOrderItem>()
+                    .Where(i => i.SalesOrderId == so.Id && i.QuantityDelivered > 0)
+                    .ToListAsync();
+                if (items.Count == 0) continue;
+
+                var note = new DeliveryNote
+                {
+                    DeliveryNoteNumber = $"DN-BACKFILL-{so.SONumber}",
+                    SalesOrderId = so.Id,
+                    CustomerId = so.CustomerId,
+                    ShipDate = so.DeliveryDate ?? so.OrderDate,
+                    Status = "Shipped",
+                    CreatedByUsername = "System"
+                };
+                await _connection.InsertAsync(note);
+
+                foreach (var item in items)
+                {
+                    await _connection.InsertAsync(new DeliveryNoteLine
+                    {
+                        DeliveryNoteId = note.Id,
+                        SalesOrderItemId = item.Id,
+                        ProductId = item.ProductId,
+                        Quantity = item.QuantityDelivered
+                    });
+                }
+            }
+        }
+
+        private async Task MigrateToV12Async()
+        {
+            // POS cash register sessions: opening/closing float per payment method, cash in/out,
+            // and orders attached to whichever session was open when they were rung up.
+            await AddColumnIfNotExistsAsync("SalesOrder", "PosSessionId", "INTEGER NULL");
         }
 
         private async Task MigrateToV9Async()

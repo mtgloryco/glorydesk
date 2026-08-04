@@ -239,6 +239,8 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly Action? _goToForecasting;
         private readonly Action? _goToLocations;
         private readonly Action? _goToDamageWriteOff;
+        private readonly Action<int?>? _goToPurchaseOrderDetails;
+        private readonly Action<int?>? _goToSalesOrderDetails;
         private readonly BarcodeService? _barcodeService;
 
         [ObservableProperty] private string _barcodeStatusMessage = string.Empty;
@@ -252,6 +254,11 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private decimal _historyJournalTotalDebit;
         [ObservableProperty] private decimal _historyJournalTotalCredit;
         [ObservableProperty] private string _historyStatusMessage = string.Empty;
+
+        // Replenishment forecast: on hand + incoming (open POs, including Draft/RFQ) - outgoing (open SOs, including Draft quotations)
+        [ObservableProperty] private ReplenishmentForecast _currentForecast = new();
+        [ObservableProperty] private bool _isIncomingBreakdownOpen;
+        [ObservableProperty] private bool _isOutgoingBreakdownOpen;
 
         [ObservableProperty] private string _adjustmentBatchNumber = string.Empty;
         [ObservableProperty] private string _adjustmentSerialNumbers = string.Empty;
@@ -281,7 +288,9 @@ namespace InventoryManagementSystem.UI.ViewModels
             Action? goToLocations = null,
             CustomFieldService? customFieldService = null,
             BarcodeService? barcodeService = null,
-            Action? goToDamageWriteOff = null)
+            Action? goToDamageWriteOff = null,
+            Action<int?>? goToPurchaseOrderDetails = null,
+            Action<int?>? goToSalesOrderDetails = null)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
@@ -300,6 +309,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             _goToForecasting = goToForecasting;
             _goToLocations = goToLocations;
             _goToDamageWriteOff = goToDamageWriteOff;
+            _goToPurchaseOrderDetails = goToPurchaseOrderDetails;
+            _goToSalesOrderDetails = goToSalesOrderDetails;
             _customFieldService = customFieldService;
             _barcodeService = barcodeService;
             _customFieldsPanel.Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasCustomFields));
@@ -977,7 +988,39 @@ namespace InventoryManagementSystem.UI.ViewModels
                 ? "No stock movements recorded for this product yet."
                 : $"{events.Count} transaction(s). Select a row to view linked journal entries.";
 
+            IsIncomingBreakdownOpen = false;
+            IsOutgoingBreakdownOpen = false;
+            CurrentForecast = await _inventoryService.GetReplenishmentForecastAsync(product.Id);
+
             IsHistoryModalOpen = true;
+        }
+
+        [RelayCommand]
+        private void ToggleIncomingBreakdown()
+        {
+            IsIncomingBreakdownOpen = !IsIncomingBreakdownOpen;
+            IsOutgoingBreakdownOpen = false;
+        }
+
+        [RelayCommand]
+        private void ToggleOutgoingBreakdown()
+        {
+            IsOutgoingBreakdownOpen = !IsOutgoingBreakdownOpen;
+            IsIncomingBreakdownOpen = false;
+        }
+
+        [RelayCommand]
+        private void OpenReplenishmentSource(ReplenishmentSourceLine? source)
+        {
+            if (source == null) return;
+            if (source.DocumentType == "Purchase Order")
+            {
+                _goToPurchaseOrderDetails?.Invoke(source.DocumentId);
+            }
+            else if (source.DocumentType == "Sales Order")
+            {
+                _goToSalesOrderDetails?.Invoke(source.DocumentId);
+            }
         }
 
         partial void OnSelectedHistoryEventChanged(ProductHistoryEvent? value)

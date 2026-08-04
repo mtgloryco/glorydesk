@@ -18,11 +18,11 @@
             <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="15" Margin="0,20,0,0">
                 <StackPanel>
                     <TextBlock Text="From" FontSize="12" Foreground="#888"/>
-                    <DatePicker SelectedDate="{Binding StartDate}"/>
+                    <CalendarDatePicker SelectedDate="{Binding StartDate}"/>
                 </StackPanel>
                 <StackPanel>
                     <TextBlock Text="To" FontSize="12" Foreground="#888"/>
-                    <DatePicker SelectedDate="{Binding EndDate}"/>
+                    <CalendarDatePicker SelectedDate="{Binding EndDate}"/>
                 </StackPanel>
                 <Button Content="Update Analysis" Command="{Binding LoadDataCommand}" VerticalAlignment="Bottom" Background="#007ACC" Foreground="White" FontWeight="Bold"/>
             </StackPanel>

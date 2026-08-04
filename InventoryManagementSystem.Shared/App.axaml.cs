@@ -34,7 +34,8 @@ public partial class App : Application
         SecurityComplianceService securityComplianceService,
         DocumentAttachmentService documentAttachmentService,
         RecurringInvoiceService recurringInvoiceService,
-        ExpenseService expenseService, DamageWriteOffService damageWriteOffService)? PreInitializedServices { get; set; }
+        ExpenseService expenseService, DamageWriteOffService damageWriteOffService,
+        PosSessionService posSessionService)? PreInitializedServices { get; set; }
 
     public override void Initialize()
     {
@@ -65,7 +66,7 @@ public partial class App : Application
                     services.companyBranchService, services.workflowApprovalService, services.mrpPlanningService,
                     services.crmPipelineService, services.mobileFieldService, services.securityComplianceService,
                     services.documentAttachmentService, services.recurringInvoiceService,
-                    services.expenseService, services.damageWriteOffService),
+                    services.expenseService, services.damageWriteOffService, services.posSessionService),
             };
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
@@ -86,7 +87,7 @@ public partial class App : Application
                     services.companyBranchService, services.workflowApprovalService, services.mrpPlanningService,
                     services.crmPipelineService, services.mobileFieldService, services.securityComplianceService,
                     services.documentAttachmentService, services.recurringInvoiceService,
-                    services.expenseService, services.damageWriteOffService),
+                    services.expenseService, services.damageWriteOffService, services.posSessionService),
             };
         }
 
@@ -113,7 +114,8 @@ public partial class App : Application
         SecurityComplianceService securityComplianceService,
         DocumentAttachmentService documentAttachmentService,
         RecurringInvoiceService recurringInvoiceService,
-        ExpenseService expenseService, DamageWriteOffService damageWriteOffService) InitializeServices()
+        ExpenseService expenseService, DamageWriteOffService damageWriteOffService,
+        PosSessionService posSessionService) InitializeServices()
     {
         // Initialize Database
         var dbService = new DatabaseService();
@@ -145,6 +147,7 @@ public partial class App : Application
         var taxService = new TaxService(dbService);
         var accountService = new AccountService(dbService);
         var journalService = new JournalService(dbService);
+        var posSessionService = new PosSessionService(dbService);
         var accountingReportService = new AccountingReportService(dbService);
         var manufacturingService = new ManufacturingService(dbService, auditService);
         var customFieldService = new CustomFieldService(dbService);
@@ -204,7 +207,7 @@ public partial class App : Application
             companyBranchService, workflowApprovalService, mrpPlanningService,
             crmPipelineService, mobileFieldService, securityComplianceService,
             documentAttachmentService, recurringInvoiceService,
-            expenseService, damageWriteOffService);
+            expenseService, damageWriteOffService, posSessionService);
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

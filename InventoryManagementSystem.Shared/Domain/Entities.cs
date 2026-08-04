@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using SQLite;
 
 namespace InventoryManagementSystem.Domain
@@ -372,6 +374,78 @@ namespace InventoryManagementSystem.Domain
         public DateTime Date { get; set; } = DateTime.Now;
     }
 
+    /// <summary>A cash-register shift: opened with a starting float per payment method, closed once
+    /// the cashier counts and enters what's actually in the drawer/mobile wallet for each method.</summary>
+    public class PosSession : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public string SessionNumber { get; set; } = string.Empty;
+        public string Status { get; set; } = "Open"; // Open, Closed
+        public string OpenedByUsername { get; set; } = string.Empty;
+        public DateTime OpenedAt { get; set; } = DateTime.Now;
+        public string? ClosedByUsername { get; set; }
+        public DateTime? ClosedAt { get; set; }
+        public string Notes { get; set; } = string.Empty;
+    }
+
+    /// <summary>Per payment-method opening float and closing count for one PosSession.</summary>
+    public class PosSessionBalance : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public int PosSessionId { get; set; }
+        public int PosPaymentMethodId { get; set; }
+        public decimal OpeningBalance { get; set; }
+        public decimal? CountedClosingBalance { get; set; }
+    }
+
+    /// <summary>A manual cash movement during a session (float top-up, drop to safe, petty cash out),
+    /// independent of sales - needed so the closing reconciliation accounts for money that moved
+    /// without a sale behind it.</summary>
+    public class PosCashMovement : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public int PosSessionId { get; set; }
+        public int PosPaymentMethodId { get; set; }
+        public string MovementType { get; set; } = "In"; // In, Out
+        public decimal Amount { get; set; }
+        public string Reason { get; set; } = string.Empty;
+        public DateTime Date { get; set; } = DateTime.Now;
+        public string Username { get; set; } = string.Empty;
+    }
+
+    public class PosSessionBalanceRow
+    {
+        public int PosPaymentMethodId { get; set; }
+        public string PaymentMethodName { get; set; } = string.Empty;
+        public decimal OpeningBalance { get; set; }
+        public decimal SalesTotal { get; set; }
+        public decimal CashIn { get; set; }
+        public decimal CashOut { get; set; }
+        public decimal ExpectedBalance => OpeningBalance + SalesTotal + CashIn - CashOut;
+        public decimal? CountedClosingBalance { get; set; }
+        public decimal? Difference => CountedClosingBalance.HasValue ? CountedClosingBalance.Value - ExpectedBalance : null;
+    }
+
+    public class PosSessionSummary
+    {
+        public PosSession Session { get; set; } = new();
+        public List<PosSessionBalanceRow> Balances { get; set; } = new();
+        public List<SalesOrderListItem> Orders { get; set; } = new();
+        public decimal OrdersTotal => Orders.Sum(o => o.SalesOrder.TotalAmount);
+    }
+
     // --- PHASE 5: RETURNS & REFUNDS ---
     // (Adding these since they weren't found despite user's claim)
 
@@ -630,6 +704,7 @@ namespace InventoryManagementSystem.Domain
         public string DeliveryStatus { get; set; } = "Pending"; // Pending, Delivered, Partially Delivered
         public bool IsPosSale { get; set; } = false;
         public int? PosPaymentMethodId { get; set; }
+        public int? PosSessionId { get; set; }
     }
 
     public class SalesOrderItem : ISyncableEntity
@@ -994,6 +1069,46 @@ namespace InventoryManagementSystem.Domain
         public decimal OpenBalance { get; set; }
         public int DaysOverdue { get; set; }
         public string AgingBucket { get; set; } = "Current";
+    }
+
+    public class ReplenishmentSourceLine
+    {
+        public string DocumentType { get; set; } = string.Empty; // "Purchase Order" or "Sales Order"
+        public int DocumentId { get; set; }
+        public string DocumentNumber { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+        public int Quantity { get; set; }
+    }
+
+    public class ReplenishmentForecast
+    {
+        public int OnHand { get; set; }
+        public int Incoming { get; set; }
+        public int Outgoing { get; set; }
+        public int ForecastedAvailable => OnHand + Incoming - Outgoing;
+        public List<ReplenishmentSourceLine> IncomingSources { get; set; } = new();
+        public List<ReplenishmentSourceLine> OutgoingSources { get; set; } = new();
+    }
+
+    public class AccountLedgerLine
+    {
+        public DateTime Date { get; set; }
+        public string EntryNumber { get; set; } = string.Empty;
+        public string Reference { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        public decimal Debit { get; set; }
+        public decimal Credit { get; set; }
+        public decimal RunningBalance { get; set; }
+    }
+
+    public class AccountLedgerResult
+    {
+        public string AccountCode { get; set; } = string.Empty;
+        public string AccountName { get; set; } = string.Empty;
+        public decimal OpeningBalance { get; set; }
+        public decimal ClosingBalance { get; set; }
+        public List<AccountLedgerLine> Lines { get; set; } = new();
     }
 
     public class AgingSummary

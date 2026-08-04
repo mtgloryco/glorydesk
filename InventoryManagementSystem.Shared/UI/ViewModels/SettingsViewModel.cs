@@ -697,7 +697,9 @@ public partial class SettingsViewModel : ViewModelBase
         BudgetReportService budgetReportService,
         Action? onRequestShowWizard = null,
         Action? onModulesChanged = null,
-        NotificationService? notificationService = null)
+        NotificationService? notificationService = null,
+        string? initialTab = null,
+        string? initialAccountingSubTab = null)
     {
         _settingsService = settingsService;
         Language = languageService;
@@ -739,6 +741,15 @@ public partial class SettingsViewModel : ViewModelBase
         _ = LoadTaxesAsync();
         // Load payments
         _ = LoadPaymentsDataAsync();
+
+        if (!string.IsNullOrEmpty(initialTab))
+        {
+            SelectedTab = initialTab;
+        }
+        if (!string.IsNullOrEmpty(initialAccountingSubTab))
+        {
+            SelectedAccountingSubTab = initialAccountingSubTab;
+        }
     }
 
     [RelayCommand]

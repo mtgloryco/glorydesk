@@ -28,6 +28,79 @@ namespace InventoryManagementSystem.Services
         public ProductHistoryService ProductHistory =>
             _productHistoryService ??= new ProductHistoryService(_databaseService);
 
+        /// <summary>
+        /// Forecasted available stock for a product: what's on hand right now, plus what's still due
+        /// in from open purchase orders (including Draft/RFQ - not yet approved counts too, since the
+        /// point is to see everything that could still change supply), minus what's still committed
+        /// out on open sales orders (including Draft quotations, for the same reason).
+        /// </summary>
+        public async Task<ReplenishmentForecast> GetReplenishmentForecastAsync(int productId)
+        {
+            var product = await _databaseService.Connection.FindAsync<Product>(productId);
+            var forecast = new ReplenishmentForecast { OnHand = product?.StockQuantity ?? 0 };
+
+            var poItems = await _databaseService.Connection.Table<PurchaseOrderItem>()
+                .Where(i => i.ProductId == productId)
+                .ToListAsync();
+            var purchaseOrders = await _databaseService.Connection.Table<PurchaseOrder>()
+                .Where(po => !po.IsDeleted && po.Status != "Cancelled")
+                .ToListAsync();
+            var poDict = purchaseOrders.ToDictionary(po => po.Id);
+
+            foreach (var item in poItems)
+            {
+                var outstanding = item.QuantityOrdered - item.QuantityReceived;
+                if (outstanding <= 0 || !poDict.TryGetValue(item.PurchaseOrderId, out var po))
+                {
+                    continue;
+                }
+
+                forecast.Incoming += outstanding;
+                forecast.IncomingSources.Add(new ReplenishmentSourceLine
+                {
+                    DocumentType = "Purchase Order",
+                    DocumentId = po.Id,
+                    DocumentNumber = po.PONumber,
+                    Status = po.Status,
+                    Date = po.OrderDate,
+                    Quantity = outstanding
+                });
+            }
+
+            var soItems = await _databaseService.Connection.Table<SalesOrderItem>()
+                .Where(i => i.ProductId == productId)
+                .ToListAsync();
+            var salesOrders = await _databaseService.Connection.Table<SalesOrder>()
+                .Where(so => !so.IsDeleted && so.Status != "Cancelled")
+                .ToListAsync();
+            var soDict = salesOrders.ToDictionary(so => so.Id);
+
+            foreach (var item in soItems)
+            {
+                var outstanding = item.QuantityOrdered - item.QuantityDelivered;
+                if (outstanding <= 0 || !soDict.TryGetValue(item.SalesOrderId, out var so))
+                {
+                    continue;
+                }
+
+                forecast.Outgoing += outstanding;
+                forecast.OutgoingSources.Add(new ReplenishmentSourceLine
+                {
+                    DocumentType = "Sales Order",
+                    DocumentId = so.Id,
+                    DocumentNumber = so.SONumber,
+                    Status = so.Status,
+                    Date = so.OrderDate,
+                    Quantity = outstanding
+                });
+            }
+
+            forecast.IncomingSources = forecast.IncomingSources.OrderBy(s => s.Date).ToList();
+            forecast.OutgoingSources = forecast.OutgoingSources.OrderBy(s => s.Date).ToList();
+
+            return forecast;
+        }
+
         // Product CRUD
         public async Task<List<Product>> GetAllProductsAsync()
         {

@@ -25,7 +25,7 @@
             </Grid>
 
             <!-- Advanced Filters row -->
-            <Grid Grid.Row="1" ColumnDefinitions="Auto, 130, Auto, 160, Auto, 140, Auto, 140" Margin="0,0,0,16" VerticalAlignment="Center">
+            <Grid Grid.Row="1" ColumnDefinitions="Auto, 130, Auto, 160, Auto, 180, Auto, 180, Auto, 130, Auto, 150" Margin="0,0,0,16" VerticalAlignment="Center">
                 <!-- Archive filter -->
                 <TextBlock Grid.Column="0" Text="Show:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
                 <ComboBox Grid.Column="1" ItemsSource="{Binding ArchiveFilterOptions}" SelectedItem="{Binding ArchiveFilter}" HorizontalAlignment="Stretch" Margin="0,0,20,0"/>
@@ -36,10 +36,18 @@
 
                 <!-- Date range filters -->
                 <TextBlock Grid.Column="4" Text="From:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
-                <DatePicker Grid.Column="5" SelectedDate="{Binding FilterStartDate}" HorizontalAlignment="Stretch" Margin="0,0,20,0"/>
+                <CalendarDatePicker Grid.Column="5" SelectedDate="{Binding FilterStartDate}" HorizontalAlignment="Stretch" Margin="0,0,20,0"/>
 
                 <TextBlock Grid.Column="6" Text="To:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
-                <DatePicker Grid.Column="7" SelectedDate="{Binding FilterEndDate}" HorizontalAlignment="Stretch"/>
+                <CalendarDatePicker Grid.Column="7" SelectedDate="{Binding FilterEndDate}" HorizontalAlignment="Stretch" Margin="0,0,20,0"/>
+
+                <!-- Order type filter -->
+                <TextBlock Grid.Column="8" Text="Type:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
+                <ComboBox Grid.Column="9" ItemsSource="{Binding FilterOrderTypeOptions}" SelectedItem="{Binding FilterOrderType}" HorizontalAlignment="Stretch" Margin="0,0,20,0"/>
+
+                <!-- Product category filter -->
+                <TextBlock Grid.Column="10" Text="Category:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
+                <ComboBox Grid.Column="11" ItemsSource="{Binding FilterCategoryOptions}" SelectedItem="{Binding FilterCategory}" HorizontalAlignment="Stretch"/>
             </Grid>
 
             <!-- Table/Grid of POs -->
@@ -390,11 +398,11 @@
                                     <Grid ColumnDefinitions="*, 15, *">
                                         <StackPanel Grid.Column="0" Spacing="5">
                                             <TextBlock Text="Order Deadline" FontSize="12" FontWeight="SemiBold"/>
-                                            <DatePicker SelectedDate="{Binding NewPoOrderDeadline}" HorizontalAlignment="Stretch"/>
+                                            <CalendarDatePicker SelectedDate="{Binding NewPoOrderDeadline}" HorizontalAlignment="Stretch"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Spacing="5">
                                             <TextBlock Text="Expected Arrival" FontSize="12" FontWeight="SemiBold"/>
-                                            <DatePicker SelectedDate="{Binding NewPoExpectedDeliveryDate}" HorizontalAlignment="Stretch"/>
+                                            <CalendarDatePicker SelectedDate="{Binding NewPoExpectedDeliveryDate}" HorizontalAlignment="Stretch"/>
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
@@ -665,7 +673,7 @@
                                                 <TextBlock Grid.Column="2" Text="Lot #" VerticalAlignment="Center" IsVisible="{Binding RequiresLotTracking}"/>
                                                 <TextBox Grid.Column="3" Text="{Binding BatchNumber}" Margin="6,0,12,0" IsVisible="{Binding RequiresLotTracking}"/>
                                                 <TextBlock Grid.Column="4" Text="Expiry" VerticalAlignment="Center" IsVisible="{Binding RequiresLotTracking}"/>
-                                                <DatePicker Grid.Column="5" SelectedDate="{Binding ExpiryDate}" IsVisible="{Binding RequiresLotTracking}"/>
+                                                <CalendarDatePicker Grid.Column="5" SelectedDate="{Binding ExpiryDate}" IsVisible="{Binding RequiresLotTracking}"/>
                                             </Grid>
                                             <StackPanel IsVisible="{Binding RequiresSerialTracking}" Spacing="4">
                                                 <TextBlock Text="Serial numbers (comma-separated)" FontSize="11" Foreground="Gray"/>

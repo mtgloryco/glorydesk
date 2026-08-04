@@ -262,6 +262,86 @@ namespace InventoryManagementSystem.Services
             return total;
         }
 
+        /// <summary>
+        /// The General Ledger for one account: every posted journal line against it, in date order,
+        /// with a running balance. Lines before <paramref name="from"/> are folded into an opening
+        /// balance rather than dropped, so the running balance stays correct even when the view is
+        /// scoped to a date range.
+        /// </summary>
+        public async Task<AccountLedgerResult> GetAccountLedgerAsync(int accountId, DateTime? from = null, DateTime? to = null)
+        {
+            var account = await _databaseService.Connection.FindAsync<Account>(accountId);
+            if (account == null)
+            {
+                return new AccountLedgerResult();
+            }
+
+            var entries = await _databaseService.Connection.Table<JournalEntry>()
+                .Where(e => !e.IsDeleted && e.State == "Posted")
+                .ToListAsync();
+            var entryDict = entries.ToDictionary(e => e.Id);
+
+            var accountLines = await _databaseService.Connection.Table<JournalLine>()
+                .Where(l => !l.IsDeleted && l.AccountId == accountId)
+                .ToListAsync();
+
+            var joined = accountLines
+                .Where(l => entryDict.ContainsKey(l.JournalEntryId))
+                .Select(l => (Line: l, Entry: entryDict[l.JournalEntryId]))
+                .OrderBy(x => x.Entry.Date)
+                .ThenBy(x => x.Entry.EntryNumber)
+                .ToList();
+
+            var isDebitNormal = IsDebitNormalBalance(account.Type);
+            decimal openingBalance = 0;
+            decimal running = 0;
+            var rows = new List<AccountLedgerLine>();
+
+            foreach (var (line, entry) in joined)
+            {
+                var delta = isDebitNormal ? (line.Debit - line.Credit) : (line.Credit - line.Debit);
+
+                if (from.HasValue && entry.Date.Date < from.Value.Date)
+                {
+                    openingBalance += delta;
+                    continue;
+                }
+                if (to.HasValue && entry.Date.Date > to.Value.Date)
+                {
+                    continue;
+                }
+
+                running += delta;
+                rows.Add(new AccountLedgerLine
+                {
+                    Date = entry.Date,
+                    EntryNumber = entry.EntryNumber,
+                    Reference = entry.Reference,
+                    Label = line.Label,
+                    Debit = line.Debit,
+                    Credit = line.Credit,
+                    RunningBalance = openingBalance + running
+                });
+            }
+
+            return new AccountLedgerResult
+            {
+                AccountCode = account.Code,
+                AccountName = account.Name,
+                OpeningBalance = openingBalance,
+                ClosingBalance = openingBalance + running,
+                Lines = rows
+            };
+        }
+
+        private static bool IsDebitNormalBalance(string accountType)
+        {
+            if (string.IsNullOrEmpty(accountType)) return true;
+            return !(accountType.StartsWith("Liability:", StringComparison.OrdinalIgnoreCase) ||
+                     accountType.StartsWith("Equity:", StringComparison.OrdinalIgnoreCase) ||
+                     accountType.StartsWith("Income:", StringComparison.OrdinalIgnoreCase));
+        }
+
         private decimal CalculateAccountBalance(string accountType, decimal debit, decimal credit)
         {
             if (string.IsNullOrEmpty(accountType))

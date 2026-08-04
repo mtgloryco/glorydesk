@@ -24,12 +24,13 @@ namespace InventoryManagementSystem.Services
         }
 
         public string GeneratePurchaseOrderPdf(
-            PurchaseOrder po, 
-            List<PurchaseOrderItem> items, 
-            List<Product> allProducts, 
-            List<Tax> allTaxes, 
+            PurchaseOrder po,
+            List<PurchaseOrderItem> items,
+            List<Product> allProducts,
+            List<Tax> allTaxes,
             Supplier? supplier,
-            bool asBill = false)
+            bool asBill = false,
+            List<InvoicePayment>? payments = null)
         {
             var dateStr = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var cleanRef = po.PONumber.Replace("-", "_").Replace(" ", "_");
@@ -161,11 +162,6 @@ namespace InventoryManagementSystem.Services
                                 header.Cell().Element(HeaderStyle).AlignRight().Text("Rate").Bold().FontColor(Colors.White);
                                 header.Cell().Element(HeaderStyle).AlignRight().Text("Tax").Bold().FontColor(Colors.White);
                                 header.Cell().Element(HeaderStyle).AlignRight().Text("Amount").Bold().FontColor(Colors.White);
-
-                                static IContainer HeaderStyle(IContainer container)
-                                {
-                                    return container.Background("#37474F").Padding(6).BorderBottom(1).BorderColor(Colors.Grey.Darken3);
-                                }
                             });
 
                             int index = 1;
@@ -319,13 +315,68 @@ namespace InventoryManagementSystem.Services
                                 r.RelativeItem().AlignRight().Text($"{finalTotal:N2} {currency}").Bold().FontSize(12).FontColor(Colors.Blue.Darken3);
                             });
 
-                            // Balance Due Card (styled box)
-                            summary.Item().PaddingTop(5).Background(Colors.Grey.Lighten4).Padding(8).Row(r =>
+                            // Payments already recorded against this bill reduce what's still owed -
+                            // without this, the printed balance always showed the full total even
+                            // after the vendor had been partially paid.
+                            decimal amountPaid = asBill ? (payments?.Sum(p => p.Amount) ?? 0) : 0;
+                            decimal balanceDue = finalTotal - amountPaid;
+
+                            if (amountPaid > 0)
                             {
-                                r.RelativeItem().Text("Balance Due").Bold().FontSize(11);
-                                r.RelativeItem().AlignRight().Text($"{finalTotal:N2} {currency}").Bold().FontSize(11).FontColor(Colors.Grey.Darken4);
+                                summary.Item().Row(r =>
+                                {
+                                    r.RelativeItem().Text("Amount Paid").FontColor(Colors.Grey.Darken2);
+                                    r.RelativeItem().AlignRight().Text($"-{amountPaid:N2} {currency}").FontColor(Colors.Green.Darken2);
+                                });
+                            }
+
+                            // Balance Due Card (styled box)
+                            var isSettled = balanceDue <= 0;
+                            summary.Item().PaddingTop(5).Background(isSettled ? Colors.Green.Lighten4 : Colors.Grey.Lighten4).Padding(8).Row(r =>
+                            {
+                                r.RelativeItem().Text(isSettled ? "Paid in Full" : "Balance Due").Bold().FontSize(11);
+                                r.RelativeItem().AlignRight().Text($"{balanceDue:N2} {currency}").Bold().FontSize(11).FontColor(isSettled ? Colors.Green.Darken3 : Colors.Grey.Darken4);
                             });
                         });
+
+                        // Payment History
+                        if (asBill && payments != null && payments.Count > 0)
+                        {
+                            col.Item().PaddingTop(15).Column(payHistory =>
+                            {
+                                payHistory.Spacing(3);
+                                payHistory.Item().Text("Payments Received").Bold().FontSize(9).FontColor(Colors.Grey.Darken3);
+                                payHistory.Item().Table(table =>
+                                {
+                                    table.ColumnsDefinition(c =>
+                                    {
+                                        c.RelativeColumn(2);
+                                        c.RelativeColumn(2);
+                                        c.RelativeColumn(2);
+                                        c.RelativeColumn(3);
+                                        c.RelativeColumn(2);
+                                    });
+
+                                    table.Header(header =>
+                                    {
+                                        header.Cell().Element(HeaderStyle).Text("Payment #").FontColor(Colors.White);
+                                        header.Cell().Element(HeaderStyle).Text("Date").FontColor(Colors.White);
+                                        header.Cell().Element(HeaderStyle).Text("Method").FontColor(Colors.White);
+                                        header.Cell().Element(HeaderStyle).Text("Reference").FontColor(Colors.White);
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Amount").FontColor(Colors.White);
+                                    });
+
+                                    foreach (var payment in payments.OrderBy(p => p.PaymentDate))
+                                    {
+                                        table.Cell().Padding(4).Text(payment.PaymentNumber).FontSize(9);
+                                        table.Cell().Padding(4).Text(payment.PaymentDate.ToString("yyyy-MM-dd")).FontSize(9);
+                                        table.Cell().Padding(4).Text(payment.PaymentMethod).FontSize(9);
+                                        table.Cell().Padding(4).Text(payment.Reference ?? "").FontSize(9);
+                                        table.Cell().Padding(4).AlignRight().Text($"{payment.Amount:N2}").FontSize(9);
+                                    }
+                                });
+                            });
+                        }
 
                         // Notes section
                         if (!string.IsNullOrWhiteSpace(po.Notes))
@@ -369,6 +420,11 @@ namespace InventoryManagementSystem.Services
             .GeneratePdf(path);
 
             return path;
+        }
+
+        private static IContainer HeaderStyle(IContainer container)
+        {
+            return container.Background("#37474F").Padding(6).BorderBottom(1).BorderColor(Colors.Grey.Darken3);
         }
     }
 }

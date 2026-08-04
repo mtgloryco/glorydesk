@@ -1,6 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using InventoryManagementSystem.Services;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System;
 
@@ -57,6 +60,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly RecurringInvoiceService _recurringInvoiceService;
     private readonly ExpenseService _expenseService;
     private readonly DamageWriteOffService _damageWriteOffService;
+    private readonly PosSessionService _posSessionService;
 
     public IndustryTemplateService IndustryTemplateService => _industryTemplateService;
     public CustomFieldService CustomFieldService => _customFieldService;
@@ -148,7 +152,8 @@ public partial class MainViewModel : ViewModelBase
         DocumentAttachmentService documentAttachmentService,
         RecurringInvoiceService recurringInvoiceService,
         ExpenseService expenseService,
-        DamageWriteOffService damageWriteOffService)
+        DamageWriteOffService damageWriteOffService,
+        PosSessionService posSessionService)
     {
         _inventoryService = inventoryService;
         _userService = userService;
@@ -200,6 +205,7 @@ public partial class MainViewModel : ViewModelBase
         _recurringInvoiceService = recurringInvoiceService;
         _expenseService = expenseService;
         _damageWriteOffService = damageWriteOffService;
+        _posSessionService = posSessionService;
 
         // Check for updates on startup (fire and forget, silent)
         _ = CheckForUpdatesInternal(false);
@@ -546,6 +552,94 @@ public partial class MainViewModel : ViewModelBase
         CanGoBack = _navigationStack.Count > 0;
     }
 
+    // --- Quick Navigation search: find any page or buried settings/report screen by name ---
+
+    [ObservableProperty] private string _navSearchText = string.Empty;
+    [ObservableProperty] private ObservableCollection<NavigationSearchItem> _matchedNavItems = new();
+
+    private List<NavigationSearchItem>? _navigationIndex;
+
+    private List<NavigationSearchItem> NavigationIndex => _navigationIndex ??= BuildNavigationIndex();
+
+    private List<NavigationSearchItem> BuildNavigationIndex()
+    {
+        var items = new List<NavigationSearchItem>
+        {
+            new("Dashboard", "Dashboard", GoToDashboard),
+            new("Point of Sale", "POS", GoToPOS),
+            new("Inventory", "Inventory", GoToInventory),
+            new("Manufacturing", "Manufacturing", GoToManufacturing),
+            new("Request for Quotation (RFQ)", "Inventory > RFQ", GoToRfq),
+            new("Purchase Orders", "Inventory > Purchase Orders", GoToPurchaseOrders),
+            new("Sales Quotations", "Sales > Quotations", GoToSalesQuotations),
+            new("Sales Orders", "Sales > Orders", GoToSalesOrders),
+            new("Customers", "Customers", GoToCustomers),
+            new("Suppliers", "Suppliers", GoToSuppliers),
+            new("Reports", "Reports", GoToReports),
+            new("Analytics", "Analytics", GoToAnalytics),
+            new("Advanced Analytics", "Analytics > Advanced", GoToAdvancedAnalytics),
+            new("Forecasting", "Inventory > Forecasting", GoToForecasting),
+            new("Reorder Dashboard", "Inventory > Reorder Dashboard", GoToReorderDashboard),
+            new("Cycle Count", "Inventory > Cycle Count", GoToCycleCount),
+            new("Expiry Dashboard", "Inventory > Expiry Dashboard", GoToExpiryDashboard),
+            new("Locations", "Inventory > Locations", GoToLocations),
+            new("Stock Transfer", "Inventory > Stock Transfer", GoToStockTransfer),
+            new("Returns", "Returns", GoToReturns),
+            new("Damage & Loss Write-off", "Inventory > Damage & Loss Write-off", GoToDamageWriteOff),
+            new("Bundles", "Inventory > Bundles", GoToBundles),
+            new("Expenses", "Expenses", GoToExpenses),
+            new("Users", "Users", GoToUsers),
+            new("License", "License", GoToLicense),
+            new("Audit Trail", "Audit Trail", GoToAuditTrail),
+            new("Enterprise", "Enterprise", GoToEnterprise),
+
+            new("General Settings", "Settings > General", () => GoToSettingsTab("General", null)),
+            new("Taxes", "Settings > Taxes", () => GoToSettingsTab("Taxes", null)),
+            new("Chart of Accounts", "Settings > Accounting > Chart of Accounts", () => GoToSettingsTab("Accounting", "Chart of Accounts")),
+            new("Journals", "Settings > Accounting > Journals", () => GoToSettingsTab("Accounting", "Journals")),
+            new("Accounting Reports", "Settings > Accounting > Accounting Reports", () => GoToSettingsTab("Accounting", "Accounting Reports")),
+            new("Payments Setup", "Settings > Payments", () => GoToSettingsTab("Payments", null)),
+            new("Financial Settings", "Settings > Financial", () => GoToSettingsTab("Financial", null)),
+            new("Business Setup", "Settings > Business Setup", () => GoToSettingsTab("BusinessSetup", null)),
+            new("Custom Fields", "Settings > Custom Fields", () => GoToSettingsTab("CustomFields", null)),
+            new("Terminology", "Settings > Terminology", () => GoToSettingsTab("Terminology", null)),
+            new("Modules", "Settings > Modules", () => GoToSettingsTab("Modules", null)),
+        };
+
+        foreach (var report in ReportsViewModel.AllReports)
+        {
+            var key = report.Key;
+            items.Add(new NavigationSearchItem(report.Title, $"Reports > {report.Category} > {report.Title}", () => GoToReport(key)));
+        }
+
+        return items;
+    }
+
+    partial void OnNavSearchTextChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            MatchedNavItems = new ObservableCollection<NavigationSearchItem>();
+            return;
+        }
+
+        var query = value.Trim();
+        var matches = NavigationIndex
+            .Where(i => i.MatchesQuery(query))
+            .Take(30)
+            .ToList();
+        MatchedNavItems = new ObservableCollection<NavigationSearchItem>(matches);
+    }
+
+    [RelayCommand]
+    private void GoToNavItem(NavigationSearchItem? item)
+    {
+        if (item == null) return;
+        item.Navigate();
+        NavSearchText = string.Empty;
+        MatchedNavItems = new ObservableCollection<NavigationSearchItem>();
+    }
+
     [RelayCommand]
     public void SwitchUser()
     {
@@ -579,7 +673,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, GoToCycleCount, GoToReorderDashboard, GoToForecasting, GoToLocations, CustomFieldService, _barcodeService, GoToDamageWriteOff));
+    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, GoToCycleCount, GoToReorderDashboard, GoToForecasting, GoToLocations, CustomFieldService, _barcodeService, GoToDamageWriteOff, GoToPurchaseOrderDetails, GoToSalesOrderDetails));
 
     [RelayCommand]
     public void GoToManufacturing() => NavigateTo(new ManufacturingViewModel(_manufacturingService, _inventoryService, Language));
@@ -639,13 +733,18 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToReports()
     {
+        GoToReport(null);
+    }
+
+    public void GoToReport(string? reportKey)
+    {
         if (!_licenseService.CanAccessAdvancedReports())
         {
             // Redirect to License/Upgrade page if not premium
-            GoToLicense(); 
+            GoToLicense();
             return;
         }
-        NavigateTo(new ReportsViewModel(_inventoryService, _licenseService, _settingsService, Language, _accountingReportService, _agingReportService, _vatExportService, _budgetReportService, _paymentService, _advancedAnalyticsService, _monthCloseService, GoToPurchaseOrderDetails, GoToSalesOrderDetails));
+        NavigateTo(new ReportsViewModel(_inventoryService, _licenseService, _settingsService, Language, _accountingReportService, _accountService, _agingReportService, _vatExportService, _budgetReportService, _paymentService, _advancedAnalyticsService, _monthCloseService, GoToPurchaseOrderDetails, GoToSalesOrderDetails, reportKey));
     }
 
     [RelayCommand]
@@ -657,7 +756,7 @@ public partial class MainViewModel : ViewModelBase
             GoToLicense();
             return;
         }
-        NavigateTo(new POSViewModel(_inventoryService, _licenseService, _receiptService, _settingsService, Language, _salesOrderService, _customerService, _journalService, _taxService, _barcodeService, _currencyService, _auditService));
+        NavigateTo(new POSViewModel(_inventoryService, _licenseService, _receiptService, _settingsService, Language, _salesOrderService, _customerService, _journalService, _taxService, _barcodeService, _currencyService, _returnsService, _posSessionService, _auditService));
     }
 
     [RelayCommand]
@@ -684,8 +783,13 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToSettings()
     {
+        GoToSettingsTab(null, null);
+    }
+
+    public void GoToSettingsTab(string? tab, string? accountingSubTab)
+    {
         if (!CanAccessSettings) return;
-        NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService, _paymentService, _customFieldService, _currencyService, _budgetReportService, RunSetupWizardFromSettings, RefreshModuleGatedAccessProperties, _notificationService));
+        NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService, _paymentService, _customFieldService, _currencyService, _budgetReportService, RunSetupWizardFromSettings, RefreshModuleGatedAccessProperties, _notificationService, tab, accountingSubTab));
     }
 
     [RelayCommand]
@@ -928,8 +1032,29 @@ public partial class MainViewModel : ViewModelBase
         {
             var currentTheme = app.RequestedThemeVariant;
             app.RequestedThemeVariant = currentTheme == Avalonia.Styling.ThemeVariant.Dark 
-                ? Avalonia.Styling.ThemeVariant.Light 
+                ? Avalonia.Styling.ThemeVariant.Light
                 : Avalonia.Styling.ThemeVariant.Dark;
         }
     }
+}
+
+/// <summary>One destination in the global "Quick Navigation" search - a top-level page, or a
+/// specific buried tab/report the user would otherwise have to know the click-path to reach.</summary>
+public class NavigationSearchItem
+{
+    public NavigationSearchItem(string title, string path, System.Action navigate)
+    {
+        Title = title;
+        Path = path;
+        Navigate = navigate;
+    }
+
+    public string Title { get; }
+    /// <summary>Breadcrumb shown under the title, e.g. "Settings &gt; Accounting &gt; Journals".</summary>
+    public string Path { get; }
+    public System.Action Navigate { get; }
+
+    public bool MatchesQuery(string query) =>
+        Title.Contains(query, System.StringComparison.OrdinalIgnoreCase) ||
+        Path.Contains(query, System.StringComparison.OrdinalIgnoreCase);
 }

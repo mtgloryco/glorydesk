@@ -1132,7 +1132,7 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="3" Spacing="4" Margin="0,0,8,0">
                                     <TextBlock Text="Effective Date" FontSize="11" FontWeight="SemiBold"/>
-                                    <DatePicker SelectedDate="{Binding ExchangeEffectiveDate}"/>
+                                    <CalendarDatePicker SelectedDate="{Binding ExchangeEffectiveDate}"/>
                                 </StackPanel>
                                 <Button Grid.Column="4" Content="Save Rate" Command="{Binding SaveExchangeRateCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" VerticalAlignment="Bottom"/>
                             </Grid>

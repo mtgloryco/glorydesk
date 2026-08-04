@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             xmlns:domain="clr-namespace:InventoryManagementSystem.Domain"
              xmlns:helpers="using:InventoryManagementSystem.UI.Helpers"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
              x:Class="InventoryManagementSystem.UI.Views.ReportsView"
@@ -351,17 +352,74 @@
                           </StackPanel>
                       </ScrollViewer>
 
+                      <!-- General Ledger -->
+                      <ScrollViewer IsVisible="{Binding IsGeneralLedgerSelected}" Margin="20">
+                          <StackPanel Spacing="16">
+                              <Grid ColumnDefinitions="260, 20, Auto, 20, Auto">
+                                  <StackPanel Grid.Column="0" Spacing="5">
+                                      <TextBlock Text="Account" FontSize="12" FontWeight="SemiBold"/>
+                                      <AutoCompleteBox Text="{Binding LedgerAccountSearchText, Mode=TwoWay}"
+                                                       ItemsSource="{Binding MatchedLedgerAccounts}"
+                                                       FilterMode="None"
+                                                       Watermark="Type to search accounts...">
+                                          <AutoCompleteBox.ItemTemplate>
+                                              <DataTemplate DataType="domain:Account">
+                                                  <TextBlock Text="{Binding Name}"/>
+                                              </DataTemplate>
+                                          </AutoCompleteBox.ItemTemplate>
+                                      </AutoCompleteBox>
+                                      <ListBox ItemsSource="{Binding MatchedLedgerAccounts}" MaxHeight="140"
+                                               IsVisible="{Binding MatchedLedgerAccounts.Count}" Background="{DynamicResource CardBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1">
+                                          <ListBox.ItemTemplate>
+                                              <DataTemplate DataType="domain:Account">
+                                                  <Grid ColumnDefinitions="*, Auto">
+                                                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                                      <Button Grid.Column="1" Content="Select" Command="{Binding #Root.DataContext.SelectLedgerAccountCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="5,2"/>
+                                                  </Grid>
+                                              </DataTemplate>
+                                          </ListBox.ItemTemplate>
+                                      </ListBox>
+                                  </StackPanel>
+                                  <StackPanel Grid.Column="2" Spacing="5">
+                                      <TextBlock Text="From" FontSize="12" FontWeight="SemiBold"/>
+                                      <CalendarDatePicker SelectedDate="{Binding LedgerFromDate}" Width="160"/>
+                                  </StackPanel>
+                                  <StackPanel Grid.Column="4" Spacing="5">
+                                      <TextBlock Text="To" FontSize="12" FontWeight="SemiBold"/>
+                                      <CalendarDatePicker SelectedDate="{Binding LedgerToDate}" Width="160"/>
+                                  </StackPanel>
+                              </Grid>
+
+                              <Grid ColumnDefinitions="*,*" IsVisible="{Binding SelectedLedgerAccount, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                  <Border Background="#E3F2FD" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="Opening Balance" FontSize="11"/><TextBlock Text="{Binding LedgerOpeningBalance, StringFormat='{}{0:N2}'}" FontWeight="Bold"/></StackPanel></Border>
+                                  <Border Grid.Column="1" Background="#E8F5E9" Padding="12" CornerRadius="8" Margin="4"><StackPanel><TextBlock Text="Closing Balance" FontSize="11"/><TextBlock Text="{Binding LedgerClosingBalance, StringFormat='{}{0:N2}'}" FontWeight="Bold"/></StackPanel></Border>
+                              </Grid>
+
+                              <DataGrid ItemsSource="{Binding LedgerLines}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal">
+                                  <DataGrid.Columns>
+                                      <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:yyyy-MM-dd}'}" Width="100"/>
+                                      <DataGridTextColumn Header="Entry #" Binding="{Binding EntryNumber}" Width="140"/>
+                                      <DataGridTextColumn Header="Reference" Binding="{Binding Reference}" Width="160"/>
+                                      <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="*"/>
+                                      <DataGridTextColumn Header="Debit" Binding="{Binding Debit, StringFormat='{}{0:N2}'}" Width="110"/>
+                                      <DataGridTextColumn Header="Credit" Binding="{Binding Credit, StringFormat='{}{0:N2}'}" Width="110"/>
+                                      <DataGridTextColumn Header="Balance" Binding="{Binding RunningBalance, StringFormat='{}{0:N2}'}" Width="120"/>
+                                  </DataGrid.Columns>
+                              </DataGrid>
+                          </StackPanel>
+                      </ScrollViewer>
+
                       <!-- VAT Return -->
                       <ScrollViewer IsVisible="{Binding IsVatReturnSelected}" Margin="20">
                           <StackPanel Spacing="16">
                               <Grid ColumnDefinitions="Auto, Auto, Auto, *">
                                   <StackPanel Spacing="5" Margin="0,0,15,0">
                                       <TextBlock Text="Period Start" FontSize="12" FontWeight="SemiBold"/>
-                                      <DatePicker SelectedDate="{Binding VatPeriodStart}"/>
+                                      <CalendarDatePicker SelectedDate="{Binding VatPeriodStart}"/>
                                   </StackPanel>
                                   <StackPanel Spacing="5" Margin="0,0,15,0">
                                       <TextBlock Text="Period End" FontSize="12" FontWeight="SemiBold"/>
-                                      <DatePicker SelectedDate="{Binding VatPeriodEnd}"/>
+                                      <CalendarDatePicker SelectedDate="{Binding VatPeriodEnd}"/>
                                   </StackPanel>
                                   <Button Content="Compute VAT Return" Command="{Binding LoadVatReturnCommand}" Background="#007ACC" Foreground="White" Padding="12,8" VerticalAlignment="Bottom"/>
                               </Grid>
@@ -638,11 +696,11 @@
                     <Grid ColumnDefinitions="*, *">
                         <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,8,0">
                             <TextBlock Text="Statement Date" FontSize="11"/>
-                            <DatePicker SelectedDate="{Binding ImportStatementDate}"/>
+                            <CalendarDatePicker SelectedDate="{Binding ImportStatementDate}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Spacing="4">
                             <TextBlock Text="Line Date" FontSize="11"/>
-                            <DatePicker SelectedDate="{Binding ImportLineDate}"/>
+                            <CalendarDatePicker SelectedDate="{Binding ImportLineDate}"/>
                         </StackPanel>
                     </Grid>
                     <Grid ColumnDefinitions="*, *">

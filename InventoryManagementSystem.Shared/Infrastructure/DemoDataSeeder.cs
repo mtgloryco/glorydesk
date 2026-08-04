@@ -259,6 +259,30 @@ namespace InventoryManagementSystem.Infrastructure
                         conn.Insert(item);
                     }
 
+                    // Seeded orders are marked Delivered directly (no seed-time equivalent of the
+                    // "confirm shipment" flow), so without this the Delivery Slip / Packing List
+                    // buttons find no DeliveryNote to print and silently do nothing.
+                    var deliveryNote = new DeliveryNote
+                    {
+                        DeliveryNoteNumber = $"DN-DEMO-{soCounter:D4}",
+                        SalesOrderId = so.Id,
+                        CustomerId = so.CustomerId,
+                        ShipDate = so.DeliveryDate ?? so.OrderDate,
+                        Status = "Shipped",
+                        CreatedByUsername = "admin"
+                    };
+                    conn.Insert(deliveryNote);
+                    foreach (var item in items)
+                    {
+                        conn.Insert(new DeliveryNoteLine
+                        {
+                            DeliveryNoteId = deliveryNote.Id,
+                            SalesOrderItemId = item.Id,
+                            ProductId = item.ProductId,
+                            Quantity = item.QuantityDelivered
+                        });
+                    }
+
                     soCounter++;
                 }
             }

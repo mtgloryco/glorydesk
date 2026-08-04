@@ -108,11 +108,11 @@
             <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,Auto" ColumnSpacing="12" RowSpacing="10">
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="Waste From" FontSize="12" Foreground="#6B7280"/>
-                    <DatePicker SelectedDate="{Binding WasteFrom}"/>
+                    <CalendarDatePicker SelectedDate="{Binding WasteFrom}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="Waste To" FontSize="12" Foreground="#6B7280"/>
-                    <DatePicker SelectedDate="{Binding WasteTo}"/>
+                    <CalendarDatePicker SelectedDate="{Binding WasteTo}"/>
                 </StackPanel>
                 <Button Grid.Column="2"
                         Content="Generate Waste Report"

@@ -429,6 +429,7 @@ namespace InventoryManagementSystem.Services
                                 {
                                     c.Item().Text("Date: ______________").FontSize(9);
                                 });
+                                
                             });
                         }
                     });

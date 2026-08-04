@@ -166,6 +166,35 @@ namespace InventoryManagementSystem.UI.ViewModels
             }
         }
 
+        private string _filterOrderType = "All Types";
+        public string FilterOrderType
+        {
+            get => _filterOrderType;
+            set
+            {
+                if (SetProperty(ref _filterOrderType, value))
+                {
+                    LoadPurchaseOrdersCommand.Execute(null);
+                }
+            }
+        }
+
+        private string _filterCategory = "All Categories";
+        public string FilterCategory
+        {
+            get => _filterCategory;
+            set
+            {
+                if (SetProperty(ref _filterCategory, value))
+                {
+                    LoadPurchaseOrdersCommand.Execute(null);
+                }
+            }
+        }
+
+        public List<string> FilterOrderTypeOptions { get; } = new() { "All Types", "Approved", "Received", "Cancelled" };
+        [ObservableProperty] private ObservableCollection<string> _filterCategoryOptions = new() { "All Categories" };
+
         public List<Supplier> AllSuppliers { get; private set; } = new();
         public List<Product> AllProducts { get; private set; } = new();
 
@@ -219,6 +248,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             Language = languageService;
             _pdfService = new PurchaseOrderPdfService(_settingsService);
 
+            _ = LoadFilterCategoryOptionsAsync();
+
             if (initialPurchaseOrderId.HasValue)
             {
                 _ = InitializeWithDetailsAsync(initialPurchaseOrderId.Value);
@@ -227,6 +258,12 @@ namespace InventoryManagementSystem.UI.ViewModels
             {
                 LoadPurchaseOrdersCommand.Execute(null);
             }
+        }
+
+        private async Task LoadFilterCategoryOptionsAsync()
+        {
+            var categories = await _inventoryService.GetCategoriesAsync();
+            FilterCategoryOptions = new ObservableCollection<string>(new[] { "All Categories" }.Concat(categories.Select(c => c.Name)));
         }
 
         private async Task InitializeWithDetailsAsync(int purchaseOrderId)
@@ -337,8 +374,32 @@ namespace InventoryManagementSystem.UI.ViewModels
                     );
                 }
 
+                // 4. Order Type filtering (by lifecycle status)
+                if (FilterOrderType != "All Types")
+                {
+                    posOnly = posOnly.Where(po => po.PurchaseOrder.Status == FilterOrderType);
+                }
+
+                var filteredList = posOnly.ToList();
+
+                // 5. Product Category filtering - a PO matches if any of its line items is in that category
+                if (FilterCategory != "All Categories")
+                {
+                    var products = await _inventoryService.GetAllProductsAsync();
+                    var matchingIds = new List<int>();
+                    foreach (var po in filteredList)
+                    {
+                        var items = await _purchaseOrderService.GetItemsAsync(po.PurchaseOrder.Id);
+                        if (items.Any(i => products.FirstOrDefault(p => p.Id == i.ProductId)?.Category == FilterCategory))
+                        {
+                            matchingIds.Add(po.PurchaseOrder.Id);
+                        }
+                    }
+                    filteredList = filteredList.Where(po => matchingIds.Contains(po.PurchaseOrder.Id)).ToList();
+                }
+
                 var displayItems = new List<PurchaseOrderDisplayItem>();
-                foreach (var item in posOnly)
+                foreach (var item in filteredList)
                 {
                     displayItems.Add(new PurchaseOrderDisplayItem(item.PurchaseOrder, item.SupplierName));
                 }
@@ -848,7 +909,7 @@ namespace InventoryManagementSystem.UI.ViewModels
                 var products = await _inventoryService.GetAllProductsAsync();
                 var taxes = await _taxService.GetAllTaxesAsync();
 
-                var path = _pdfService.GeneratePurchaseOrderPdf(DetailedPo, items, products, taxes, DetailedSupplier, asBill: true);
+                var path = _pdfService.GeneratePurchaseOrderPdf(DetailedPo, items, products, taxes, DetailedSupplier, asBill: true, payments: DetailedPayments.ToList());
 
                 if (File.Exists(path))
                 {

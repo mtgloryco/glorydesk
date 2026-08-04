@@ -22,7 +22,7 @@
 
                     <StackPanel Spacing="5">
                         <TextBlock Text="Date" FontSize="12" Foreground="Gray"/>
-                        <DatePicker SelectedDate="{Binding Date}" HorizontalAlignment="Stretch"/>
+                        <CalendarDatePicker SelectedDate="{Binding Date}" HorizontalAlignment="Stretch"/>
                     </StackPanel>
 
                     <StackPanel Spacing="5">

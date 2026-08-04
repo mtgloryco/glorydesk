@@ -82,6 +82,8 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly TaxService _taxService;
         private readonly BarcodeService _barcodeService;
         private readonly CurrencyService _currencyService;
+        private readonly ReturnsService _returnsService;
+        private readonly PosSessionService _posSessionService;
         private readonly AuditService? _auditService;
 
         [ObservableProperty] private ObservableCollection<Product> _availableProducts = new();
@@ -105,6 +107,11 @@ namespace InventoryManagementSystem.UI.ViewModels
         public bool IsOrdersTabActive => ActiveTab == "Orders";
         public bool IsPaymentMethodsTabActive => ActiveTab == "PaymentMethods";
 
+        // Only the Sales screen needs a register open - Orders history and Configuration are
+        // freely usable regardless, since they're lookup/admin screens rather than a till.
+        public bool ShowSalesContent => IsSalesTabActive && CurrentSession != null;
+        public bool ShowOpenRegisterPrompt => IsSalesTabActive && CurrentSession == null;
+
         // --- Cashier ---
         public string CashierName => UserSession.CurrentUser?.Username ?? "Cashier";
 
@@ -113,6 +120,8 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private ObservableCollection<Journal> _journals = new();
         [ObservableProperty] private string _newPaymentMethodName = string.Empty;
         [ObservableProperty] private Journal? _newPaymentMethodSelectedJournal;
+        [ObservableProperty] private string _journalSearchText = string.Empty;
+        [ObservableProperty] private ObservableCollection<Journal> _matchedJournals = new();
 
         // --- POS Checkout Payment Panel ---
         [ObservableProperty] private bool _isPaymentPanelVisible;
@@ -141,6 +150,8 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         // --- POS Order History ---
         [ObservableProperty] private ObservableCollection<SalesOrderListItem> _posOrders = new();
+        [ObservableProperty] private ObservableCollection<CustomerOrderGroup> _posOrderGroups = new();
+        [ObservableProperty] private string _orderSearchText = string.Empty;
 
         // --- POS Order Details Modal ---
         [ObservableProperty] private bool _isOrderDetailsOpen;
@@ -148,10 +159,40 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private string _detailedCustomerName = string.Empty;
         [ObservableProperty] private ObservableCollection<POSDetailedOrderItemRow> _detailedOrderItems = new();
         [ObservableProperty] private ObservableCollection<POSDetailedPaymentRow> _detailedPayments = new();
+        [ObservableProperty] private ObservableCollection<CustomerReturn> _detailedReturns = new();
+        public bool HasReturns => DetailedReturns.Count > 0;
         [ObservableProperty] private decimal _detailedSubtotal;
         [ObservableProperty] private decimal _detailedTaxes;
         [ObservableProperty] private decimal _detailedTotal;
         [ObservableProperty] private string _detailedTaxBreakdownText = string.Empty;
+
+        // --- POS Session (cash register shift) ---
+        [ObservableProperty] private PosSession? _currentSession;
+        [ObservableProperty] private bool _isOpenRegisterModalOpen;
+        [ObservableProperty] private string _openRegisterErrorMessage = string.Empty;
+        public ObservableCollection<PosOpeningBalanceRow> OpeningBalanceRows { get; } = new();
+
+        [ObservableProperty] private bool _isCloseRegisterModalOpen;
+        [ObservableProperty] private string _closeRegisterErrorMessage = string.Empty;
+        [ObservableProperty] private string _closingNotes = string.Empty;
+        public ObservableCollection<PosCloseBalanceRow> CloseBalanceRows { get; } = new();
+
+        [ObservableProperty] private bool _isCashMovementModalOpen;
+        [ObservableProperty] private string _cashMovementType = "In";
+        [ObservableProperty] private PosPaymentMethod? _cashMovementMethod;
+        [ObservableProperty] private decimal _cashMovementAmount;
+        [ObservableProperty] private string _cashMovementReason = string.Empty;
+        [ObservableProperty] private string _cashMovementErrorMessage = string.Empty;
+        public List<string> CashMovementTypes { get; } = new() { "In", "Out" };
+        public ObservableCollection<PosPaymentMethod> CashMovementMethods { get; } = new();
+
+        // --- Orders tab: toggle between individual Orders and Sessions ---
+        [ObservableProperty] private string _ordersViewMode = "Orders"; // "Orders" or "Sessions"
+        public bool IsOrdersModeSelected => OrdersViewMode == "Orders";
+        public bool IsSessionsModeSelected => OrdersViewMode == "Sessions";
+        public ObservableCollection<PosSession> AllSessions { get; } = new();
+        [ObservableProperty] private PosSession? _selectedSessionForView;
+        [ObservableProperty] private PosSessionSummary? _selectedSessionSummary;
 
         public string CurrencySymbol => _settingsService.CurrentSettings.CurrencySymbol;
         public string BaseCurrency => CurrencySymbol ?? "RWF";
@@ -170,6 +211,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             TaxService taxService,
             BarcodeService barcodeService,
             CurrencyService currencyService,
+            ReturnsService returnsService,
+            PosSessionService posSessionService,
             AuditService? auditService = null)
         {
             _inventoryService = inventoryService;
@@ -184,10 +227,13 @@ namespace InventoryManagementSystem.UI.ViewModels
             _taxService = taxService;
             _barcodeService = barcodeService;
             _currencyService = currencyService;
+            _returnsService = returnsService;
+            _posSessionService = posSessionService;
             PosCheckoutCurrency = BaseCurrency;
             CheckoutTotalAmount = 0;
             LoadProductsCommand.Execute(null);
             _ = EnsureWalkInCustomerExistsAsync();
+            _ = CheckForOpenSessionAsync();
         }
 
         async partial void OnSearchTextChanged(string value)
@@ -474,6 +520,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             OnPropertyChanged(nameof(IsSalesTabActive));
             OnPropertyChanged(nameof(IsOrdersTabActive));
             OnPropertyChanged(nameof(IsPaymentMethodsTabActive));
+            OnPropertyChanged(nameof(ShowSalesContent));
+            OnPropertyChanged(nameof(ShowOpenRegisterPrompt));
 
             if (value == "Orders")
             {
@@ -485,16 +533,49 @@ namespace InventoryManagementSystem.UI.ViewModels
             }
         }
 
+        partial void OnOrderSearchTextChanged(string value)
+        {
+            _ = LoadPosOrdersAsync();
+        }
+
         private async Task LoadPosOrdersAsync()
         {
             try
             {
                 var list = await _salesOrderService.GetPosSalesOrdersAsync();
+
+                if (!string.IsNullOrWhiteSpace(OrderSearchText))
+                {
+                    var query = OrderSearchText.ToLower();
+                    list = list.Where(o =>
+                        o.CustomerName.ToLower().Contains(query) ||
+                        o.SalesOrder.SONumber.ToLower().Contains(query)
+                    ).ToList();
+                }
+
                 PosOrders.Clear();
                 foreach (var item in list)
                 {
                     PosOrders.Add(item);
                 }
+
+                // Group by customer so the cashier can drill: customer -> their orders -> order items.
+                var groups = list
+                    .GroupBy(o => o.CustomerName)
+                    .OrderBy(g => g.Key)
+                    .Select(g => new CustomerOrderGroup(g.Key, g.OrderByDescending(o => o.SalesOrder.OrderDate).ToList()))
+                    .ToList();
+
+                var previouslyExpanded = PosOrderGroups.Where(g => g.IsExpanded).Select(g => g.CustomerName).ToHashSet();
+                foreach (var group in groups)
+                {
+                    if (previouslyExpanded.Contains(group.CustomerName))
+                    {
+                        group.IsExpanded = true;
+                    }
+                }
+
+                PosOrderGroups = new ObservableCollection<CustomerOrderGroup>(groups);
             }
             catch (Exception ex)
             {
@@ -514,15 +595,40 @@ namespace InventoryManagementSystem.UI.ViewModels
                 var allJournals = await _journalService.GetAllJournalsAsync();
                 var filteredJournals = allJournals.Where(j => j.Type == "Cash" || j.Type == "Bank" || j.Type == "Credit Card" || j.Type == "Miscellaneous").ToList();
                 Journals = new ObservableCollection<Journal>(filteredJournals);
+                MatchedJournals = new ObservableCollection<Journal>(filteredJournals);
                 if (NewPaymentMethodSelectedJournal == null && filteredJournals.Count > 0)
                 {
                     NewPaymentMethodSelectedJournal = filteredJournals[0];
+                    JournalSearchText = filteredJournals[0].Name;
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to load Payment methods page: {ex.Message}");
             }
+        }
+
+        partial void OnJournalSearchTextChanged(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || (NewPaymentMethodSelectedJournal != null && value == NewPaymentMethodSelectedJournal.Name))
+            {
+                MatchedJournals = new ObservableCollection<Journal>(Journals);
+                return;
+            }
+
+            var query = value.ToLower();
+            var matches = Journals.Where(j => j.Name.ToLower().Contains(query)).ToList();
+            MatchedJournals = new ObservableCollection<Journal>(matches);
+            NewPaymentMethodSelectedJournal = null;
+        }
+
+        [RelayCommand]
+        private void SelectJournal(Journal? journal)
+        {
+            if (journal == null) return;
+            NewPaymentMethodSelectedJournal = journal;
+            JournalSearchText = journal.Name;
+            MatchedJournals.Clear();
         }
 
         [RelayCommand]
@@ -550,6 +656,8 @@ namespace InventoryManagementSystem.UI.ViewModels
                 await connection.InsertAsync(method);
 
                 NewPaymentMethodName = string.Empty;
+                NewPaymentMethodSelectedJournal = null;
+                JournalSearchText = string.Empty;
                 await LoadPaymentMethodsDataAsync();
             }
             catch (Exception ex)
@@ -586,12 +694,267 @@ namespace InventoryManagementSystem.UI.ViewModels
             }
         }
 
+        // --- POS Session (cash register shift) ---
+        // Deliberately scoped to Sales only: Orders history and Configuration (payment methods)
+        // stay usable without a register open, since they're lookup/admin screens, not a till.
+        // Only ringing up a sale needs a session, and the cashier opens one on their own terms via
+        // the "Open Register" prompt shown in place of the product grid - never a forced popup.
+
+        private async Task CheckForOpenSessionAsync()
+        {
+            CurrentSession = await _posSessionService.GetOpenSessionAsync();
+        }
+
+        partial void OnCurrentSessionChanged(PosSession? value)
+        {
+            OnPropertyChanged(nameof(ShowSalesContent));
+            OnPropertyChanged(nameof(ShowOpenRegisterPrompt));
+        }
+
+        [RelayCommand]
+        private async Task PromptOpenRegister()
+        {
+            await PrepareOpenRegisterModalAsync();
+        }
+
+        private async Task PrepareOpenRegisterModalAsync()
+        {
+            OpenRegisterErrorMessage = string.Empty;
+            var connection = _journalService.Database.Connection;
+            var methods = await connection.Table<PosPaymentMethod>().ToListAsync();
+
+            OpeningBalanceRows.Clear();
+            foreach (var method in methods)
+            {
+                OpeningBalanceRows.Add(new PosOpeningBalanceRow(method));
+            }
+
+            IsOpenRegisterModalOpen = true;
+        }
+
+        [RelayCommand]
+        private async Task OpenRegister()
+        {
+            OpenRegisterErrorMessage = string.Empty;
+            if (OpeningBalanceRows.Count == 0)
+            {
+                OpenRegisterErrorMessage = "Set up at least one payment method first (POS > Payment Methods).";
+                return;
+            }
+
+            try
+            {
+                var openingBalances = OpeningBalanceRows.ToDictionary(r => r.Method.Id, r => r.Amount);
+                var user = UserSession.CurrentUser?.Username ?? "Cashier";
+                CurrentSession = await _posSessionService.OpenSessionAsync(openingBalances, user);
+                IsOpenRegisterModalOpen = false;
+            }
+            catch (Exception ex)
+            {
+                OpenRegisterErrorMessage = ex.Message;
+            }
+        }
+
+        [RelayCommand]
+        private async Task OpenCloseRegisterModal()
+        {
+            if (CurrentSession == null) return;
+
+            CloseRegisterErrorMessage = string.Empty;
+            ClosingNotes = string.Empty;
+            var summary = await _posSessionService.GetSessionSummaryAsync(CurrentSession.Id);
+
+            CloseBalanceRows.Clear();
+            foreach (var row in summary.Balances)
+            {
+                CloseBalanceRows.Add(new PosCloseBalanceRow(row) { CountedBalance = row.ExpectedBalance });
+            }
+
+            IsCloseRegisterModalOpen = true;
+        }
+
+        [RelayCommand]
+        private void CloseCloseRegisterModal()
+        {
+            IsCloseRegisterModalOpen = false;
+        }
+
+        [RelayCommand]
+        private async Task ConfirmCloseRegister()
+        {
+            if (CurrentSession == null) return;
+
+            try
+            {
+                var countedBalances = CloseBalanceRows.ToDictionary(r => r.Summary.PosPaymentMethodId, r => r.CountedBalance);
+                var user = UserSession.CurrentUser?.Username ?? "Cashier";
+                await _posSessionService.CloseSessionAsync(CurrentSession.Id, countedBalances, user, ClosingNotes);
+
+                IsCloseRegisterModalOpen = false;
+                CurrentSession = null;
+                // Deliberately not re-prompting here: the next register is opened when the cashier
+                // is ready to sell again (via the Sales tab), not forced immediately on close.
+            }
+            catch (Exception ex)
+            {
+                CloseRegisterErrorMessage = ex.Message;
+            }
+        }
+
+        [RelayCommand]
+        private async Task OpenCashMovementModal(string movementType)
+        {
+            if (CurrentSession == null) return;
+
+            CashMovementErrorMessage = string.Empty;
+            CashMovementType = movementType;
+            CashMovementAmount = 0;
+            CashMovementReason = string.Empty;
+
+            var connection = _journalService.Database.Connection;
+            var methods = await connection.Table<PosPaymentMethod>().ToListAsync();
+            CashMovementMethods.Clear();
+            foreach (var m in methods) CashMovementMethods.Add(m);
+            CashMovementMethod = methods.FirstOrDefault();
+
+            IsCashMovementModalOpen = true;
+        }
+
+        [RelayCommand]
+        private void CloseCashMovementModal()
+        {
+            IsCashMovementModalOpen = false;
+        }
+
+        [RelayCommand]
+        private async Task ConfirmCashMovement()
+        {
+            if (CurrentSession == null || CashMovementMethod == null) return;
+
+            try
+            {
+                var user = UserSession.CurrentUser?.Username ?? "Cashier";
+                await _posSessionService.RecordCashMovementAsync(
+                    CurrentSession.Id, CashMovementMethod.Id, CashMovementType, CashMovementAmount, CashMovementReason, user);
+
+                IsCashMovementModalOpen = false;
+
+                // Keep the close-register summary in sync if it's open behind this modal.
+                if (IsCloseRegisterModalOpen)
+                {
+                    await OpenCloseRegisterModal();
+                }
+            }
+            catch (Exception ex)
+            {
+                CashMovementErrorMessage = ex.Message;
+            }
+        }
+
+        [RelayCommand]
+        private void SwitchOrdersViewMode(string mode)
+        {
+            OrdersViewMode = mode;
+            OnPropertyChanged(nameof(IsOrdersModeSelected));
+            OnPropertyChanged(nameof(IsSessionsModeSelected));
+
+            if (mode == "Sessions")
+            {
+                _ = LoadAllSessionsAsync();
+            }
+        }
+
+        private async Task LoadAllSessionsAsync()
+        {
+            var sessions = await _posSessionService.GetAllSessionsAsync();
+            AllSessions.Clear();
+            foreach (var s in sessions) AllSessions.Add(s);
+        }
+
+        [RelayCommand]
+        private async Task SelectSessionForView(PosSession? session)
+        {
+            if (session == null) return;
+            SelectedSessionForView = session;
+            SelectedSessionSummary = await _posSessionService.GetSessionSummaryAsync(session.Id);
+        }
+
+        [RelayCommand]
+        private async Task ExportSessionToExcel()
+        {
+            if (SelectedSessionSummary == null) return;
+
+            if (Avalonia.Application.Current?.ApplicationLifetime is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow == null)
+            {
+                return;
+            }
+
+            var summary = SelectedSessionSummary;
+            var file = await desktop.MainWindow.StorageProvider.SaveFilePickerAsync(new Avalonia.Platform.Storage.FilePickerSaveOptions
+            {
+                Title = "Save Session as Excel",
+                DefaultExtension = ".xlsx",
+                SuggestedFileName = $"{summary.Session.SessionNumber}",
+                FileTypeChoices = new[] { new Avalonia.Platform.Storage.FilePickerFileType("Excel Workbook") { Patterns = new[] { "*.xlsx" } } }
+            });
+            if (file == null) return;
+
+            using var workbook = new ClosedXML.Excel.XLWorkbook();
+
+            var balanceSheet = workbook.Worksheets.Add("Balances");
+            var balanceHeaders = new[] { "Payment Method", "Opening", "Sales", "Cash In", "Cash Out", "Expected", "Counted", "Difference" };
+            for (var i = 0; i < balanceHeaders.Length; i++)
+            {
+                balanceSheet.Cell(1, i + 1).Value = balanceHeaders[i];
+                balanceSheet.Cell(1, i + 1).Style.Font.Bold = true;
+            }
+            var row = 2;
+            foreach (var b in summary.Balances)
+            {
+                balanceSheet.Cell(row, 1).Value = b.PaymentMethodName;
+                balanceSheet.Cell(row, 2).Value = b.OpeningBalance;
+                balanceSheet.Cell(row, 3).Value = b.SalesTotal;
+                balanceSheet.Cell(row, 4).Value = b.CashIn;
+                balanceSheet.Cell(row, 5).Value = b.CashOut;
+                balanceSheet.Cell(row, 6).Value = b.ExpectedBalance;
+                balanceSheet.Cell(row, 7).Value = b.CountedClosingBalance ?? 0;
+                balanceSheet.Cell(row, 8).Value = b.Difference ?? 0;
+                row++;
+            }
+            balanceSheet.Columns().AdjustToContents();
+
+            var ordersSheet = workbook.Worksheets.Add("Orders");
+            var orderHeaders = new[] { "Reference", "Customer", "Date", "Total" };
+            for (var i = 0; i < orderHeaders.Length; i++)
+            {
+                ordersSheet.Cell(1, i + 1).Value = orderHeaders[i];
+                ordersSheet.Cell(1, i + 1).Style.Font.Bold = true;
+            }
+            row = 2;
+            foreach (var o in summary.Orders)
+            {
+                ordersSheet.Cell(row, 1).Value = o.SalesOrder.SONumber;
+                ordersSheet.Cell(row, 2).Value = o.CustomerName;
+                ordersSheet.Cell(row, 3).Value = o.SalesOrder.OrderDate;
+                ordersSheet.Cell(row, 4).Value = o.SalesOrder.TotalAmount;
+                row++;
+            }
+            ordersSheet.Columns().AdjustToContents();
+
+            workbook.SaveAs(file.Path.LocalPath);
+        }
+
         [RelayCommand]
         private async Task Checkout()
         {
             if (CartItems.Count == 0) return;
 
             PaymentErrorMessage = null;
+            if (CurrentSession == null)
+            {
+                PaymentErrorMessage = "No register session is open. Open one before ringing up sales.";
+                return;
+            }
             if (Tenders.Count == 0)
             {
                 PaymentErrorMessage = "Add at least one payment (cash, mobile money, etc.) before completing the sale.";
@@ -636,6 +999,7 @@ namespace InventoryManagementSystem.UI.ViewModels
                     DeliveryStatus = "Delivered",
                     IsPosSale = true,
                     PosPaymentMethodId = Tenders[0].Method.Id,
+                    PosSessionId = CurrentSession.Id,
                     CreatedByUsername = user
                 };
 
@@ -676,6 +1040,30 @@ namespace InventoryManagementSystem.UI.ViewModels
                         unitPrice: item.UnitPrice,
                         postSalesRevenueJournal: false
                     );
+                }
+
+                // POS sales are handed over immediately, so record the shipment now - without this,
+                // Delivery Slip / Packing List printing (available from the Customer Orders list)
+                // would find no delivery record and silently print nothing.
+                var deliveryNote = new DeliveryNote
+                {
+                    DeliveryNoteNumber = $"DN-{order.SONumber}",
+                    SalesOrderId = order.Id,
+                    CustomerId = order.CustomerId,
+                    ShipDate = order.OrderDate,
+                    Status = "Shipped",
+                    CreatedByUsername = user
+                };
+                await connection.InsertAsync(deliveryNote);
+                foreach (var orderItem in itemsList)
+                {
+                    await connection.InsertAsync(new DeliveryNoteLine
+                    {
+                        DeliveryNoteId = deliveryNote.Id,
+                        SalesOrderItemId = orderItem.Id,
+                        ProductId = orderItem.ProductId,
+                        Quantity = orderItem.QuantityDelivered
+                    });
                 }
 
                 // 3. Double Entry Accounting Entries (always posted, regardless of AutoCreateInvoice -
@@ -1026,6 +1414,10 @@ namespace InventoryManagementSystem.UI.ViewModels
                 }
                 DetailedPayments = new ObservableCollection<POSDetailedPaymentRow>(paymentRows);
 
+                var returns = await _returnsService.GetCustomerReturnsForOrderAsync(so.Id);
+                DetailedReturns = new ObservableCollection<CustomerReturn>(returns);
+                OnPropertyChanged(nameof(HasReturns));
+
                 IsOrderDetailsOpen = true;
             }
             catch (Exception ex)
@@ -1038,6 +1430,170 @@ namespace InventoryManagementSystem.UI.ViewModels
         private void CloseOrderDetails()
         {
             IsOrderDetailsOpen = false;
+        }
+
+        [RelayCommand]
+        private void ToggleCustomerGroup(CustomerOrderGroup? group)
+        {
+            if (group == null) return;
+            group.IsExpanded = !group.IsExpanded;
+        }
+
+        // --- POS Refund ---
+        [ObservableProperty] private bool _isReturnModalOpen;
+        [ObservableProperty] private string _returnErrorMessage = string.Empty;
+        [ObservableProperty] private SalesOrder _returnTargetOrder = new();
+        public ObservableCollection<SalesOrderReturnRow> ReturnRows { get; } = new();
+
+        [RelayCommand]
+        private async Task OpenReturnOrder(SalesOrderListItem? item)
+        {
+            var target = item?.SalesOrder ?? DetailedOrder;
+            if (target == null) return;
+
+            ReturnErrorMessage = string.Empty;
+            var orderItems = await _salesOrderService.GetItemsAsync(target.Id);
+            var products = await _inventoryService.GetAllProductsAsync();
+
+            ReturnRows.Clear();
+            foreach (var it in orderItems)
+            {
+                if (it.QuantityDelivered <= 0) continue;
+
+                var prod = products.FirstOrDefault(p => p.Id == it.ProductId);
+                ReturnRows.Add(new SalesOrderReturnRow
+                {
+                    ItemId = it.Id,
+                    ProductId = it.ProductId,
+                    ProductName = prod?.Name ?? "Unknown Product",
+                    QuantityDelivered = it.QuantityDelivered,
+                    QuantityToReturn = it.QuantityDelivered,
+                    RefundAmount = it.QuantityDelivered * it.UnitPrice,
+                    Condition = "Resaleable",
+                    Reason = "POS Refund"
+                });
+            }
+
+            if (ReturnRows.Count == 0)
+            {
+                BarcodeStatusMessage = "No delivered items found on this order to return.";
+                return;
+            }
+
+            ReturnTargetOrder = target;
+            IsReturnModalOpen = true;
+        }
+
+        [RelayCommand]
+        private async Task SubmitReturn()
+        {
+            ReturnErrorMessage = string.Empty;
+            if (ReturnRows.Any(r => r.QuantityToReturn < 0))
+            {
+                ReturnErrorMessage = "Return quantity cannot be negative.";
+                return;
+            }
+            if (ReturnRows.Any(r => r.QuantityToReturn > r.QuantityDelivered))
+            {
+                ReturnErrorMessage = "Return quantity cannot exceed delivered quantity.";
+                return;
+            }
+
+            try
+            {
+                var payload = ReturnRows
+                    .Where(r => r.QuantityToReturn > 0)
+                    .Select(r => (r.ItemId, r.QuantityToReturn, r.Condition, r.Reason, r.RefundAmount))
+                    .ToList();
+
+                if (payload.Count == 0)
+                {
+                    ReturnErrorMessage = "Please specify at least one item and quantity to return.";
+                    return;
+                }
+
+                await _returnsService.ProcessSalesOrderReturnAsync(ReturnTargetOrder.Id, payload, UserSession.CurrentUser?.Username ?? "Cashier");
+                IsReturnModalOpen = false;
+
+                // Refresh whatever's currently on screen so the refunded quantities show up immediately
+                var updatedList = await _salesOrderService.GetPosSalesOrdersAsync();
+                var updatedItem = updatedList.FirstOrDefault(o => o.SalesOrder.Id == ReturnTargetOrder.Id);
+                if (updatedItem != null)
+                {
+                    await OpenOrderDetails(updatedItem);
+                }
+
+                await LoadPosOrdersAsync();
+            }
+            catch (Exception ex)
+            {
+                ReturnErrorMessage = $"Return failed: {ex.Message}";
+            }
+        }
+
+        [RelayCommand]
+        private void CloseReturnModal()
+        {
+            IsReturnModalOpen = false;
+        }
+    }
+
+    public class CustomerOrderGroup : ObservableObject
+    {
+        public CustomerOrderGroup(string customerName, List<SalesOrderListItem> orders)
+        {
+            CustomerName = customerName;
+            Orders = new ObservableCollection<SalesOrderListItem>(orders);
+        }
+
+        public string CustomerName { get; }
+        public ObservableCollection<SalesOrderListItem> Orders { get; }
+        public int OrderCount => Orders.Count;
+        public decimal TotalAmount => Orders.Sum(o => o.SalesOrder.TotalAmount);
+
+        private bool _isExpanded;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set => SetProperty(ref _isExpanded, value);
+        }
+    }
+
+    public partial class PosOpeningBalanceRow : ObservableObject
+    {
+        public PosOpeningBalanceRow(PosPaymentMethod method)
+        {
+            Method = method;
+        }
+
+        public PosPaymentMethod Method { get; }
+        public string MethodName => Method.Name;
+
+        [ObservableProperty] private decimal _amount;
+    }
+
+    public partial class PosCloseBalanceRow : ObservableObject
+    {
+        public PosCloseBalanceRow(PosSessionBalanceRow summary)
+        {
+            Summary = summary;
+        }
+
+        public PosSessionBalanceRow Summary { get; }
+        public string MethodName => Summary.PaymentMethodName;
+        public decimal OpeningBalance => Summary.OpeningBalance;
+        public decimal SalesTotal => Summary.SalesTotal;
+        public decimal CashIn => Summary.CashIn;
+        public decimal CashOut => Summary.CashOut;
+        public decimal ExpectedBalance => Summary.ExpectedBalance;
+
+        [ObservableProperty] private decimal _countedBalance;
+
+        public decimal Difference => CountedBalance - ExpectedBalance;
+
+        partial void OnCountedBalanceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(Difference));
         }
     }
 

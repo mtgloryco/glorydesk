@@ -17,7 +17,7 @@
                     <NumericUpDown Value="{Binding NumberValue}" IsVisible="{Binding IsNumber}"
                                    HorizontalAlignment="Stretch" FormatString="0.####" />
 
-                    <DatePicker SelectedDate="{Binding DateValue}" IsVisible="{Binding IsDate}" />
+                    <CalendarDatePicker SelectedDate="{Binding DateValue}" IsVisible="{Binding IsDate}" />
 
                     <CheckBox IsChecked="{Binding BoolValue}" IsVisible="{Binding IsBoolean}" Content="Yes" />
 

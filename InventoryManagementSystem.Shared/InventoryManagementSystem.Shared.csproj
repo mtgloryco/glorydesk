@@ -14,6 +14,7 @@
     <PackageReference Include="Velopack" Version="0.0.1298" />
     <PackageReference Include="System.Management" Version="9.0.0" />
     <PackageReference Include="CsvHelper" Version="33.0.1" />
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.10" />
   </ItemGroup>
 

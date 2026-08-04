@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             xmlns:domain="clr-namespace:InventoryManagementSystem.Domain"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
              x:Class="InventoryManagementSystem.UI.Views.POSView"
              x:DataType="vm:POSViewModel"
@@ -60,6 +61,12 @@
 
                 <!-- User Session Indicator -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CurrentSession, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <TextBlock Text="{Binding CurrentSession.SessionNumber, StringFormat='Register: {0}'}" FontSize="11" Foreground="Gray" VerticalAlignment="Center"/>
+                        <Button Content="Cash In" Command="{Binding OpenCashMovementModalCommand}" CommandParameter="In" Background="#2E7D32" Foreground="White" FontSize="11" Padding="8,4" CornerRadius="3"/>
+                        <Button Content="Cash Out" Command="{Binding OpenCashMovementModalCommand}" CommandParameter="Out" Background="#EF6C00" Foreground="White" FontSize="11" Padding="8,4" CornerRadius="3"/>
+                        <Button Content="Close Register" Command="{Binding OpenCloseRegisterModalCommand}" Background="#C62828" Foreground="White" FontSize="11" Padding="8,4" CornerRadius="3" Margin="0,0,10,0"/>
+                    </StackPanel>
                     <TextBlock Text="👤" VerticalAlignment="Center" Opacity="0.7"/>
                     <TextBlock Text="{Binding CashierName}" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryColor}"/>
                 </StackPanel>
@@ -69,8 +76,16 @@
         <!-- MAIN CONTENT AREA -->
         <Grid Grid.Row="1">
             
-            <!-- 1. SALES / CHECKOUT VIEW -->
-            <Grid ColumnDefinitions="*, 420" IsVisible="{Binding IsSalesTabActive}">
+            <!-- 1a. SALES BLOCKED - no register open yet, opened on demand -->
+            <StackPanel IsVisible="{Binding ShowOpenRegisterPrompt}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="360">
+                <TextBlock Text="🔒" FontSize="48" HorizontalAlignment="Center"/>
+                <TextBlock Text="No register is open" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+                <TextBlock Text="Open a register with a starting float per payment method before ringing up sales. Orders history and Configuration are still available from the tabs above." FontSize="13" Foreground="Gray" TextWrapping="Wrap" TextAlignment="Center"/>
+                <Button Content="Open Register" Command="{Binding PromptOpenRegisterCommand}" Background="#2E7D32" Foreground="White" Padding="20,10" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- 1b. SALES / CHECKOUT VIEW -->
+            <Grid ColumnDefinitions="*, 420" IsVisible="{Binding ShowSalesContent}">
                 <!-- LEFT: Product Selection -->
                 <Grid RowDefinitions="Auto, *" ColumnDefinitions="*, Auto" Margin="24">
                     <!-- Header -->
@@ -369,34 +384,126 @@
             </Grid>
 
             <!-- 2. POS ORDERS HISTORY VIEW -->
-            <Grid RowDefinitions="Auto, *" Margin="24" IsVisible="{Binding IsOrdersTabActive}">
+            <Grid RowDefinitions="Auto, Auto, *" Margin="24" IsVisible="{Binding IsOrdersTabActive}">
                 <!-- Title / Header -->
-                <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                    <TextBlock Text="POS Order History" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
-                    <TextBlock Text="List of all orders made through the Point of Sale" FontSize="14" Foreground="Gray"/>
-                </StackPanel>
+                <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,15">
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="POS Order History" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                        <TextBlock Text="Browse orders by customer, or switch to Sessions to review a register shift" FontSize="14" Foreground="Gray"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Button Content="Orders" Command="{Binding SwitchOrdersViewModeCommand}" CommandParameter="Orders"
+                                Classes="tab-btn" Classes.active-tab="{Binding IsOrdersModeSelected}"/>
+                        <Button Content="Sessions" Command="{Binding SwitchOrdersViewModeCommand}" CommandParameter="Sessions"
+                                Classes="tab-btn" Classes.active-tab="{Binding IsSessionsModeSelected}"/>
+                    </StackPanel>
+                </Grid>
 
-                <!-- DataGrid of orders -->
-                <Border Grid.Row="1" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="8" Padding="15" BoxShadow="0 4 6 -1 #1A000000">
-                    <DataGrid ItemsSource="{Binding PosOrders}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="All">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Order #" Binding="{Binding SalesOrder.SONumber}" Width="1.5*"/>
-                            <DataGridTextColumn Header="{Binding Language.Resources[Customer]}" Binding="{Binding CustomerName}" Width="2*"/>
-                            <DataGridTextColumn Header="Date" Binding="{Binding SalesOrder.OrderDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="2*"/>
-                            <DataGridTextColumn Header="Total" Binding="{Binding SalesOrder.TotalAmount, StringFormat='{}{0:N0}'}" Width="1.5*"/>
-                            <DataGridTextColumn Header="Billing" Binding="{Binding SalesOrder.BillingStatus}" Width="1.5*"/>
-                            <DataGridTextColumn Header="Delivery" Binding="{Binding SalesOrder.DeliveryStatus}" Width="1.5*"/>
-                            <DataGridTemplateColumn Header="Actions" Width="1.5*">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Button Content="View Details" Command="{Binding #Root.DataContext.OpenOrderDetailsCommand}" CommandParameter="{Binding}"
-                                                Classes="accent" FontSize="11" Padding="8,4" HorizontalAlignment="Center"/>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Border>
+                <TextBox Grid.Row="1" Text="{Binding OrderSearchText}" Watermark="Search by customer or order #..." Width="350" HorizontalAlignment="Left" Margin="0,0,0,15"
+                         IsVisible="{Binding IsOrdersModeSelected}"/>
+
+                <!-- Customer-grouped order list -->
+                <ScrollViewer Grid.Row="2" IsVisible="{Binding IsOrdersModeSelected}">
+                    <ItemsControl ItemsSource="{Binding PosOrderGroups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource ContentBackgroundColor}" CornerRadius="8" Padding="0" Margin="0,0,0,10" BoxShadow="0 2 4 -1 #1A000000">
+                                    <StackPanel>
+                                        <!-- Customer header row - click to expand/collapse their orders -->
+                                        <Button Command="{Binding #Root.DataContext.ToggleCustomerGroupCommand}" CommandParameter="{Binding}"
+                                                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="15">
+                                            <Grid ColumnDefinitions="*, Auto, Auto">
+                                                <TextBlock Grid.Column="0" Text="{Binding CustomerName}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding OrderCount, StringFormat='{}{0} order(s)'}" Foreground="Gray" FontSize="12" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding TotalAmount, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Button>
+
+                                        <!-- Orders for this customer -->
+                                        <ItemsControl ItemsSource="{Binding Orders}" IsVisible="{Binding IsExpanded}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="15,10">
+                                                        <Grid ColumnDefinitions="1.5*, 2*, 1.2*, 1.2*, Auto">
+                                                            <TextBlock Grid.Column="0" Text="{Binding SalesOrder.SONumber}" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding SalesOrder.OrderDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" VerticalAlignment="Center" Foreground="Gray" FontSize="12"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding SalesOrder.TotalAmount, StringFormat='{}{0:N0}'}" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="3" Text="{Binding SalesOrder.BillingStatus}" VerticalAlignment="Center" FontSize="12"/>
+                                                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6">
+                                                                <Button Content="View Details" Command="{Binding #Root.DataContext.OpenOrderDetailsCommand}" CommandParameter="{Binding}"
+                                                                        Classes="accent" FontSize="11" Padding="8,4"/>
+                                                                <Button Content="Refund" Command="{Binding #Root.DataContext.OpenReturnOrderCommand}" CommandParameter="{Binding}"
+                                                                        Background="#f44336" Foreground="White" FontSize="11" Padding="8,4" CornerRadius="3"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Sessions view -->
+                <Grid Grid.Row="2" ColumnDefinitions="320, 20, *" IsVisible="{Binding IsSessionsModeSelected}">
+                    <Border Grid.Column="0" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="8" Padding="10" BoxShadow="0 2 4 -1 #1A000000">
+                        <ListBox ItemsSource="{Binding AllSessions}" SelectedItem="{Binding SelectedSessionForView}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Spacing="2" Margin="0,4">
+                                        <Button Command="{Binding #Root.DataContext.SelectSessionForViewCommand}" CommandParameter="{Binding}"
+                                                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="6">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding SessionNumber}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Status}" FontSize="11" Foreground="Gray"/>
+                                                <TextBlock Text="{Binding OpenedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontSize="11" Foreground="Gray"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+
+                    <StackPanel Grid.Column="2" Spacing="12" IsVisible="{Binding SelectedSessionSummary, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding SelectedSessionSummary.Session.SessionNumber}" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock FontSize="12" Foreground="Gray">
+                                    <Run Text="Opened by"/> <Run Text="{Binding SelectedSessionSummary.Session.OpenedByUsername}"/>
+                                    <Run Text=" on "/> <Run Text="{Binding SelectedSessionSummary.Session.OpenedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"/>
+                                </TextBlock>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Export to Excel" Command="{Binding ExportSessionToExcelCommand}" Padding="10,6"/>
+                        </Grid>
+
+                        <DataGrid ItemsSource="{Binding SelectedSessionSummary.Balances}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" Height="180">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Method" Binding="{Binding PaymentMethodName}" Width="120"/>
+                                <DataGridTextColumn Header="Opening" Binding="{Binding OpeningBalance, StringFormat='{}{0:N0}'}" Width="90"/>
+                                <DataGridTextColumn Header="Sales" Binding="{Binding SalesTotal, StringFormat='{}{0:N0}'}" Width="90"/>
+                                <DataGridTextColumn Header="Cash In" Binding="{Binding CashIn, StringFormat='{}{0:N0}'}" Width="80"/>
+                                <DataGridTextColumn Header="Cash Out" Binding="{Binding CashOut, StringFormat='{}{0:N0}'}" Width="80"/>
+                                <DataGridTextColumn Header="Expected" Binding="{Binding ExpectedBalance, StringFormat='{}{0:N0}'}" Width="90"/>
+                                <DataGridTextColumn Header="Counted" Binding="{Binding CountedClosingBalance, StringFormat='{}{0:N0}'}" Width="90"/>
+                                <DataGridTextColumn Header="Difference" Binding="{Binding Difference, StringFormat='{}{0:N0}'}" Width="90"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <TextBlock Text="Orders in this session" FontWeight="SemiBold"/>
+                        <DataGrid ItemsSource="{Binding SelectedSessionSummary.Orders}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" Height="200">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Reference" Binding="{Binding SalesOrder.SONumber}" Width="120"/>
+                                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*"/>
+                                <DataGridTextColumn Header="Date" Binding="{Binding SalesOrder.OrderDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="150"/>
+                                <DataGridTextColumn Header="Total" Binding="{Binding SalesOrder.TotalAmount, StringFormat='{}{0:N0}'}" Width="110"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Grid>
             </Grid>
 
             <!-- 3. CONFIGURATION - PAYMENT METHODS VIEW -->
@@ -439,13 +546,30 @@
 
                         <StackPanel Spacing="5">
                             <TextBlock Text="Journal" FontWeight="SemiBold"/>
-                            <ComboBox ItemsSource="{Binding Journals}" SelectedItem="{Binding NewPaymentMethodSelectedJournal}" HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
+                            <AutoCompleteBox Text="{Binding JournalSearchText, Mode=TwoWay}"
+                                             ItemsSource="{Binding MatchedJournals}"
+                                             FilterMode="None"
+                                             Watermark="Type to search journals...">
+                                <AutoCompleteBox.ItemTemplate>
+                                    <DataTemplate DataType="domain:Journal">
                                         <TextBlock Text="{Binding Name}"/>
                                     </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                                </AutoCompleteBox.ItemTemplate>
+                            </AutoCompleteBox>
+
+                            <!-- Autocomplete popup helper list -->
+                            <ListBox ItemsSource="{Binding MatchedJournals}" MaxHeight="140"
+                                     IsVisible="{Binding MatchedJournals.Count}" Background="{DynamicResource CardBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="domain:Journal">
+                                        <Grid ColumnDefinitions="*, Auto">
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="Select" Command="{Binding #Root.DataContext.SelectJournalCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="5,2"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Text="{Binding NewPaymentMethodSelectedJournal.Name, StringFormat='Selected: {0}'}" Foreground="#2E7D32" FontWeight="SemiBold" IsVisible="{Binding NewPaymentMethodSelectedJournal, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                         </StackPanel>
 
                         <Button Content="Save Payment Method" Command="{Binding CreatePaymentMethodCommand}" Classes="accent" HorizontalAlignment="Stretch" Padding="10" FontWeight="SemiBold"/>
@@ -599,6 +723,9 @@
                                         </Border.Styles>
                                         <TextBlock Text="{Binding DetailedOrder.BillingStatus}" Foreground="White" FontSize="11" FontWeight="Bold"/>
                                     </Border>
+                                    <Border CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Background="#f44336" Margin="0,4,0,0" IsVisible="{Binding HasReturns}">
+                                        <TextBlock Text="Partially Refunded" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                    </Border>
                                 </StackPanel>
                                 <!-- Col 3: Delivery Status -->
                                 <StackPanel Grid.Column="3" Spacing="5">
@@ -645,6 +772,22 @@
                                     </DataGrid>
                                 </Grid>
                             </TabItem>
+
+                            <!-- Returns/Refunds subtab - only shown once a refund has been processed -->
+                            <TabItem Header="Returns" FontSize="14" FontWeight="SemiBold" IsVisible="{Binding HasReturns}">
+                                <Grid Margin="0,10,0,0">
+                                    <DataGrid ItemsSource="{Binding DetailedReturns}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" Height="260">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Return #" Binding="{Binding ReturnNumber}" Width="220"/>
+                                            <DataGridTextColumn Header="Date" Binding="{Binding ReturnDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="180"/>
+                                            <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="90"/>
+                                            <DataGridTextColumn Header="Condition" Binding="{Binding Condition}" Width="110"/>
+                                            <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*"/>
+                                            <DataGridTextColumn Header="Refund Amount" Binding="{Binding RefundAmount, StringFormat='{}{0:N0}'}" Width="140"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </TabItem>
                         </TabControl>
                     </Grid>
 
@@ -675,6 +818,7 @@
                                         <TextBlock Text="{Binding CurrencySymbol}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
                                     </StackPanel>
                                 </StackPanel>
+                                <Button Content="Refund" Command="{Binding OpenReturnOrderCommand}" Background="#f44336" Foreground="White" Padding="15,10" VerticalAlignment="Center" Width="100" HorizontalContentAlignment="Center"/>
                                 <Button Content="Close" Command="{Binding CloseOrderDetailsCommand}" Classes="accent" Padding="15,10" VerticalAlignment="Center" Width="100" HorizontalContentAlignment="Center"/>
                             </StackPanel>
                         </Grid>
@@ -682,6 +826,162 @@
                 </Grid>
             </Border>
         </Grid>
-        
+
+        <!-- POS Refund Modal -->
+        <Grid Grid.RowSpan="2" Background="#B0000000" IsVisible="{Binding IsReturnModalOpen}" ZIndex="25" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Width="750" Height="500" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <TextBlock Grid.Row="0" Margin="0,0,0,12" Text="Refund POS Order Items" FontSize="16" FontWeight="Bold" Foreground="#f44336"/>
+
+                    <ScrollViewer Grid.Row="1">
+                        <ItemsControl ItemsSource="{Binding ReturnRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="0,8" Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="*, 80, 100, 110, 120">
+                                            <StackPanel Grid.Column="0" Spacing="2">
+                                                <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold" FontSize="12"/>
+                                                <TextBlock Text="{Binding QuantityDelivered, StringFormat='{}Delivered: {0}'}" FontSize="10" Foreground="Gray"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <TextBlock Text="Refund Qty" FontSize="9" Foreground="Gray"/>
+                                                <TextBox Text="{Binding QuantityToReturn}" FontSize="12" TextAlignment="Center" Height="28"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="Refund Amt" FontSize="9" Foreground="Gray"/>
+                                                <TextBox Text="{Binding RefundAmount}" FontSize="12" TextAlignment="Center" Height="28"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="3" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="Condition" FontSize="9" Foreground="Gray"/>
+                                                <ComboBox SelectedValue="{Binding Condition}" SelectedValueBinding="{Binding Content}" SelectedIndex="0" Height="28" FontSize="11" HorizontalAlignment="Stretch">
+                                                    <ComboBoxItem Content="Resaleable"/>
+                                                    <ComboBoxItem Content="Damaged"/>
+                                                    <ComboBoxItem Content="Destroyed"/>
+                                                </ComboBox>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="4" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="Reason" FontSize="9" Foreground="Gray"/>
+                                                <TextBox Text="{Binding Reason}" FontSize="11" Height="28"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding ReturnErrorMessage}" Foreground="Red" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Button Content="Cancel" Command="{Binding CloseReturnModalCommand}" Background="#757575" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12"/>
+                        <Button Content="Confirm Refund" Command="{Binding SubmitReturnCommand}" Background="#f44336" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- OPEN REGISTER MODAL (mandatory gate - no sale can be rung up without an open session) -->
+        <Grid Grid.RowSpan="2" Background="#D0000000" IsVisible="{Binding IsOpenRegisterModalOpen}" ZIndex="40" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Width="500" Padding="24" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="Open Register" FontSize="18" FontWeight="Bold"/>
+                    <TextBlock Text="Enter the starting float for each payment method before you can start selling." FontSize="12" Foreground="Gray" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding OpenRegisterErrorMessage}" Foreground="Red" FontSize="12" IsVisible="{Binding OpenRegisterErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <ItemsControl ItemsSource="{Binding OpeningBalanceRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="*, 150" Margin="0,4">
+                                    <TextBlock Text="{Binding MethodName}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    <TextBox Grid.Column="1" Text="{Binding Amount}" TextAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Content="Open Register" Command="{Binding OpenRegisterCommand}" Background="#2E7D32" Foreground="White" Padding="12,8" HorizontalAlignment="Stretch" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- CLOSE REGISTER MODAL -->
+        <Grid Grid.RowSpan="2" Background="#B0000000" IsVisible="{Binding IsCloseRegisterModalOpen}" ZIndex="41" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Width="820" MaxHeight="620" Padding="24" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
+                        <TextBlock Text="Close Register" FontSize="18" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding CurrentSession.SessionNumber, StringFormat='Session: {0}'}" FontSize="12" Foreground="Gray"/>
+                        <TextBlock Text="{Binding CloseRegisterErrorMessage}" Foreground="Red" FontSize="12" IsVisible="{Binding CloseRegisterErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1">
+                        <StackPanel Spacing="10">
+                            <DataGrid ItemsSource="{Binding CloseBalanceRows}" AutoGenerateColumns="False" IsReadOnly="False" GridLinesVisibility="Horizontal" Height="200">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Method" Binding="{Binding MethodName}" Width="120" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Opening" Binding="{Binding OpeningBalance, StringFormat='{}{0:N0}'}" Width="90" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Sales" Binding="{Binding SalesTotal, StringFormat='{}{0:N0}'}" Width="90" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Cash In" Binding="{Binding CashIn, StringFormat='{}{0:N0}'}" Width="80" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Cash Out" Binding="{Binding CashOut, StringFormat='{}{0:N0}'}" Width="80" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Expected" Binding="{Binding ExpectedBalance, StringFormat='{}{0:N0}'}" Width="90" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Counted" Binding="{Binding CountedBalance, StringFormat='{}{0:N0}'}" Width="100"/>
+                                    <DataGridTextColumn Header="Difference" Binding="{Binding Difference, StringFormat='{}{0:N0}'}" Width="90" IsReadOnly="True"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Notes" FontSize="12" FontWeight="SemiBold"/>
+                                <TextBox Text="{Binding ClosingNotes}" Watermark="Any explanation for a discrepancy..." Height="60" AcceptsReturn="True"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button Content="Cancel" Command="{Binding CloseCloseRegisterModalCommand}" Background="#757575" Foreground="White" Padding="12,6" CornerRadius="4"/>
+                        <Button Content="Confirm Close" Command="{Binding ConfirmCloseRegisterCommand}" Background="#C62828" Foreground="White" Padding="12,6" CornerRadius="4" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- CASH IN / CASH OUT MODAL -->
+        <Grid Grid.RowSpan="2" Background="#B0000000" IsVisible="{Binding IsCashMovementModalOpen}" ZIndex="42" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Width="420" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="{Binding CashMovementType, StringFormat='Cash {0}'}" FontSize="16" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding CashMovementErrorMessage}" Foreground="Red" FontSize="12" IsVisible="{Binding CashMovementErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Payment Method" FontSize="12" FontWeight="SemiBold"/>
+                        <ComboBox ItemsSource="{Binding CashMovementMethods}" SelectedItem="{Binding CashMovementMethod}" HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Amount" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBox Text="{Binding CashMovementAmount}"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Reason" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBox Text="{Binding CashMovementReason}" Watermark="e.g. Cash drop to safe, float top-up..."/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Command="{Binding CloseCashMovementModalCommand}" Background="#757575" Foreground="White" Padding="12,6" CornerRadius="4"/>
+                        <Button Content="Confirm" Command="{Binding ConfirmCashMovementCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" CornerRadius="4" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
     </Grid>
 </UserControl>

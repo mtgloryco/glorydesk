@@ -29,10 +29,41 @@
             </Border>
 
             <!-- Search & Actions -->
-            <Grid Grid.Row="1" ColumnDefinitions="*, Auto" Margin="0,0,0,15">
-                <TextBox Text="{Binding SearchText}" Watermark="Search by SQ/SO reference or customer..." Width="350" HorizontalAlignment="Left"/>
-                <Button Grid.Column="1" Content="New Price Quote" Command="{Binding OpenAddSaleCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4"/>
-            </Grid>
+            <StackPanel Grid.Row="1" Spacing="10" Margin="0,0,0,15">
+                <Grid ColumnDefinitions="Auto, Auto, *, Auto, Auto, Auto">
+                    <TextBox Grid.Column="0" Text="{Binding SearchText}" Watermark="Search by SQ/SO reference or customer..." Width="350"/>
+                    <Button Grid.Column="1" Content="{Binding FilterButtonLabel}"
+                            Command="{Binding ToggleFilterPanelCommand}" Padding="12,6" CornerRadius="4" Margin="8,0,0,0"/>
+                    <TextBlock Grid.Column="3" Text="{Binding ErrorMessage}" Foreground="Gray" FontSize="12" VerticalAlignment="Center" Margin="0,0,15,0"
+                               IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <Button Grid.Column="4" Content="Export to Excel" Command="{Binding ExportToExcelCommand}" Padding="12,6" FontWeight="SemiBold" CornerRadius="4" Margin="0,0,10,0"
+                            IsVisible="{Binding !IsRecurringTabSelected}"/>
+                    <Button Grid.Column="5" Content="New Price Quote" Command="{Binding OpenAddSaleCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4"/>
+                </Grid>
+
+                <!-- Advanced filter panel: date range, order type, product category -->
+                <Border IsVisible="{Binding IsFilterPanelOpen}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="15">
+                    <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto, *, Auto">
+                        <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,15,0">
+                            <TextBlock Text="From" FontSize="11" Foreground="Gray"/>
+                            <CalendarDatePicker SelectedDate="{Binding FilterStartDate}" Width="150"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4" Margin="0,0,15,0">
+                            <TextBlock Text="To" FontSize="11" Foreground="Gray"/>
+                            <CalendarDatePicker SelectedDate="{Binding FilterEndDate}" Width="150"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="4" Margin="0,0,15,0">
+                            <TextBlock Text="Order Type" FontSize="11" Foreground="Gray"/>
+                            <ComboBox ItemsSource="{Binding FilterOrderTypeOptions}" SelectedItem="{Binding FilterOrderType}" Width="150"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Spacing="4" Margin="0,0,15,0">
+                            <TextBlock Text="Product Category" FontSize="11" Foreground="Gray"/>
+                            <ComboBox ItemsSource="{Binding FilterCategoryOptions}" SelectedItem="{Binding FilterCategory}" Width="170"/>
+                        </StackPanel>
+                        <Button Grid.Column="8" Content="Clear Filters" Command="{Binding ClearFiltersCommand}" VerticalAlignment="Bottom" Padding="10,6" IsVisible="{Binding HasActiveFilters}"/>
+                    </Grid>
+                </Border>
+            </StackPanel>
 
             <!-- Sales List Content -->
             <Grid Grid.Row="2">

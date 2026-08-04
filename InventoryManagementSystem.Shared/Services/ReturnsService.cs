@@ -481,6 +481,21 @@ namespace InventoryManagementSystem.Services
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Returns processed against a specific sales order via ProcessSalesOrderReturnAsync.
+        /// BillingStatus never changes on refund (the invoice was genuinely issued; the return only
+        /// creates a credit against it) so this is the only place a UI can show "this order was
+        /// refunded" without that being mistaken for the order un-invoicing itself.
+        /// </summary>
+        public async Task<List<CustomerReturn>> GetCustomerReturnsForOrderAsync(int salesOrderId)
+        {
+            var idText = salesOrderId.ToString();
+            return await _databaseService.Connection.Table<CustomerReturn>()
+                .Where(r => !r.IsDeleted && r.OriginalReceiptId == idText)
+                .OrderByDescending(r => r.ReturnDate)
+                .ToListAsync();
+        }
+
         public async Task<List<SupplierReturn>> GetSupplierReturnsAsync(DateTime from, DateTime to)
         {
             return await _databaseService.Connection.Table<SupplierReturn>()

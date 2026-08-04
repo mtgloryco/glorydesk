@@ -23,8 +23,32 @@
                            HorizontalAlignment="Left"
                            Margin="0,16,0,0"/>
                     <TextBlock Text="MT GLORY" FontSize="11" Foreground="#888" Margin="0,0,0,12"/>
-                    <TextBlock Text="{Binding CurrentUserName}" FontWeight="SemiBold" Margin="0,0,0,20"/>
-                    
+                    <TextBlock Text="{Binding CurrentUserName}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+
+                    <!-- Quick Navigation: find any page, settings tab, or report by name without knowing where it lives -->
+                    <StackPanel Spacing="4" Margin="0,0,0,16">
+                        <TextBox Text="{Binding NavSearchText, Mode=TwoWay}" Watermark="🔍 Go to..." Padding="8,6"/>
+                        <Border Background="{DynamicResource CardBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6"
+                                IsVisible="{Binding MatchedNavItems.Count}" BoxShadow="0 4 10 -1 #20000000">
+                            <ScrollViewer MaxHeight="380">
+                                <ItemsControl ItemsSource="{Binding MatchedNavItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).GoToNavItemCommand}" CommandParameter="{Binding .}"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="10,8"
+                                                    Background="Transparent" BorderThickness="0" CornerRadius="0">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                                    <TextBlock Text="{Binding Path}" FontSize="11" Foreground="Gray"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                    </StackPanel>
+
                     <Button Content="{Binding Language.Resources[Dashboard]}" Command="{Binding GoToDashboardCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
                     <Button Content="{Binding Language.Resources[POS]}" Command="{Binding GoToPOSCommand}" IsVisible="{Binding CanAccessPOS}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
                     <Button Content="{Binding Language.Resources[Inventory]}" Command="{Binding GoToInventoryCommand}" IsVisible="{Binding CanAccessInventory}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
