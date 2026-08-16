@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+             x:Class="InventoryManagementSystem.UI.Views.LeaveRequestsView"
+             x:DataType="vm:LeaveRequestsViewModel">
+    <Grid RowDefinitions="Auto,*" ColumnDefinitions="2*,*" Margin="20">
+        <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+            <TextBlock Grid.Column="0" Text="Leave Requests" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="+ Request Leave" Command="{Binding ShowAddLeaveRequestFormCommand}" Background="#007ACC" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4" />
+        </Grid>
+
+        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="16" Margin="0,0,12,0">
+            <StackPanel Spacing="6">
+                <TextBlock Text="Pending Approval" FontWeight="SemiBold" FontSize="16" />
+                <DataGrid ItemsSource="{Binding PendingRequests}" AutoGenerateColumns="False" Height="260">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Employee ID" Binding="{Binding EmployeeId}" Width="90" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Start" Binding="{Binding StartDate, StringFormat={}{0:yyyy-MM-dd}}" Width="100" IsReadOnly="True" />
+                        <DataGridTextColumn Header="End" Binding="{Binding EndDate, StringFormat={}{0:yyyy-MM-dd}}" Width="100" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Days" Binding="{Binding DaysCount}" Width="60" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*" IsReadOnly="True" />
+                        <DataGridTemplateColumn Header="Actions" Width="160">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                        <Button Content="Approve" Command="{Binding $parent[UserControl].((vm:LeaveRequestsViewModel)DataContext).ApproveRequestCommand}" CommandParameter="{Binding}" Background="#2E7D32" Foreground="White" FontSize="10" Padding="8,4"/>
+                                        <Button Content="Reject" Command="{Binding $parent[UserControl].((vm:LeaveRequestsViewModel)DataContext).RejectRequestCommand}" CommandParameter="{Binding}" Background="#D32F2F" Foreground="White" FontSize="10" Padding="8,4"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBox Watermark="Review notes (optional, applies to Approve/Reject above)" Text="{Binding ReviewNotes}" />
+            </StackPanel>
+
+            <StackPanel Spacing="6" IsVisible="{Binding FormEmployee, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="{Binding FormEmployee.Name, StringFormat='History — {0}'}" FontWeight="SemiBold" FontSize="16" />
+                <DataGrid ItemsSource="{Binding RecentRequests}" AutoGenerateColumns="False" Height="200">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Start" Binding="{Binding StartDate, StringFormat={}{0:yyyy-MM-dd}}" Width="100" IsReadOnly="True" />
+                        <DataGridTextColumn Header="End" Binding="{Binding EndDate, StringFormat={}{0:yyyy-MM-dd}}" Width="100" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Days" Binding="{Binding DaysCount}" Width="60" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" IsReadOnly="True" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10">
+                <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6" IsVisible="{Binding IsFormVisible}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Request Leave" FontWeight="SemiBold" FontSize="16" />
+
+                        <TextBlock Text="Employee" FontSize="11" Foreground="Gray" />
+                        <ComboBox ItemsSource="{Binding Employees}" SelectedItem="{Binding FormEmployee}" HorizontalAlignment="Stretch" PlaceholderText="Select employee...">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Text="Leave Type" FontSize="11" Foreground="Gray" />
+                        <ComboBox ItemsSource="{Binding LeaveTypes}" SelectedItem="{Binding FormLeaveType}" HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Text="Start Date" FontSize="11" Foreground="Gray" />
+                        <CalendarDatePicker SelectedDate="{Binding FormStartDate}" />
+
+                        <TextBlock Text="End Date" FontSize="11" Foreground="Gray" />
+                        <CalendarDatePicker SelectedDate="{Binding FormEndDate}" />
+
+                        <TextBox Watermark="Reason" Text="{Binding FormReason}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" />
+
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                            <Button Content="Submit" Command="{Binding SubmitLeaveRequestCommand}" Background="#2E7D32" Foreground="White"/>
+                            <Button Content="Cancel" Command="{Binding CloseFormCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6" IsVisible="{Binding FormEmployee, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Leave Balance (this year)" FontWeight="SemiBold" FontSize="14" />
+                        <ItemsControl ItemsSource="{Binding SelectedEmployeeBalances}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                                        <TextBlock Grid.Column="0" Text="{Binding LeaveTypeName}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Balance, StringFormat='{}{0} days left'}" FontWeight="SemiBold" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

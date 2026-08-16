@@ -2,11 +2,11 @@ STAFF & PAYROLL (HR) MODULE — BUILD ROADMAP
 Inventory Management System / Glory Desk
 ============================================
 
-Status: PHASE 6 DONE (2026-08-16). Phases 7-10 not started. This file tracks
-the build, phase by phase, the same way industry-roadmap.txt tracks the rest
-of the product. Mark [x] only when a task is actually working end-to-end, not
-when it's "mostly done" — that's how industry-roadmap.txt ended up claiming
-things (mobile apps, SSO, SMS) that don't really work.
+Status: PHASES 6-7 DONE (2026-08-17). Phases 8-10 not started. This file
+tracks the build, phase by phase, the same way industry-roadmap.txt tracks
+the rest of the product. Mark [x] only when a task is actually working
+end-to-end, not when it's "mostly done" — that's how industry-roadmap.txt
+ended up claiming things (mobile apps, SSO, SMS) that don't really work.
 
 Conventions used throughout: Entity -> Service -> ViewModel -> View -> DI
 wiring in App.axaml.cs -> nav entry + permission + license gate in
@@ -59,27 +59,57 @@ Goal: a real employee record, separate from login accounts.
     add one in Phase 10 polish if editing Status is too many clicks in
     practice.
 
-PHASE 7 — ATTENDANCE & LEAVE
+PHASE 7 — ATTENDANCE & LEAVE [DONE 2026-08-17]
 ----------------------------
-[ ] Add AttendanceRecord entity: EmployeeId, date, status
+[x] Add AttendanceRecord entity: EmployeeId, date, status
     (Present/Absent/Late/HalfDay/OnLeave), clock-in/out (nullable),
-    LocationId, notes
-[ ] Add LeaveType entity (Annual, Sick, Maternity/Paternity, Unpaid, Other)
-    — seed sensible defaults on first run
-[ ] Add LeaveRequest entity: EmployeeId, LeaveTypeId, start/end date, days
-    count, status (Pending/Approved/Rejected), approver UserId, reason
-[ ] AttendanceService.cs: mark attendance (single + bulk-for-the-day),
-    monthly attendance summary per employee
-[ ] LeaveService.cs: submit/approve/reject request, running leave balance
-    per employee per leave type
-[ ] ViewModels/Views: AttendanceViewModel/View (daily register grid),
-    LeaveRequestsViewModel/View (list + approve/reject actions)
-[ ] Reuse the existing approvals pattern from Enterprise (PO/discount
-    approvals) for leave approval — check EnterpriseViewModel.cs
-[ ] Reports: attendance summary (present/absent/late % per period, per
-    branch), leave balance report
-[ ] Tests: Phase7Tests.cs
-[ ] Docs: content/docs/team-settings/attendance.md, .../leave.md
+    LocationId, notes, SourceLeaveRequestId (added — traces auto-generated
+    OnLeave rows back to the leave request that created them)
+[x] Add LeaveType entity (Annual, Sick, Maternity/Paternity, Unpaid, Other)
+    — seeded on first run (18/10/30/0/0 default days — placeholder numbers,
+    NOT confirmed against real labor law, flagged in staff-facing docs)
+[x] Add LeaveRequest entity: EmployeeId, LeaveTypeId, start/end date, days
+    count, status (Pending/Approved/Rejected/Cancelled), reason.
+    DEVIATION: approver is stored as ReviewedByUsername (string), not a
+    UserId FK — matches how the rest of the app (ApprovalRequest, AuditLog)
+    already tracks who-did-what by username, not by foreign key.
+[x] AttendanceService.cs: mark attendance (single + bulk), monthly summary
+    per employee, upsert-by-day (remarking a day updates in place, no dupes)
+[x] LeaveService.cs: submit/approve/reject, running leave balance per
+    employee per leave type (entitlement minus Approved days only —
+    Pending/Rejected don't count)
+[x] ViewModels/Views: AttendanceViewModel/View (daily register grid, one
+    row per active employee, Status dropdown + notes, Save Day),
+    LeaveRequestsViewModel/View (submit form, Pending Approval grid with
+    Approve/Reject, per-employee history + live balance panel)
+[x] DEVIATION: did NOT reuse WorkflowApprovalService/ApprovalRequest for
+    leave approval. That table is a separate parallel status from
+    LeaveRequest.Status — routing leave through it would mean two status
+    fields that could drift out of sync for no real benefit here.
+    LeaveService.ApproveAsync/RejectAsync directly own LeaveRequest.Status
+    instead. Approving also calls AttendanceService.ApplyApprovedLeaveAsync
+    to write OnLeave rows for every day in range — no double entry between
+    the two features.
+[ ] Reports: attendance summary (present/absent/late %) and leave balance
+    report as standalone Report pages — NOT built. Today the same numbers
+    only exist inline (AttendanceViewModel.SummaryText for one day/branch,
+    LeaveRequestsViewModel.SelectedEmployeeBalances for one employee at a
+    time). No cross-employee/period rollup report yet — add in Phase 9
+    (Payroll Reporting) alongside the payroll reports, since they'll likely
+    share a "Team & Settings > Reports" page.
+[x] Tests: Phase7Tests.cs — 7 tests: leave types seeded, attendance
+    upsert-not-duplicate, monthly summary counts, leave request days-count
+    + defaults to Pending, approval writes OnLeave attendance rows,
+    double-approval throws, balance only counts Approved days. Full suite
+    (107 tests) still green.
+[x] Docs: content/docs/team-settings/attendance.md, .../leave.md + _nav.ts
+    entries (ready: true)
+
+    Note: Attendance and Leave Requests are gated by the same
+    CanAccessStaffManagement (Medium+) / ManageEmployees permission as
+    Staff — no separate license/role tier was introduced for them. If you
+    want attendance/leave to be a higher-tier upsell than basic staff
+    records, split that out before general release.
 
 PHASE 8 — PAYROLL CORE
 Goal: run payroll and get a payslip, gated at Pro+.

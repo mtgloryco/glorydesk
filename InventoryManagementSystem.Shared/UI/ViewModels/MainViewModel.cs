@@ -62,6 +62,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly DamageWriteOffService _damageWriteOffService;
     private readonly PosSessionService _posSessionService;
     private readonly EmployeeService _employeeService;
+    private readonly AttendanceService _attendanceService;
+    private readonly LeaveService _leaveService;
 
     public IndustryTemplateService IndustryTemplateService => _industryTemplateService;
     public CustomFieldService CustomFieldService => _customFieldService;
@@ -155,7 +157,9 @@ public partial class MainViewModel : ViewModelBase
         ExpenseService expenseService,
         DamageWriteOffService damageWriteOffService,
         PosSessionService posSessionService,
-        EmployeeService employeeService)
+        EmployeeService employeeService,
+        AttendanceService attendanceService,
+        LeaveService leaveService)
     {
         _inventoryService = inventoryService;
         _userService = userService;
@@ -209,6 +213,8 @@ public partial class MainViewModel : ViewModelBase
         _damageWriteOffService = damageWriteOffService;
         _posSessionService = posSessionService;
         _employeeService = employeeService;
+        _attendanceService = attendanceService;
+        _leaveService = leaveService;
 
         // Check for updates on startup (fire and forget, silent)
         _ = CheckForUpdatesInternal(false);
@@ -298,6 +304,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanAccessInventory));
         OnPropertyChanged(nameof(CanAccessSuppliers));
         OnPropertyChanged(nameof(CanAccessEmployees));
+        OnPropertyChanged(nameof(CanAccessAttendance));
+        OnPropertyChanged(nameof(CanAccessLeaveRequests));
         OnPropertyChanged(nameof(CanAccessCustomers));
         OnPropertyChanged(nameof(CanAccessPurchaseOrders));
         OnPropertyChanged(nameof(CanAccessForecasting));
@@ -508,6 +516,8 @@ public partial class MainViewModel : ViewModelBase
     public bool CanAccessInventory => HasRolePermission(RolePermissions.ManageInventory) || HasRolePermission(RolePermissions.ViewInventory);
     public bool CanAccessSuppliers => _licenseService.CanAccessSupplierManagement() && HasRolePermission(RolePermissions.ManageSuppliers);
     public bool CanAccessEmployees => _licenseService.CanAccessStaffManagement() && HasRolePermission(RolePermissions.ManageEmployees);
+    public bool CanAccessAttendance => CanAccessEmployees;
+    public bool CanAccessLeaveRequests => CanAccessEmployees;
     public bool CanAccessCustomers => HasRolePermission(RolePermissions.ManageCustomers) || HasRolePermission(RolePermissions.ViewInventory);
     public bool CanAccessPurchaseOrders => _licenseService.CanAccessPurchaseOrders() && HasRolePermission(RolePermissions.ManagePurchasing);
     public bool CanAccessForecasting => _licenseService.CanAccessForecasting() && HasRolePermission(RolePermissions.ManagePurchasing);
@@ -581,6 +591,8 @@ public partial class MainViewModel : ViewModelBase
             new("Customers", "Customers", GoToCustomers),
             new("Suppliers", "Suppliers", GoToSuppliers),
             new("Staff", "Team > Staff", GoToEmployees),
+            new("Attendance", "Team > Attendance", GoToAttendance),
+            new("Leave Requests", "Team > Leave Requests", GoToLeaveRequests),
             new("Reports", "Reports", GoToReports),
             new("Analytics", "Analytics", GoToAnalytics),
             new("Advanced Analytics", "Analytics > Advanced", GoToAdvancedAnalytics),
@@ -822,6 +834,34 @@ public partial class MainViewModel : ViewModelBase
         if (!HasRolePermission(RolePermissions.ManageEmployees)) return;
 
         NavigateTo(new EmployeesViewModel(_employeeService, _locationService));
+    }
+
+    [RelayCommand]
+    public void GoToAttendance()
+    {
+        if (!_licenseService.CanAccessStaffManagement())
+        {
+            GoToLicense();
+            return;
+        }
+
+        if (!HasRolePermission(RolePermissions.ManageEmployees)) return;
+
+        NavigateTo(new AttendanceViewModel(_attendanceService, _employeeService, _locationService));
+    }
+
+    [RelayCommand]
+    public void GoToLeaveRequests()
+    {
+        if (!_licenseService.CanAccessStaffManagement())
+        {
+            GoToLicense();
+            return;
+        }
+
+        if (!HasRolePermission(RolePermissions.ManageEmployees)) return;
+
+        NavigateTo(new LeaveRequestsViewModel(_leaveService, _employeeService));
     }
 
 
