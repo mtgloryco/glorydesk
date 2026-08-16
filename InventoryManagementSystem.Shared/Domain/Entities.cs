@@ -196,6 +196,91 @@ namespace InventoryManagementSystem.Domain
         public int ProductId { get; set; }
     }
 
+    public class Employee : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string NationalId { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Position { get; set; } = string.Empty;
+        public string Department { get; set; } = string.Empty;
+        public int LocationId { get; set; }
+        public DateTime HireDate { get; set; } = DateTime.Now;
+        public DateTime? TerminationDate { get; set; }
+        public string Status { get; set; } = "Active"; // Active, OnLeave, Terminated
+        public string EmploymentType { get; set; } = "Full-time"; // Full-time, Part-time, Contract
+        public string PayFrequency { get; set; } = "Monthly"; // Monthly, Weekly, Daily
+        public decimal BaseSalary { get; set; }
+        public string BankName { get; set; } = string.Empty;
+        public string BankAccountNumber { get; set; } = string.Empty;
+        public string EmergencyContactName { get; set; } = string.Empty;
+        public string EmergencyContactPhone { get; set; } = string.Empty;
+        /// <summary>Optional link to a login account, for staff who also sign in to Glory Desk.</summary>
+        public int? UserId { get; set; }
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+    }
+
+    public class AttendanceRecord : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public int EmployeeId { get; set; }
+        public DateTime Date { get; set; }
+        public string Status { get; set; } = "Present"; // Present, Absent, Late, HalfDay, OnLeave
+        public DateTime? ClockIn { get; set; }
+        public DateTime? ClockOut { get; set; }
+        public int LocationId { get; set; }
+        public string Notes { get; set; } = string.Empty;
+        /// <summary>Set when this row was created automatically because a LeaveRequest was approved for this day.</summary>
+        public int? SourceLeaveRequestId { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+    }
+
+    public class LeaveType : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public string Name { get; set; } = string.Empty;
+        /// <summary>Editable per business — not a legal guarantee. Confirm actual entitlements before relying on this.</summary>
+        public int DefaultDaysPerYear { get; set; }
+        public bool IsPaid { get; set; } = true;
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class LeaveRequest : ISyncableEntity
+    {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+        public Guid SyncId { get; set; } = Guid.NewGuid();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; }
+        public int EmployeeId { get; set; }
+        public int LeaveTypeId { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public int DaysCount { get; set; }
+        public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Cancelled
+        public string Reason { get; set; } = string.Empty;
+        public string RequestedByUsername { get; set; } = string.Empty;
+        public DateTime RequestedAt { get; set; } = DateTime.Now;
+        public string ReviewedByUsername { get; set; } = string.Empty;
+        public DateTime? ReviewedAt { get; set; }
+        public string ReviewNotes { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+    }
+
     public class PurchaseOrder : ISyncableEntity
     {
         [PrimaryKey, AutoIncrement]

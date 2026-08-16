@@ -72,6 +72,10 @@ namespace InventoryManagementSystem.Infrastructure
             await _connection.CreateTableAsync<LocalLicense>();
             await _connection.CreateTableAsync<Supplier>();
             await _connection.CreateTableAsync<SupplierProduct>();
+            await _connection.CreateTableAsync<Employee>();
+            await _connection.CreateTableAsync<AttendanceRecord>();
+            await _connection.CreateTableAsync<LeaveType>();
+            await _connection.CreateTableAsync<LeaveRequest>();
             await _connection.CreateTableAsync<PurchaseOrder>();
             await _connection.CreateTableAsync<PurchaseOrderItem>();
             await _connection.CreateTableAsync<ReorderRule>();
@@ -585,6 +589,21 @@ namespace InventoryManagementSystem.Infrastructure
                     new ProductUnit { Name = "g", Quantity = 0.001, GroupInPOS = false, ReferenceUnit = "kg" },
                     new ProductUnit { Name = "kg", Quantity = 1.0, GroupInPOS = false, ReferenceUnit = "" },
                     new ProductUnit { Name = "l", Quantity = 1.0, GroupInPOS = false, ReferenceUnit = "" }
+                });
+            }
+
+            var leaveTypeCount = await _connection.Table<LeaveType>().CountAsync();
+            if (leaveTypeCount == 0)
+            {
+                // Starting point only — confirm actual entitlements with an accountant/HR
+                // before relying on these day counts for real payroll or leave decisions.
+                await _connection.InsertAllAsync(new[]
+                {
+                    new LeaveType { Name = "Annual", DefaultDaysPerYear = 18, IsPaid = true },
+                    new LeaveType { Name = "Sick", DefaultDaysPerYear = 10, IsPaid = true },
+                    new LeaveType { Name = "Maternity/Paternity", DefaultDaysPerYear = 30, IsPaid = true },
+                    new LeaveType { Name = "Unpaid", DefaultDaysPerYear = 0, IsPaid = false },
+                    new LeaveType { Name = "Other", DefaultDaysPerYear = 0, IsPaid = false }
                 });
             }
 

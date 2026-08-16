@@ -61,6 +61,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly ExpenseService _expenseService;
     private readonly DamageWriteOffService _damageWriteOffService;
     private readonly PosSessionService _posSessionService;
+    private readonly EmployeeService _employeeService;
 
     public IndustryTemplateService IndustryTemplateService => _industryTemplateService;
     public CustomFieldService CustomFieldService => _customFieldService;
@@ -153,7 +154,8 @@ public partial class MainViewModel : ViewModelBase
         RecurringInvoiceService recurringInvoiceService,
         ExpenseService expenseService,
         DamageWriteOffService damageWriteOffService,
-        PosSessionService posSessionService)
+        PosSessionService posSessionService,
+        EmployeeService employeeService)
     {
         _inventoryService = inventoryService;
         _userService = userService;
@@ -206,6 +208,7 @@ public partial class MainViewModel : ViewModelBase
         _expenseService = expenseService;
         _damageWriteOffService = damageWriteOffService;
         _posSessionService = posSessionService;
+        _employeeService = employeeService;
 
         // Check for updates on startup (fire and forget, silent)
         _ = CheckForUpdatesInternal(false);
@@ -294,6 +297,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanAccessReports));
         OnPropertyChanged(nameof(CanAccessInventory));
         OnPropertyChanged(nameof(CanAccessSuppliers));
+        OnPropertyChanged(nameof(CanAccessEmployees));
         OnPropertyChanged(nameof(CanAccessCustomers));
         OnPropertyChanged(nameof(CanAccessPurchaseOrders));
         OnPropertyChanged(nameof(CanAccessForecasting));
@@ -503,6 +507,7 @@ public partial class MainViewModel : ViewModelBase
     public bool CanAccessReports => _licenseService.CanAccessAdvancedReports() && HasRolePermission(RolePermissions.ViewReports);
     public bool CanAccessInventory => HasRolePermission(RolePermissions.ManageInventory) || HasRolePermission(RolePermissions.ViewInventory);
     public bool CanAccessSuppliers => _licenseService.CanAccessSupplierManagement() && HasRolePermission(RolePermissions.ManageSuppliers);
+    public bool CanAccessEmployees => _licenseService.CanAccessStaffManagement() && HasRolePermission(RolePermissions.ManageEmployees);
     public bool CanAccessCustomers => HasRolePermission(RolePermissions.ManageCustomers) || HasRolePermission(RolePermissions.ViewInventory);
     public bool CanAccessPurchaseOrders => _licenseService.CanAccessPurchaseOrders() && HasRolePermission(RolePermissions.ManagePurchasing);
     public bool CanAccessForecasting => _licenseService.CanAccessForecasting() && HasRolePermission(RolePermissions.ManagePurchasing);
@@ -575,6 +580,7 @@ public partial class MainViewModel : ViewModelBase
             new("Sales Orders", "Sales > Orders", GoToSalesOrders),
             new("Customers", "Customers", GoToCustomers),
             new("Suppliers", "Suppliers", GoToSuppliers),
+            new("Staff", "Team > Staff", GoToEmployees),
             new("Reports", "Reports", GoToReports),
             new("Analytics", "Analytics", GoToAnalytics),
             new("Advanced Analytics", "Analytics > Advanced", GoToAdvancedAnalytics),
@@ -802,6 +808,20 @@ public partial class MainViewModel : ViewModelBase
         }
 
         NavigateTo(new SuppliersViewModel(_supplierService, _inventoryService));
+    }
+
+    [RelayCommand]
+    public void GoToEmployees()
+    {
+        if (!_licenseService.CanAccessStaffManagement())
+        {
+            GoToLicense();
+            return;
+        }
+
+        if (!HasRolePermission(RolePermissions.ManageEmployees)) return;
+
+        NavigateTo(new EmployeesViewModel(_employeeService, _locationService));
     }
 
 

@@ -121,6 +121,7 @@ namespace InventoryManagementSystem.Services
                 // Sidebar
                 ["Customers"] = "Customers",
                 ["Suppliers"] = "Suppliers",
+                ["Employees"] = "Staff",
                 ["PurchaseOrders"] = "Orders to Suppliers",
                 ["Forecasting"] = "Demand Forecast",
                 ["ReorderDashboard"] = "What to Reorder",
@@ -242,6 +243,7 @@ namespace InventoryManagementSystem.Services
                 // Sidebar
                 ["Customers"] = "Clients",
                 ["Suppliers"] = "Fournisseurs",
+                ["Employees"] = "Personnel",
                 ["PurchaseOrders"] = "Bons de Commande",
                 ["Forecasting"] = "Previsions",
                 ["ReorderDashboard"] = "Tableau Reapprov.",
@@ -342,6 +344,7 @@ namespace InventoryManagementSystem.Services
                 // Sidebar
                 ["Customers"] = "Abakiriya",
                 ["Suppliers"] = "Abasupplier",
+                ["Employees"] = "Abakozi",
                 ["PurchaseOrders"] = "Bons de Commande",
                 ["Forecasting"] = "Ibibanziriza Igihe",
                 ["ReorderDashboard"] = "Guhindura Ububiko",

@@ -19,12 +19,13 @@ namespace InventoryManagementSystem.Services
         public const string ManageSettings = "ManageSettings";
         public const string ManageManufacturing = "ManageManufacturing";
         public const string ManageExpenses = "ManageExpenses";
+        public const string ManageEmployees = "ManageEmployees";
 
         private static readonly HashSet<string> AllPermissions = new(StringComparer.OrdinalIgnoreCase)
         {
             AccessPOS, ManageInventory, ViewInventory, ManageSales, ManagePurchasing,
             ManageSuppliers, ManageCustomers, ProcessReturns, ViewReports, ViewAudit,
-            ManageUsers, ManageSettings, ManageManufacturing, ManageExpenses
+            ManageUsers, ManageSettings, ManageManufacturing, ManageExpenses, ManageEmployees
         };
 
         private static readonly Dictionary<string, HashSet<string>> RoleMap = new(StringComparer.OrdinalIgnoreCase)

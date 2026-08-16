@@ -1,0 +1,115 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+             x:Class="InventoryManagementSystem.UI.Views.EmployeesView"
+             x:DataType="vm:EmployeesViewModel">
+    <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="2*,*" Margin="20">
+        <!-- Header Panel with Add button -->
+        <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="*, Auto" Margin="0,0,0,16">
+            <TextBlock Grid.Column="0" Text="Staff" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="+ Add Employee" Command="{Binding ShowAddEmployeeFormCommand}" Background="#007ACC" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4" />
+        </Grid>
+
+        <!-- Search Bar -->
+        <Grid Grid.Row="1" Grid.Column="0" ColumnDefinitions="*,Auto" Margin="0,0,12,12">
+            <TextBox Grid.Column="0" Watermark="Search staff by name, position, department, phone, email, national ID..." Text="{Binding SearchText}" VerticalAlignment="Center" />
+            <CheckBox Grid.Column="1" Content="Show terminated" IsChecked="{Binding ShowInactive}" Margin="12,0,0,0" VerticalAlignment="Center" />
+        </Grid>
+
+        <DataGrid Grid.Row="2" Grid.Column="0" ItemsSource="{Binding Employees}" SelectedItem="{Binding SelectedEmployee}" AutoGenerateColumns="False" Margin="0,0,12,0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+                <DataGridTextColumn Header="Position" Binding="{Binding Position}" Width="140" />
+                <DataGridTextColumn Header="Department" Binding="{Binding Department}" Width="120" />
+                <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120" />
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
+                <DataGridTemplateColumn Header="Actions" Width="150">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:EmployeesViewModel)DataContext).EditEmployeeCommand}" CommandParameter="{Binding}" Background="#007ACC" Foreground="White" FontSize="10" Padding="8,4"/>
+                                <Button Content="Deactivate" Command="{Binding $parent[UserControl].((vm:EmployeesViewModel)DataContext).ConfirmDeactivateEmployeeCommand}" CommandParameter="{Binding}" Background="#D32F2F" Foreground="White" FontSize="10" Padding="8,4"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <ScrollViewer Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10" Margin="0,0,8,0">
+                <!-- Add / Edit Employee Form (Collapsible) -->
+                <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6" IsVisible="{Binding IsFormVisible}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Add / Edit Employee" FontWeight="SemiBold" FontSize="16" />
+                        <TextBox Watermark="Full name" Text="{Binding CurrentEmployee.Name}" />
+                        <TextBox Watermark="National ID" Text="{Binding CurrentEmployee.NationalId}" />
+                        <TextBox Watermark="Phone" Text="{Binding CurrentEmployee.Phone}" />
+                        <TextBox Watermark="Email" Text="{Binding CurrentEmployee.Email}" />
+                        <TextBox Watermark="Position (e.g. Cashier)" Text="{Binding CurrentEmployee.Position}" />
+                        <TextBox Watermark="Department (e.g. Sales)" Text="{Binding CurrentEmployee.Department}" />
+
+                        <TextBlock Text="Branch / Location" FontSize="11" Foreground="Gray" Margin="0,4,0,0" />
+                        <ComboBox ItemsSource="{Binding Locations}" SelectedItem="{Binding SelectedEmployeeLocation}" HorizontalAlignment="Stretch" PlaceholderText="Select location...">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Text="Employment Type" FontSize="11" Foreground="Gray" Margin="0,4,0,0" />
+                        <ComboBox ItemsSource="{Binding EmploymentTypes}" SelectedItem="{Binding CurrentEmployee.EmploymentType}" HorizontalAlignment="Stretch" />
+
+                        <TextBlock Text="Pay Frequency" FontSize="11" Foreground="Gray" Margin="0,4,0,0" />
+                        <ComboBox ItemsSource="{Binding PayFrequencies}" SelectedItem="{Binding CurrentEmployee.PayFrequency}" HorizontalAlignment="Stretch" />
+
+                        <TextBlock Text="Status" FontSize="11" Foreground="Gray" Margin="0,4,0,0" />
+                        <ComboBox ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding CurrentEmployee.Status}" HorizontalAlignment="Stretch" />
+
+                        <TextBox Watermark="Base salary" Text="{Binding CurrentEmployee.BaseSalary}" />
+                        <TextBox Watermark="Bank name" Text="{Binding CurrentEmployee.BankName}" />
+                        <TextBox Watermark="Bank account number" Text="{Binding CurrentEmployee.BankAccountNumber}" />
+                        <TextBox Watermark="Emergency contact name" Text="{Binding CurrentEmployee.EmergencyContactName}" />
+                        <TextBox Watermark="Emergency contact phone" Text="{Binding CurrentEmployee.EmergencyContactPhone}" />
+
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                            <Button Content="Save" Command="{Binding SaveEmployeeCommand}" Background="#2E7D32" Foreground="White"/>
+                            <Button Content="Cancel" Command="{Binding CloseFormCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,12,0,0" IsVisible="{Binding SelectedEmployee, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Employee Details" FontWeight="SemiBold" FontSize="14" />
+                        <TextBlock Text="{Binding SelectedEmployee.Name}" FontWeight="Bold" FontSize="15" />
+                        <TextBlock Text="{Binding SelectedEmployee.Position, StringFormat='Position: {0}'}" />
+                        <TextBlock Text="{Binding SelectedEmployee.Department, StringFormat='Department: {0}'}" />
+                        <TextBlock Text="{Binding SelectedEmployee.EmploymentType, StringFormat='Employment: {0}'}" />
+                        <TextBlock Text="{Binding SelectedEmployee.HireDate, StringFormat='Hired: {0:yyyy-MM-dd}'}" />
+                        <TextBlock Text="{Binding SelectedEmployee.BaseSalary, StringFormat='Base salary: {0:N2}'}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Deactivation Confirmation Dialog Overlay -->
+        <Grid Grid.RowSpan="3" Grid.ColumnSpan="2" Background="#80000000" IsVisible="{Binding IsDeleteConfirmationOpen}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" Width="320" BoxShadow="0 10 30 0 #40000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Confirm Deactivation" FontSize="18" FontWeight="Bold" Foreground="#D32F2F" />
+                    <TextBlock Text="{Binding EmployeeToDeactivate.Name, StringFormat='Are you sure you want to deactivate \'{0}\'?'}" TextWrapping="Wrap" FontSize="14" />
+                    <TextBlock Text="Their record and history are kept, but they no longer appear as active staff." FontSize="12" Foreground="Gray" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Command="{Binding CancelDeactivateCommand}" Padding="10,5" />
+                        <Button Content="Deactivate" Command="{Binding ExecuteDeactivateCommand}" Background="#D32F2F" Foreground="White" Padding="10,5" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

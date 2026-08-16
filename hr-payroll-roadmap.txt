@@ -1,0 +1,145 @@
+STAFF & PAYROLL (HR) MODULE — BUILD ROADMAP
+Inventory Management System / Glory Desk
+============================================
+
+Status: PHASE 6 DONE (2026-08-16). Phases 7-10 not started. This file tracks
+the build, phase by phase, the same way industry-roadmap.txt tracks the rest
+of the product. Mark [x] only when a task is actually working end-to-end, not
+when it's "mostly done" — that's how industry-roadmap.txt ended up claiming
+things (mobile apps, SSO, SMS) that don't really work.
+
+Conventions used throughout: Entity -> Service -> ViewModel -> View -> DI
+wiring in App.axaml.cs -> nav entry + permission + license gate in
+MainViewModel.cs -> tests -> docs. Copy an existing module (Suppliers is the
+closest analogue) rather than inventing a new pattern.
+
+Decisions baked into this plan — revisit if you disagree:
+- Employee is its own entity, separate from User (login account). Staff who
+  never log into Glory Desk (cleaners, drivers) still need payroll records.
+  Employee has an optional UserId link for staff who also log in.
+- Statutory numbers (PAYE bands, RSSB %, CBHI %) are editable settings, not
+  hardcoded — rates change, and you may sell outside Rwanda later.
+- License gating: Staff records at Medium+, Payroll processing at Pro+
+  (matches how Forecasting/Audit Trail are gated today). Change if you want
+  Payroll to be an Enterprise-only upsell instead.
+
+--------------------------------------------------------------------------
+
+PHASE 6 — STAFF FOUNDATIONS [DONE 2026-08-16]
+Goal: a real employee record, separate from login accounts.
+----------------------------------------------------------
+[x] Add Employee entity in Domain/Entities.cs: name, national ID, phone,
+    email, position, department, LocationId (branch), hire date,
+    termination date, status (Active/OnLeave/Terminated), employment type
+    (Full-time/Part-time/Contract), pay frequency (Monthly/Weekly/Daily),
+    base salary, bank name/account, emergency contact, optional UserId
+[x] Register CreateTableAsync<Employee>() in DatabaseService.cs
+[x] Add RolePermissions.ManageEmployees constant, add to AllPermissions,
+    assign to Admin/Manager (Accountant view-only deferred — not built)
+[x] Add LicenseService.CanAccessStaffManagement() => IsMedium || IsPro || IsEnterprise
+[x] Create EmployeeService.cs (Services/): CRUD + AuditService logging on
+    create/update/deactivate — copied SupplierService.cs structure
+[x] Create EmployeesViewModel.cs + EmployeesView.axaml — copied
+    SuppliersViewModel/SuppliersView as the template (list + detail/edit form)
+[x] Wire into App.axaml.cs DI, MainViewModel.cs (field, GoToEmployees(),
+    menu entry under Team & settings), gated by CanAccessStaffManagement
+[x] Add EN/FR/RW strings to LanguageService.cs (Employees sidebar label —
+    form field labels are still English-only placeholders/watermarks;
+    full field-level localization deferred to Phase 10 polish pass)
+[x] Tests: Phase6Tests.cs — 6 tests: add/list, update+audit log, deactivate
+    keeps history, reactivate via Status edit, per-location filtering, role
+    permission matrix. Full suite (100 tests) still green.
+[x] Docs: content/docs/team-settings/staff.md + entry in _nav.ts (ready: true)
+
+    Note: Status is the source of truth for IsActive — EmployeeService sets
+    IsActive = (Status != "Terminated") on every save, so editing Status
+    back to Active/OnLeave reactivates someone. The grid hides terminated
+    staff by default; a "Show terminated" checkbox reveals them so they can
+    be edited/reactivated. No separate one-click "Reactivate" button yet —
+    add one in Phase 10 polish if editing Status is too many clicks in
+    practice.
+
+PHASE 7 — ATTENDANCE & LEAVE
+----------------------------
+[ ] Add AttendanceRecord entity: EmployeeId, date, status
+    (Present/Absent/Late/HalfDay/OnLeave), clock-in/out (nullable),
+    LocationId, notes
+[ ] Add LeaveType entity (Annual, Sick, Maternity/Paternity, Unpaid, Other)
+    — seed sensible defaults on first run
+[ ] Add LeaveRequest entity: EmployeeId, LeaveTypeId, start/end date, days
+    count, status (Pending/Approved/Rejected), approver UserId, reason
+[ ] AttendanceService.cs: mark attendance (single + bulk-for-the-day),
+    monthly attendance summary per employee
+[ ] LeaveService.cs: submit/approve/reject request, running leave balance
+    per employee per leave type
+[ ] ViewModels/Views: AttendanceViewModel/View (daily register grid),
+    LeaveRequestsViewModel/View (list + approve/reject actions)
+[ ] Reuse the existing approvals pattern from Enterprise (PO/discount
+    approvals) for leave approval — check EnterpriseViewModel.cs
+[ ] Reports: attendance summary (present/absent/late % per period, per
+    branch), leave balance report
+[ ] Tests: Phase7Tests.cs
+[ ] Docs: content/docs/team-settings/attendance.md, .../leave.md
+
+PHASE 8 — PAYROLL CORE
+Goal: run payroll and get a payslip, gated at Pro+.
+----------------------------------------------------
+[ ] LicenseService.CanAccessPayroll() => IsPro || IsEnterprise
+[ ] Add SalaryComponent entity (catalog): name (Transport Allowance,
+    Housing Allowance, Loan Deduction...), type (Allowance/Deduction),
+    calculation (Fixed amount / % of base), taxable flag
+[ ] Add EmployeeSalaryComponent (which components apply to which employee,
+    at what amount/%)
+[ ] Add PayrollSettings (statutory config): PAYE tax bands (editable
+    table), employer/employee RSSB %, CBHI %, other statutory items
+    >>> CONFIRM THESE NUMBERS WITH AN ACCOUNTANT BEFORE SHIPPING <<<
+[ ] Add PayrollPeriod entity (month/period, status Draft/Processed/Paid,
+    locked after paid)
+[ ] Add Payslip entity: EmployeeId, PayrollPeriodId, gross pay, itemized
+    allowances/deductions, taxable income, PAYE, RSSB employee/employer,
+    CBHI, net pay, payment status, payment method, paid date
+[ ] PayrollService.cs: run payroll for a period (calculate all employees),
+    recalculate single payslip, mark period Paid, void/reverse a processed
+    period (manager permission + reason, like returns require)
+[ ] Payslip PDF: copy PurchaseOrderPdfService.cs pattern with QuestPDF
+[ ] GL posting on payroll approval: add default chart-of-accounts lines
+    (Salary Expense, Salary Payable, Statutory Payable) to DatabaseService.cs
+    seed data, then post JournalEntry/JournalLine on payroll run, same as
+    existing PO/SO posting
+[ ] RolePermissions.ManagePayroll — Admin/Accountant only by default. Do
+    NOT default this onto Manager the way other perms currently do.
+[ ] ViewModels/Views: PayrollViewModel/View (run payroll, review period,
+    mark paid), PayslipViewModel/View (single payslip detail + print)
+[ ] Tests: Phase8Tests.cs — calculation correctness (gross -> statutory ->
+    net), GL posting balances, period locking after payment
+[ ] Docs: content/docs/team-settings/payroll.md (or money-reports/payroll.md)
+
+PHASE 9 — PAYROLL REPORTING & COMPLIANCE
+-----------------------------------------
+[ ] Payroll cost report: total cost by department/branch/period,
+    month-over-month trend
+[ ] Statutory export: PAYE return and RSSB contribution report, CSV/PDF
+    for filing >>> CONFIRM ACTUAL REQUIRED FORMAT/COLUMNS <<<
+[ ] Year-to-date payslip history per employee
+[ ] If Employee.UserId is set, let that user view their own payslip
+    history (read-only) when logged in
+[ ] Tests: Phase9Tests.cs
+[ ] Docs: update license-tiers.md comparison table with Staff/Payroll rows
+
+PHASE 10 — POLISH & ROLLOUT
+-----------------------------
+[ ] Multi-branch payroll consolidation for Enterprise tier (reuse the
+    multi-company consolidated reporting pattern from Phase 5)
+[ ] Full EN/FR/RW localization pass on all new screens
+[ ] Update industry-roadmap.txt with an honest "PHASE 6 — STAFF & PAYROLL"
+    entry as each piece actually ships — only [x] what genuinely works
+[ ] Once shipped: update the Glory Desk Marketing Brief and Gap Report
+    artifacts — Staff/Payroll moves from "not in the app" to a real
+    sellable feature and upsell reason toward Pro
+
+--------------------------------------------------------------------------
+Suggested build order if working solo, one task at a time: Phase 6 first
+(everything else depends on Employee existing), then Phase 8's data model
+and calculation engine (the hard part) before Phase 7 — attendance/leave is
+simpler and can slot in anytime, but payroll math is worth getting right
+early since GL posting depends on it.

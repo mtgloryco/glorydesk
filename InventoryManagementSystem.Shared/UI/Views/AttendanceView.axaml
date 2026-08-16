@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="InventoryManagementSystem.UI.Views.AttendanceView"
+             x:DataType="vm:AttendanceViewModel">
+    <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20">
+        <TextBlock Grid.Row="0" Text="Daily Attendance" FontSize="24" FontWeight="Bold" Margin="0,0,0,16" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,12">
+            <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,16,0">
+                <TextBlock Text="Date" FontSize="11" Foreground="Gray" />
+                <CalendarDatePicker SelectedDate="{Binding SelectedDate}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="4" Margin="0,0,16,0">
+                <TextBlock Text="Branch / Location" FontSize="11" Foreground="Gray" />
+                <ComboBox ItemsSource="{Binding Locations}" SelectedItem="{Binding SelectedLocation}" MinWidth="180" PlaceholderText="All locations">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+            <Button Grid.Column="3" Content="Save Day" Command="{Binding SaveAttendanceCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" VerticalAlignment="Bottom" FontWeight="SemiBold" CornerRadius="4" />
+        </Grid>
+
+        <TextBlock Grid.Row="2" Text="{Binding SummaryText}" FontSize="13" Foreground="Gray" Margin="0,0,0,12" />
+
+        <DataGrid Grid.Row="3" ItemsSource="{Binding Rows}" AutoGenerateColumns="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Employee" Binding="{Binding EmployeeName}" Width="*" IsReadOnly="True" />
+                <DataGridTemplateColumn Header="Status" Width="160">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding $parent[UserControl].((vm:AttendanceViewModel)DataContext).StatusOptions}" SelectedItem="{Binding Status}" HorizontalAlignment="Stretch" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="2*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>
