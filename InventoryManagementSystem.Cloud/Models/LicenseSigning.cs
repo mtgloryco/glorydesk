@@ -29,9 +29,10 @@ public record LicenseRequestRecord(
     string? LicenseKey,
     Guid? LicenseId,
     DateTime? Expiry,
-    DateTime? ProcessedAt);
+    DateTime? ProcessedAt,
+    int Seats = 1);
 
-public record AdminIssueRequest(int ValidYears = 1, string? Notes = null);
+public record AdminIssueRequest(int ValidYears = 1, string? Notes = null, int Seats = 1);
 public record AdminIssueResponse(bool Success, string Message, string? LicenseKey = null);
 public record AccountLicenseDto(
     Guid Id,
@@ -42,3 +43,25 @@ public record AccountLicenseDto(
     DateTime Expiry,
     string Status,
     string? LicenseKey);
+
+// Seat-based multi-machine activation. A single issued LicenseRequest (identified by
+// its LicenseId) can be activated on up to `Seats` distinct machines. The first machine
+// is activated automatically when the admin issues the license; additional machines call
+// /api/license/activate directly (no per-machine admin approval needed) until the seat
+// count is used up.
+public record LicenseActivateRequest(Guid LicenseId, string Email, string HardwareId);
+public record LicenseActivateResponse(
+    bool Success,
+    string Message,
+    string? LicenseKey = null,
+    int SeatsUsed = 0,
+    int MaxSeats = 0);
+
+public record LicenseDeactivateRequest(Guid LicenseId, string Email, string HardwareId);
+public record LicenseDeactivateResponse(bool Success, string Message);
+
+public record LicenseActivationDto(
+    Guid Id,
+    string HardwareId,
+    DateTime ActivatedAt,
+    bool IsActive);

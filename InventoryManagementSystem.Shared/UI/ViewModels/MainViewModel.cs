@@ -481,6 +481,31 @@ public partial class MainViewModel : ViewModelBase
         await RefreshCloudSyncStatusAsync();
     }
 
+    /// <summary>
+    /// Creates a brand-new, isolated local database for a different organization — e.g. an
+    /// employee who used this app at a previous employer and now needs to use it at a new one
+    /// without mixing the two companies' records in one local file. Takes effect on next launch:
+    /// the running app keeps using its current data until restarted.
+    /// </summary>
+    [RelayCommand]
+    public void AddNewCompanyProfile()
+    {
+        if (!_licenseService.CanAccessCloudSync())
+        {
+            GoToLicense();
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(CloudOrganizationName))
+        {
+            SyncStatusText = "Enter the new company's name in Organization first";
+            return;
+        }
+
+        CompanyProfileService.CreateProfileForNextLaunch(CloudOrganizationName);
+        SyncStatusText = $"'{CloudOrganizationName}' company profile created — restart the app to switch to it";
+    }
+
     [RelayCommand]
     public void GoBack()
     {

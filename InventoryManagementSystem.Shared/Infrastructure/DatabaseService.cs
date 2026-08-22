@@ -20,17 +20,17 @@ namespace InventoryManagementSystem.Infrastructure
             // Standard user data location: %LocalAppData%/GloryDesk (legacy: InventoryManagementSystem)
             var folder = AppPaths.GetLocalAppDataFolder();
             _databasePath = Path.Combine(folder, "inventory.db");
-            
+
             // Legacy path check (where the app runs from)
             _legacyDatabasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "inventory_v1.db");
-            
-            _connection = new SQLiteAsyncConnection(_databasePath);
+
+            _connection = OpenConnection(_databasePath);
         }
 
         /// <summary>
-        /// Testability seam: points the connection at an explicit database file (e.g. a temp file in unit tests)
-        /// instead of the fixed AppData location used by the parameterless constructor. Production code paths
-        /// (App.axaml.cs) continue to use <see cref="DatabaseService()"/> and are unaffected by this overload.
+        /// Points the connection at an explicit database file — used by tests (a temp file) and by
+        /// production entry points that resolve a non-default path (e.g. CompanyProfileService's
+        /// per-organization files; see App.axaml.cs / Browser/Program.cs).
         /// </summary>
         public DatabaseService(string customDatabasePath)
         {
@@ -42,7 +42,26 @@ namespace InventoryManagementSystem.Infrastructure
             }
 
             _legacyDatabasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "inventory_v1.db");
-            _connection = new SQLiteAsyncConnection(_databasePath);
+            _connection = OpenConnection(_databasePath);
+        }
+
+        /// <summary>
+        /// File-backed SQLite over Emscripten's IDBFS virtual filesystem does not work with this
+        /// native SQLite build: every statement — even the first read-only PRAGMA — fails with
+        /// "disk I/O error" (advisory file locking unsupported by IDBFS). Disabling locking at
+        /// open time (URI "nolock=1", and separately the built-in "unix-none" VFS) was tried and
+        /// still fails, this time with "file is not a database", so the incompatibility runs
+        /// deeper than locking alone. An in-memory connection works correctly, so the browser
+        /// build uses one as a per-session cache: data does not survive a page reload today.
+        /// Real persistence for this target should come from cloud sync populating this in-memory
+        /// db on load (the browser is inherently online anyway, unlike the desktop offline-first
+        /// case), not from fixing file-backed WASM storage — see WORKFLOW_NOTES.md.
+        /// </summary>
+        private static SQLiteAsyncConnection OpenConnection(string path)
+        {
+            return OperatingSystem.IsBrowser()
+                ? new SQLiteAsyncConnection(":memory:")
+                : new SQLiteAsyncConnection(path);
         }
 
         public async Task InitializeAsync(string defaultCurrency = "RWF")
@@ -52,12 +71,21 @@ namespace InventoryManagementSystem.Infrastructure
             // throws "disk I/O error" on the browser target, so fall back to an in-memory journal there.
             try
             {
-                await _connection.ExecuteAsync(OperatingSystem.IsBrowser()
-                    ? "PRAGMA journal_mode = MEMORY;"
-                    : "PRAGMA journal_mode = WAL;");
-                await _connection.ExecuteAsync("PRAGMA synchronous = NORMAL;");
+                if (OperatingSystem.IsBrowser())
+                {
+                    await _connection.ExecuteAsync("PRAGMA journal_mode = MEMORY;");
+                    await _connection.ExecuteAsync("PRAGMA synchronous = OFF;");
+                }
+                else
+                {
+                    await _connection.ExecuteAsync("PRAGMA journal_mode = WAL;");
+                    await _connection.ExecuteAsync("PRAGMA synchronous = NORMAL;");
+                }
             }
-            catch {}
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Journal mode pragma failed: {ex.Message}");
+            }
 
             // 1. Check for legacy import
             await ImportLegacyDatabaseIfNeeded();
@@ -561,7 +589,7 @@ namespace InventoryManagementSystem.Infrastructure
         {
             if (_connection == null)
             {
-                _connection = new SQLiteAsyncConnection(_databasePath);
+                _connection = OpenConnection(_databasePath);
                 try
                 {
                     await _connection.ExecuteAsync(OperatingSystem.IsBrowser()

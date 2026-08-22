@@ -53,10 +53,13 @@ namespace InventoryManagementSystem.Services
         {
             if (_isInitialized) return;
 
-            // On Android/Mobile, Velopack might not work or be relevant yet.
-            if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+            // On Android/Mobile, Velopack might not work or be relevant yet. The browser build has
+            // no installer to update at all, and Velopack's native calls can raise WASM traps that
+            // bypass .NET try/catch entirely (observed as an "Uncaught RuntimeError: unreachable"
+            // that kills the whole runtime) — never construct an UpdateManager there.
+            if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS() || OperatingSystem.IsBrowser())
             {
-                CurrentVersion = "1.0-Mobile";
+                CurrentVersion = "1.0-Web";
                 _isInitialized = true;
                 return;
             }

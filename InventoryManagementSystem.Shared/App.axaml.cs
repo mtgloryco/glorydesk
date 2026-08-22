@@ -121,8 +121,10 @@ public partial class App : Application
         PosSessionService posSessionService, EmployeeService employeeService,
         AttendanceService attendanceService, LeaveService leaveService) InitializeServices()
     {
-        // Initialize Database
-        var dbService = new DatabaseService();
+        // Initialize Database. Resolves to the plain "inventory.db" path for every existing
+        // single-company install; only diverges once a second company profile has been added
+        // via CompanyProfileService (see MainViewModel.AddNewCompanyProfile).
+        var dbService = new DatabaseService(CompanyProfileService.ResolveActiveDatabasePath());
         var auditService = new AuditService(dbService);
         var userService = new UserService(dbService, auditService);
         var hardwareService = new HardwareIdService();

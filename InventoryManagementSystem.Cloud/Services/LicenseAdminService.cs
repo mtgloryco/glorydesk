@@ -30,7 +30,7 @@ public class LicenseAdminService
                 var pg = (NpgsqlConnection)conn;
                 var sql = """
                     SELECT id, email, company, tier, hardware_id, created_at, status,
-                           license_key, license_id, expiry, processed_at
+                           license_key, license_id, expiry, processed_at, seats
                     FROM license_requests
                     """;
                 if (!string.IsNullOrWhiteSpace(status))
@@ -57,7 +57,7 @@ public class LicenseAdminService
             var sqlite = (SqliteConnection)conn;
             var sqliteSql = """
                 SELECT Id, Email, Company, Tier, HardwareId, CreatedAt, Status,
-                       LicenseKey, LicenseId, Expiry, ProcessedAt
+                       LicenseKey, LicenseId, Expiry, ProcessedAt, Seats
                 FROM LicenseRequests
                 """;
             if (!string.IsNullOrWhiteSpace(status))
@@ -91,6 +91,7 @@ public class LicenseAdminService
         }
 
         var years = Math.Clamp(options.ValidYears, 1, 10);
+        var seats = Math.Clamp(options.Seats, 1, 500);
         var expiry = DateTime.UtcNow.AddYears(years);
         var now = DateTime.UtcNow;
 
@@ -121,7 +122,8 @@ public class LicenseAdminService
                     """
                     UPDATE license_requests
                     SET status = 'issued', license_key = @key, license_id = @lid,
-                        expiry = @expiry, processed_at = @processed, admin_notes = @notes
+                        expiry = @expiry, processed_at = @processed, admin_notes = @notes,
+                        seats = @seats
                     WHERE id = @id
                     """,
                     pg);
@@ -130,8 +132,22 @@ public class LicenseAdminService
                 cmd.Parameters.AddWithValue("expiry", expiry);
                 cmd.Parameters.AddWithValue("processed", now);
                 cmd.Parameters.AddWithValue("notes", options.Notes ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("seats", seats);
                 cmd.Parameters.AddWithValue("id", requestId);
                 await cmd.ExecuteNonQueryAsync();
+
+                await using var activationCmd = new NpgsqlCommand(
+                    """
+                    INSERT INTO license_activations (id, license_request_id, hardware_id, license_key, activated_at, is_active)
+                    VALUES (@id, @requestId, @hardwareId, @key, @activatedAt, TRUE)
+                    """,
+                    pg);
+                activationCmd.Parameters.AddWithValue("id", Guid.NewGuid());
+                activationCmd.Parameters.AddWithValue("requestId", requestId);
+                activationCmd.Parameters.AddWithValue("hardwareId", request.HardwareId);
+                activationCmd.Parameters.AddWithValue("key", licenseKey);
+                activationCmd.Parameters.AddWithValue("activatedAt", now);
+                await activationCmd.ExecuteNonQueryAsync();
             }
             else
             {
@@ -140,7 +156,8 @@ public class LicenseAdminService
                 cmd.CommandText = """
                     UPDATE LicenseRequests
                     SET Status = 'issued', LicenseKey = $key, LicenseId = $lid,
-                        Expiry = $expiry, ProcessedAt = $processed, AdminNotes = $notes
+                        Expiry = $expiry, ProcessedAt = $processed, AdminNotes = $notes,
+                        Seats = $seats
                     WHERE Id = $id
                     """;
                 cmd.Parameters.AddWithValue("$key", licenseKey);
@@ -148,14 +165,28 @@ public class LicenseAdminService
                 cmd.Parameters.AddWithValue("$expiry", expiry.ToString("O"));
                 cmd.Parameters.AddWithValue("$processed", now.ToString("O"));
                 cmd.Parameters.AddWithValue("$notes", options.Notes ?? string.Empty);
+                cmd.Parameters.AddWithValue("$seats", seats);
                 cmd.Parameters.AddWithValue("$id", requestId.ToString());
                 await cmd.ExecuteNonQueryAsync();
+
+                await using var activationCmd = sqlite.CreateCommand();
+                activationCmd.CommandText = """
+                    INSERT INTO LicenseActivations (Id, LicenseRequestId, HardwareId, LicenseKey, ActivatedAt, IsActive)
+                    VALUES ($id, $requestId, $hardwareId, $key, $activatedAt, 1)
+                    """;
+                activationCmd.Parameters.AddWithValue("$id", Guid.NewGuid().ToString());
+                activationCmd.Parameters.AddWithValue("$requestId", requestId.ToString());
+                activationCmd.Parameters.AddWithValue("$hardwareId", request.HardwareId);
+                activationCmd.Parameters.AddWithValue("$key", licenseKey);
+                activationCmd.Parameters.AddWithValue("$activatedAt", now.ToString("O"));
+                await activationCmd.ExecuteNonQueryAsync();
             }
         });
 
         await _email.SendLicenseIssuedAsync(request.Email, request.Company, request.Tier, licenseKey, expiry);
 
-        return new AdminIssueResponse(true, $"License issued. Valid until {expiry:yyyy-MM-dd}.", licenseKey);
+        var seatNote = seats > 1 ? $" This license includes {seats} machine seats." : string.Empty;
+        return new AdminIssueResponse(true, $"License issued. Valid until {expiry:yyyy-MM-dd}.{seatNote}", licenseKey);
     }
 
     public async Task<AdminIssueResponse> RejectAsync(Guid requestId, string? reason)
@@ -257,10 +288,72 @@ public class LicenseAdminService
         });
     }
 
+    public async Task<IReadOnlyList<LicenseActivationDto>> GetActivationsAsync(Guid licenseRequestId)
+    {
+        return await _db.WithConnectionAsync(async conn =>
+        {
+            if (_db.Provider == CloudDatabaseProvider.Postgres)
+            {
+                var pg = (NpgsqlConnection)conn;
+                await using var cmd = new NpgsqlCommand(
+                    """
+                    SELECT id, hardware_id, activated_at, is_active
+                    FROM license_activations
+                    WHERE license_request_id = @requestId
+                    ORDER BY activated_at
+                    """,
+                    pg);
+                cmd.Parameters.AddWithValue("requestId", licenseRequestId);
+
+                var list = new List<LicenseActivationDto>();
+                await using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    list.Add(new LicenseActivationDto(
+                        reader.GetGuid(0), reader.GetString(1), reader.GetDateTime(2), reader.GetBoolean(3)));
+                }
+                return (IReadOnlyList<LicenseActivationDto>)list;
+            }
+
+            var sqlite = (SqliteConnection)conn;
+            await using var sqliteCmd = sqlite.CreateCommand();
+            sqliteCmd.CommandText = """
+                SELECT Id, HardwareId, ActivatedAt, IsActive
+                FROM LicenseActivations
+                WHERE LicenseRequestId = $requestId
+                ORDER BY ActivatedAt
+                """;
+            sqliteCmd.Parameters.AddWithValue("$requestId", licenseRequestId.ToString());
+
+            var sqliteList = new List<LicenseActivationDto>();
+            await using var sqliteReader = await sqliteCmd.ExecuteReaderAsync();
+            while (await sqliteReader.ReadAsync())
+            {
+                sqliteList.Add(new LicenseActivationDto(
+                    Guid.Parse(sqliteReader.GetString(0)),
+                    sqliteReader.GetString(1),
+                    DateTime.Parse(sqliteReader.GetString(2)),
+                    sqliteReader.GetInt64(3) != 0));
+            }
+            return sqliteList;
+        });
+    }
+
     private async Task<LicenseRequestRecord?> GetRequestAsync(Guid id)
     {
         var all = await ListRequestsAsync(null);
         return all.FirstOrDefault(r => r.Id == id);
+    }
+
+    /// <summary>Looks up an issued license by the public LicenseId (embedded in the signed key
+    /// and emailed to the customer) plus the account email, for self-service seat activation.</summary>
+    public async Task<LicenseRequestRecord?> GetByLicenseIdAsync(Guid licenseId, string email)
+    {
+        var normalized = email.Trim().ToLowerInvariant();
+        var all = await ListRequestsAsync("issued");
+        return all.FirstOrDefault(r =>
+            r.LicenseId == licenseId &&
+            string.Equals(r.Email, normalized, StringComparison.OrdinalIgnoreCase));
     }
 
     private static LicenseRequestRecord ReadPostgresRecord(NpgsqlDataReader reader) =>
@@ -275,7 +368,8 @@ public class LicenseAdminService
             reader.IsDBNull(7) ? null : reader.GetString(7),
             reader.IsDBNull(8) ? null : reader.GetGuid(8),
             reader.IsDBNull(9) ? null : reader.GetDateTime(9),
-            reader.IsDBNull(10) ? null : reader.GetDateTime(10));
+            reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+            reader.IsDBNull(11) ? 1 : reader.GetInt32(11));
 
     private static LicenseRequestRecord ReadSqliteRecord(SqliteDataReader reader) =>
         new(
@@ -289,5 +383,6 @@ public class LicenseAdminService
             reader.IsDBNull(7) ? null : reader.GetString(7),
             reader.IsDBNull(8) ? null : Guid.Parse(reader.GetString(8)),
             reader.IsDBNull(9) ? null : DateTime.Parse(reader.GetString(9)),
-            reader.IsDBNull(10) ? null : DateTime.Parse(reader.GetString(10)));
+            reader.IsDBNull(10) ? null : DateTime.Parse(reader.GetString(10)),
+            reader.IsDBNull(11) ? 1 : reader.GetInt32(11));
 }

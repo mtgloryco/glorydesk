@@ -143,6 +143,19 @@ public class CloudDatabase
 
             CREATE INDEX IF NOT EXISTS IX_LicenseRequests_Created
                 ON LicenseRequests(CreatedAt);
+
+            CREATE TABLE IF NOT EXISTS LicenseActivations (
+                Id TEXT PRIMARY KEY,
+                LicenseRequestId TEXT NOT NULL,
+                HardwareId TEXT NOT NULL,
+                LicenseKey TEXT NOT NULL,
+                ActivatedAt TEXT NOT NULL,
+                IsActive INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY (LicenseRequestId) REFERENCES LicenseRequests(Id)
+            );
+
+            CREATE INDEX IF NOT EXISTS IX_LicenseActivations_Request
+                ON LicenseActivations(LicenseRequestId);
             """;
 
         await using var cmd = conn.CreateCommand();
@@ -167,7 +180,7 @@ public class CloudDatabase
 
         foreach (var (name, type) in new[] {
             ("LicenseKey", "TEXT"), ("LicenseId", "TEXT"), ("Expiry", "TEXT"),
-            ("ProcessedAt", "TEXT"), ("AdminNotes", "TEXT") })
+            ("ProcessedAt", "TEXT"), ("AdminNotes", "TEXT"), ("Seats", "INTEGER NOT NULL DEFAULT 1") })
         {
             if (!columns.ContainsKey(name))
             {
@@ -234,6 +247,18 @@ public class CloudDatabase
 
             CREATE INDEX IF NOT EXISTS ix_license_requests_created
                 ON license_requests(created_at);
+
+            CREATE TABLE IF NOT EXISTS license_activations (
+                id UUID PRIMARY KEY,
+                license_request_id UUID NOT NULL REFERENCES license_requests(id),
+                hardware_id TEXT NOT NULL,
+                license_key TEXT NOT NULL,
+                activated_at TIMESTAMPTZ NOT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_license_activations_request
+                ON license_activations(license_request_id);
             """;
 
         await using var cmd = new NpgsqlCommand(sql, conn);
@@ -250,7 +275,8 @@ public class CloudDatabase
             "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS license_id UUID",
             "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS expiry TIMESTAMPTZ",
             "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ",
-            "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS admin_notes TEXT"
+            "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS admin_notes TEXT",
+            "ALTER TABLE license_requests ADD COLUMN IF NOT EXISTS seats INTEGER NOT NULL DEFAULT 1"
         };
 
         foreach (var sql in alters)

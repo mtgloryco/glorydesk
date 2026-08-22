@@ -15,6 +15,7 @@ builder.Services.AddScoped<BackupService>();
 builder.Services.AddScoped<LicenseRequestService>();
 builder.Services.AddSingleton<LicenseKeyGeneratorService>();
 builder.Services.AddScoped<LicenseAdminService>();
+builder.Services.AddScoped<LicenseSeatService>();
 builder.Services.AddSingleton<EmailNotificationService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is required.");
@@ -148,6 +149,29 @@ app.MapGet("/api/account/licenses", async (HttpContext http, LicenseAdminService
     var licenses = await admin.GetLicensesForEmailAsync(email);
     return Results.Ok(licenses);
 }).RequireAuthorization();
+
+// Self-service multi-seat activation: proves ownership with (LicenseId + account email),
+// both of which were emailed to the customer when the license was first issued. No admin
+// approval needed per machine as long as seats remain.
+app.MapPost("/api/license/activate", async (LicenseActivateRequest request, LicenseSeatService seats) =>
+{
+    var result = await seats.ActivateAsync(request);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+});
+
+app.MapPost("/api/license/deactivate", async (LicenseDeactivateRequest request, LicenseSeatService seats) =>
+{
+    var result = await seats.DeactivateAsync(request);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+});
+
+app.MapGet("/api/admin/license-requests/{id:guid}/activations", async (
+    Guid id, HttpContext ctx, IConfiguration config, LicenseAdminService admin) =>
+{
+    if (!IsAdmin(ctx, config)) return Results.Unauthorized();
+    var activations = await admin.GetActivationsAsync(id);
+    return Results.Ok(activations);
+});
 
 app.MapPost("/api/auth/register", async (RegisterRequest request, AuthService auth) =>
 {

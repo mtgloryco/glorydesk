@@ -76,6 +76,18 @@ namespace InventoryManagementSystem.Services
                     }
                 }
 
+                // Guard: this local database file already belongs to a different organization.
+                // Signing into a second org here would silently mix two companies' records in
+                // one SQLite file. Refuse instead — a different org needs its own local profile/file.
+                if (!string.IsNullOrWhiteSpace(state.OrganizationId) &&
+                    !string.Equals(state.OrganizationId, auth.OrganizationId, StringComparison.Ordinal))
+                {
+                    return CloudSyncResult.Fail(
+                        $"This device is already linked to \"{state.OrganizationName}\". Signing in to " +
+                        $"\"{auth.OrganizationName}\" here would mix two companies' data in the same local file. " +
+                        "Set up a separate company profile for the new organization instead.");
+                }
+
                 state.AuthToken = auth.Token;
                 state.OrganizationId = auth.OrganizationId;
                 state.OrganizationName = auth.OrganizationName;

@@ -12,6 +12,7 @@ InventoryManagementSystem.Shared/redist/vc_redist.x64.exe
 license-manager-web/
 /license-manager-web/
 /scratch/
+/WORKFLOW_NOTES.md
 
 
 [Dd]ebug/
@@ -71,9 +72,6 @@ Desktop.ini
 .env
 .env.local
 .env.*.local
-
-# In-progress project, not ready to build/ship yet
-InventoryManagementSystem.Browser/
 
 # Runtime database files (not source)
 InventoryManagementSystem.Cloud/cloud.db

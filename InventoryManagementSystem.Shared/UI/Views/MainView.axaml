@@ -82,6 +82,7 @@
                                 <Button Content="Backup" Command="{Binding BackupToCloudCommand}" IsEnabled="{Binding !IsSyncing}" Margin="0,0,4,0"/>
                                 <Button Grid.Column="1" Content="Restore" Command="{Binding RestoreFromCloudCommand}" IsEnabled="{Binding !IsSyncing}" Margin="4,0,0,0"/>
                             </Grid>
+                            <Button Content="Add Another Company" Command="{Binding AddNewCompanyProfileCommand}" IsEnabled="{Binding !IsSyncing}" HorizontalAlignment="Stretch" ToolTip.Tip="Creates a separate, isolated local database for a different organization (type its name in Organization above first). Requires an app restart to switch."/>
                         </StackPanel>
                     </Border>
                     
