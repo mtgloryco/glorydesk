@@ -1,4 +1,6 @@
-# Only InventoryManagementSystem.Cloud (+ Directory.Build.props) is needed to build the image.
+# Shared across both root Dockerfile (Cloud API) and
+# InventoryManagementSystem.Browser/Dockerfile (WASM frontend) — each COPYs only the
+# project folder(s) it actually needs, this just keeps the build context small.
 **/bin/
 **/obj/
 **/.vs/
@@ -9,8 +11,6 @@
 .agents/
 
 InventoryManagementSystem.Desktop/
-InventoryManagementSystem.Browser/
-InventoryManagementSystem.Shared/
 InventoryManagementSystem.Tests/
 license-manager-web/
 web/
