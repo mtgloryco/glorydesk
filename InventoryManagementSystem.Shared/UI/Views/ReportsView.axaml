@@ -36,15 +36,24 @@
                          Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="15,8" CornerRadius="6"
                          IsVisible="{Binding !IsStockStatusSelected}"/>
                          
-                 <Button Content="View Details" Command="{Binding OpenDetailsCommand}" 
-                         IsEnabled="{Binding SelectedStockMovement, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" 
-                         Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="15,8" CornerRadius="6"
-                         IsVisible="{Binding IsStockHistorySelected}"/>
-                 
+                 <Button Content="Stock ▾" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="15,8" CornerRadius="6"
+                         IsVisible="{Binding IsStockAreaSelected}">
+                     <Button.Flyout>
+                         <MenuFlyout>
+                             <MenuItem Header="Stock" Command="{Binding SwitchStockReportCommand}" CommandParameter="stock-status"/>
+                             <MenuItem Header="Moves History" Command="{Binding SwitchStockReportCommand}" CommandParameter="stock-history"/>
+                         </MenuFlyout>
+                     </Button.Flyout>
+                 </Button>
+
                  <Button Content="Export to CSV" Command="{Binding ExportToCsvCommand}" Background="#007ACC" Foreground="White" Padding="15,8" CornerRadius="6"
                          IsVisible="{Binding IsStockStatusSelected}"/>
                  <Button Content="Export VAT CSV" Command="{Binding ExportVatToCsvCommand}" Background="#007ACC" Foreground="White" Padding="15,8" CornerRadius="6"
                          IsVisible="{Binding IsVatReturnSelected}"/>
+                 <Button Content="Export PDF" Command="{Binding ExportCurrentReportPdfCommand}" Background="#C62828" Foreground="White" Padding="15,8" CornerRadius="6"
+                         IsVisible="{Binding IsCurrentReportExportable}"/>
+                 <Button Content="Export XLSX" Command="{Binding ExportCurrentReportXlsxCommand}" Background="#2E7D32" Foreground="White" Padding="15,8" CornerRadius="6"
+                         IsVisible="{Binding IsCurrentReportExportable}"/>
             </StackPanel>
         </Grid>
 
@@ -231,60 +240,128 @@
                           </StackPanel>
                       </ScrollViewer>
 
-                      <!-- Stock Status View -->
+                      <!-- Stock report (Odoo-style: on hand / free to use / incoming / outgoing / value) -->
                       <Grid RowDefinitions="Auto, *" IsVisible="{Binding IsStockStatusSelected}">
-                          <!-- Sub-toggle for Stock Status -->
                           <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="25" Margin="20,15">
                               <RadioButton Content="All Products" IsChecked="{Binding !IsLowStockReport}" Command="{Binding LoadStockReportCommand}" GroupName="StockFilter"/>
-                              <RadioButton Content="Low Stock (&lt; 5 items)" IsChecked="{Binding IsLowStockReport}" Command="{Binding LoadLowStockReportCommand}" GroupName="StockFilter"/>
+                              <RadioButton Content="Low on hand (&lt; 5)" IsChecked="{Binding IsLowStockReport}" Command="{Binding LoadLowStockReportCommand}" GroupName="StockFilter"/>
                           </StackPanel>
-                          <DataGrid Grid.Row="1" ItemsSource="{Binding ReportData}" 
-                                    AutoGenerateColumns="False" 
-                                    IsReadOnly="True" 
-                                    GridLinesVisibility="Horizontal"
-                                    BorderThickness="0" 
-                                    Background="{DynamicResource ContentBackgroundColor}"
-                                    RowHeight="45">
-                               <DataGrid.Columns>
-                                  <DataGridTextColumn Header="SKU" Binding="{Binding SKU}" Width="120"/>
-                                  <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
-                                  <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120"/>
-                                  <DataGridTextColumn Header="Qty" Binding="{Binding StockQuantity}" Width="80"/>
-                                  <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="80"/>
-                                  <DataGridTemplateColumn Header="Price" Width="100">
+                          <DataGrid Grid.Row="1" ItemsSource="{Binding StockRows}"
+                                    AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                                    BorderThickness="0" Background="{DynamicResource ContentBackgroundColor}" RowHeight="42">
+                              <DataGrid.Columns>
+                                  <DataGridTextColumn Header="Product" Binding="{Binding DisplayName}" Width="2.4*"/>
+                                  <DataGridTextColumn Header="Total Value" Binding="{Binding TotalValue, StringFormat='{}{0:N2}'}" Width="120"/>
+                                  <DataGridTextColumn Header="Unit Cost" Binding="{Binding UnitCost, StringFormat='{}{0:N2}'}" Width="110"/>
+                                  <DataGridTextColumn Header="Sales Price" Binding="{Binding SalesPrice, StringFormat='{}{0:N2}'}" Width="110"/>
+                                  <DataGridTextColumn Header="On Hand" Binding="{Binding OnHand}" Width="90"/>
+                                  <DataGridTextColumn Header="Free to Use" Binding="{Binding FreeToUse}" Width="100"/>
+                                  <DataGridTextColumn Header="Incoming" Binding="{Binding Incoming}" Width="90"/>
+                                  <DataGridTextColumn Header="Outgoing" Binding="{Binding Outgoing}" Width="90"/>
+                                  <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="70"/>
+                                  <DataGridTemplateColumn Header="" Width="270">
                                       <DataGridTemplateColumn.CellTemplate>
                                           <DataTemplate>
-                                              <TextBlock VerticalAlignment="Center" Margin="10,0,0,0">
-                                                  <Run Text="{Binding Price, StringFormat='{}{0:N0}'}"/>
-                                                  <Run Text="{Binding #Root.DataContext.CurrencySymbol}"/>
-                                              </TextBlock>
+                                              <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                  <Button Content="History" FontSize="10" Padding="7,3"
+                                                          Command="{Binding $parent[UserControl].((vm:ReportsViewModel)DataContext).OpenProductHistoryCommand}"
+                                                          CommandParameter="{Binding}"/>
+                                                  <Button Content="Replenishment" FontSize="10" Padding="7,3"
+                                                          Command="{Binding $parent[UserControl].((vm:ReportsViewModel)DataContext).OpenReplenishmentCommand}"
+                                                          CommandParameter="{Binding}"/>
+                                                  <Button Content="Locations" FontSize="10" Padding="7,3"
+                                                          Command="{Binding $parent[UserControl].((vm:ReportsViewModel)DataContext).OpenProductLocationsCommand}"
+                                                          CommandParameter="{Binding}"/>
+                                              </StackPanel>
                                           </DataTemplate>
                                       </DataGridTemplateColumn.CellTemplate>
                                   </DataGridTemplateColumn>
-                               </DataGrid.Columns>
-                           </DataGrid>
+                              </DataGrid.Columns>
+                          </DataGrid>
                       </Grid>
 
-                      <!-- Audit Reports -->
-                      <DataGrid ItemsSource="{Binding StockHistoryData}" 
-                                SelectedItem="{Binding SelectedStockMovement}"
-                                IsVisible="{Binding IsStockHistorySelected}"
-                                AutoGenerateColumns="False" 
-                                IsReadOnly="True" 
-                                GridLinesVisibility="Horizontal"
-                                BorderThickness="0" 
-                                Background="{DynamicResource ContentBackgroundColor}"
-                                RowHeight="45">
-                           <DataGrid.Columns>
-                              <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="160"/>
-                              <DataGridTextColumn Header="SKU" Binding="{Binding ProductId}" Width="100"/>
-                              <DataGridTextColumn Header="Type" Binding="{Binding MovementType}" Width="80"/>
-                              <DataGridTextColumn Header="Qty" Binding="{Binding QuantityChanged}" Width="80"/>
-                              <DataGridTextColumn Header="Batch Details" Binding="{Binding BatchTraceInfo}" Width="200"/>
-                              <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*"/>
-                              <DataGridTextColumn Header="Operator" Binding="{Binding Username}" Width="120"/>
-                           </DataGrid.Columns>
-                       </DataGrid>
+                      <!-- Moves History -->
+                      <Grid RowDefinitions="Auto, *" IsVisible="{Binding IsStockHistorySelected}">
+                          <!-- Toolbar: product filter chip · List/Grouped · group-by · pager -->
+                          <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="20,12">
+                              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                  <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" Padding="8,4"
+                                          IsVisible="{Binding MovesFilterProductName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                      <StackPanel Orientation="Horizontal" Spacing="8">
+                                          <TextBlock Text="Product" FontSize="11" Foreground="Gray" VerticalAlignment="Center"/>
+                                          <TextBlock Text="{Binding MovesFilterProductName}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                                          <Button Content="✕" Command="{Binding ClearMovesFilterCommand}" Background="Transparent" BorderThickness="0" Padding="4,0" FontSize="11"/>
+                                      </StackPanel>
+                                  </Border>
+
+                                  <Button Content="List" Command="{Binding SetMovesViewModeCommand}" CommandParameter="List" FontSize="11" Padding="10,4"/>
+                                  <Button Content="Grouped" Command="{Binding SetMovesViewModeCommand}" CommandParameter="Grouped" FontSize="11" Padding="10,4"/>
+
+                                  <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsMovesGroupedView}">
+                                      <TextBlock Text="by" FontSize="11" Foreground="Gray" VerticalAlignment="Center"/>
+                                      <ComboBox ItemsSource="{Binding MovesGroupByOptions}" SelectedItem="{Binding MovesGroupBy}" MinWidth="120"/>
+                                  </StackPanel>
+                              </StackPanel>
+
+                              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding IsMovesListView}">
+                                  <TextBlock Text="{Binding MovesPageLabel}" FontSize="12" Foreground="Gray" VerticalAlignment="Center"/>
+                                  <Button Content="‹" Command="{Binding MovesPrevPageCommand}" IsEnabled="{Binding MovesCanPrev}" Padding="10,3"/>
+                                  <Button Content="›" Command="{Binding MovesNextPageCommand}" IsEnabled="{Binding MovesCanNext}" Padding="10,3"/>
+                              </StackPanel>
+                          </Grid>
+
+                          <!-- List view -->
+                          <DataGrid Grid.Row="1" ItemsSource="{Binding MovesPagedRows}" IsVisible="{Binding IsMovesListView}"
+                                    AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                                    BorderThickness="0" Background="{DynamicResource ContentBackgroundColor}" RowHeight="40">
+                              <DataGrid.Columns>
+                                  <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="150"/>
+                                  <DataGridTextColumn Header="Reference" Binding="{Binding Reference}" Width="1.4*"/>
+                                  <DataGridTextColumn Header="Product" Binding="{Binding DisplayProduct}" Width="1.6*"/>
+                                  <DataGridTextColumn Header="Lot/Serial" Binding="{Binding LotSerial}" Width="130"/>
+                                  <DataGridTextColumn Header="From" Binding="{Binding FromLabel}" Width="150"/>
+                                  <DataGridTextColumn Header="To" Binding="{Binding ToLabel}" Width="150"/>
+                                  <DataGridTextColumn Header="Quantity" Binding="{Binding QuantityDisplay}" Width="100"/>
+                                  <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="70"/>
+                                  <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90"/>
+                              </DataGrid.Columns>
+                          </DataGrid>
+
+                          <!-- Grouped view -->
+                          <ScrollViewer Grid.Row="1" IsVisible="{Binding IsMovesGroupedView}">
+                              <ItemsControl ItemsSource="{Binding MovesGroups}" Margin="20,0">
+                                  <ItemsControl.ItemTemplate>
+                                      <DataTemplate>
+                                          <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
+                                              <StackPanel>
+                                                  <Button Command="{Binding $parent[UserControl].((vm:ReportsViewModel)DataContext).ToggleMoveGroupCommand}" CommandParameter="{Binding}"
+                                                          Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="4,10">
+                                                      <Grid ColumnDefinitions="Auto,*,Auto">
+                                                          <TextBlock Grid.Column="0" Text="{Binding Glyph}" Margin="0,0,8,0" Foreground="Gray"/>
+                                                          <TextBlock Grid.Column="1" Text="{Binding Key}" FontWeight="SemiBold"/>
+                                                          <TextBlock Grid.Column="2" Text="{Binding Summary}" Foreground="Gray" FontSize="12"/>
+                                                      </Grid>
+                                                  </Button>
+                                                  <ItemsControl ItemsSource="{Binding Rows}" IsVisible="{Binding IsExpanded}" Margin="20,0,0,8">
+                                                      <ItemsControl.ItemTemplate>
+                                                          <DataTemplate>
+                                                              <Grid ColumnDefinitions="150,*,130,120,90" Margin="0,3">
+                                                                  <TextBlock Grid.Column="0" Text="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontSize="11" Foreground="Gray"/>
+                                                                  <TextBlock Grid.Column="1" Text="{Binding Reference}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                                                  <TextBlock Grid.Column="2" Text="{Binding LotSerial}" FontSize="11" Foreground="Gray"/>
+                                                                  <TextBlock Grid.Column="3" Text="{Binding QuantityDisplay}" FontSize="11"/>
+                                                                  <TextBlock Grid.Column="4" Text="{Binding Status}" FontSize="11" Foreground="Gray"/>
+                                                              </Grid>
+                                                          </DataTemplate>
+                                                      </ItemsControl.ItemTemplate>
+                                                  </ItemsControl>
+                                              </StackPanel>
+                                          </Border>
+                                      </DataTemplate>
+                                  </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                          </ScrollViewer>
+                      </Grid>
 
                       <!-- AR Aging -->
                       <ScrollViewer IsVisible="{Binding IsArAgingSelected}" Margin="20">
@@ -733,6 +810,76 @@
                         <Button Content="Import" Command="{Binding SubmitImportStatementCommand}" Background="#2E7D32" Foreground="White"/>
                     </StackPanel>
                 </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Replenishment popup: a product's still-incoming / still-outgoing document lines -->
+        <Border Background="#44000000" Grid.RowSpan="2" Grid.ColumnSpan="2" IsVisible="{Binding IsReplenishmentModalOpen}">
+            <Border Background="{DynamicResource ContentBackgroundColor}" CornerRadius="8" Padding="20" Width="640" MaxHeight="620"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 10 30 0 #40000000">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Replenishment" FontSize="18" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding ReplenishmentTitle}" FontSize="12" Foreground="Gray"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="✕" Command="{Binding CloseReplenishmentModalCommand}" Background="Transparent" BorderThickness="0"/>
+                    </Grid>
+
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
+                        <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="10,6"><StackPanel><TextBlock Text="On Hand" FontSize="10" Foreground="Gray"/><TextBlock Text="{Binding ReplenishmentOnHand}" FontWeight="Bold"/></StackPanel></Border>
+                        <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="10,6"><StackPanel><TextBlock Text="Incoming" FontSize="10" Foreground="Gray"/><TextBlock Text="{Binding ReplenishmentIncoming}" FontWeight="Bold"/></StackPanel></Border>
+                        <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="10,6"><StackPanel><TextBlock Text="Outgoing" FontSize="10" Foreground="Gray"/><TextBlock Text="{Binding ReplenishmentOutgoing}" FontWeight="Bold"/></StackPanel></Border>
+                        <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="10,6"><StackPanel><TextBlock Text="Forecasted" FontSize="10" Foreground="Gray"/><TextBlock Text="{Binding ReplenishmentForecasted}" FontWeight="Bold"/></StackPanel></Border>
+                    </StackPanel>
+
+                    <ScrollViewer>
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Incoming — open purchase orders" FontWeight="SemiBold" FontSize="12"/>
+                            <DataGrid ItemsSource="{Binding ReplenishmentIncomingLines}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" MaxHeight="180">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Document" Binding="{Binding DocumentNumber}" Width="*"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
+                                    <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}" Width="120"/>
+                                    <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="80"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <TextBlock Text="Outgoing — open sales orders" FontWeight="SemiBold" FontSize="12"/>
+                            <DataGrid ItemsSource="{Binding ReplenishmentOutgoingLines}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" MaxHeight="180">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Document" Binding="{Binding DocumentNumber}" Width="*"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
+                                    <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}" Width="120"/>
+                                    <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="80"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Border>
+
+        <!-- Locations popup: on-hand quantity per warehouse location -->
+        <Border Background="#44000000" Grid.RowSpan="2" Grid.ColumnSpan="2" IsVisible="{Binding IsLocationsModalOpen}">
+            <Border Background="{DynamicResource ContentBackgroundColor}" CornerRadius="8" Padding="20" Width="480" MaxHeight="560"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 10 30 0 #40000000">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Locations" FontSize="18" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding LocationsTitle}" FontSize="12" Foreground="Gray"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="✕" Command="{Binding CloseLocationsModalCommand}" Background="Transparent" BorderThickness="0"/>
+                    </Grid>
+                    <DataGrid ItemsSource="{Binding ProductLocations}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" MaxHeight="420">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Location" Binding="{Binding LocationName}" Width="*"/>
+                            <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="110"/>
+                            <DataGridTextColumn Header="Reorder Point" Binding="{Binding ReorderPoint}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
             </Border>
         </Border>
     </Grid>

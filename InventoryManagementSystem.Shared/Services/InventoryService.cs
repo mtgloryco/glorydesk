@@ -703,6 +703,147 @@ namespace InventoryManagementSystem.Services
             return movements;
         }
 
+        /// <summary>
+        /// One row per stocked product for the Stock report: on hand, still-incoming (open POs),
+        /// still-outgoing (open SOs), free-to-use, and inventory value. Loads the supporting tables
+        /// once and joins in memory rather than per-product.
+        /// </summary>
+        public async Task<List<StockReportRow>> GetStockReportRowsAsync()
+        {
+            var conn = _databaseService.Connection;
+            var products = await conn.Table<Product>().Where(p => !p.IsDeleted).ToListAsync();
+
+            var openPoIds = (await conn.Table<PurchaseOrder>()
+                    .Where(po => !po.IsDeleted && po.Status != "Cancelled").ToListAsync())
+                .Select(po => po.Id).ToHashSet();
+            var incoming = (await conn.Table<PurchaseOrderItem>().Where(i => !i.IsDeleted).ToListAsync())
+                .Where(i => openPoIds.Contains(i.PurchaseOrderId))
+                .GroupBy(i => i.ProductId)
+                .ToDictionary(g => g.Key, g => g.Sum(i => Math.Max(0, i.QuantityOrdered - i.QuantityReceived)));
+
+            var openSoIds = (await conn.Table<SalesOrder>()
+                    .Where(so => !so.IsDeleted && so.Status != "Cancelled").ToListAsync())
+                .Select(so => so.Id).ToHashSet();
+            var outgoing = (await conn.Table<SalesOrderItem>().Where(i => !i.IsDeleted).ToListAsync())
+                .Where(i => openSoIds.Contains(i.SalesOrderId))
+                .GroupBy(i => i.ProductId)
+                .ToDictionary(g => g.Key, g => g.Sum(i => Math.Max(0, i.QuantityOrdered - i.QuantityDelivered)));
+
+            return products.Select(p =>
+            {
+                var inc = incoming.TryGetValue(p.Id, out var iv) ? iv : 0;
+                var outq = outgoing.TryGetValue(p.Id, out var ov) ? ov : 0;
+                return new StockReportRow
+                {
+                    ProductId = p.Id,
+                    Sku = p.SKU ?? string.Empty,
+                    Name = p.Name,
+                    Category = p.Category,
+                    Unit = p.Unit,
+                    UnitCost = p.Cost,
+                    SalesPrice = p.Price,
+                    OnHand = p.StockQuantity,
+                    Incoming = inc,
+                    Outgoing = outq,
+                    FreeToUse = Math.Max(0, p.StockQuantity - outq),
+                    TotalValue = p.StockQuantity * p.Cost,
+                };
+            }).OrderBy(r => r.Name).ToList();
+        }
+
+        /// <summary>
+        /// Stock Moves History rows (optionally for a single product), newest first. Each recorded
+        /// <see cref="StockMovement"/> is enriched with the product name and a From → To label
+        /// derived from the movement direction.
+        /// </summary>
+        public async Task<List<StockMoveHistoryRow>> GetStockMovesAsync(int? productId = null, int limit = 2000)
+        {
+            var conn = _databaseService.Connection;
+
+            var query = conn.Table<StockMovement>().Where(m => !m.IsDeleted);
+            if (productId is int pid)
+            {
+                query = query.Where(m => m.ProductId == pid);
+            }
+
+            var movements = await query.OrderByDescending(m => m.Date).Take(limit).ToListAsync();
+            if (movements.Count == 0) return new List<StockMoveHistoryRow>();
+
+            var productIds = movements.Select(m => m.ProductId).ToHashSet();
+            var products = (await conn.Table<Product>().ToListAsync())
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionary(p => p.Id);
+
+            // Default "Stock" side label: the single main location's name when there is exactly one.
+            var locations = await conn.Table<Location>().ToListAsync();
+            var stockLabel = locations.Count == 1 ? locations[0].Name : "Stock";
+
+            // Lot / serial for OUT moves: whatever batch(es) they drew from.
+            var outIds = movements.Where(m => m.MovementType == "OUT").Select(m => m.Id).ToHashSet();
+            var lotByMovement = new Dictionary<int, string>();
+            if (outIds.Count > 0)
+            {
+                var usages = (await conn.Table<SaleBatchUsage>().ToListAsync())
+                    .Where(u => outIds.Contains(u.StockMovementId))
+                    .ToList();
+                if (usages.Count > 0)
+                {
+                    var batchIds = usages.Select(u => u.PurchaseBatchId).ToHashSet();
+                    var batches = (await conn.Table<PurchaseBatch>().ToListAsync())
+                        .Where(b => batchIds.Contains(b.Id))
+                        .ToDictionary(b => b.Id);
+
+                    foreach (var g in usages.GroupBy(u => u.StockMovementId))
+                    {
+                        var codes = g
+                            .Select(u => batches.TryGetValue(u.PurchaseBatchId, out var b)
+                                ? (string.IsNullOrWhiteSpace(b.SerialNumber) ? b.BatchNumber : b.SerialNumber)
+                                : string.Empty)
+                            .Where(s => !string.IsNullOrWhiteSpace(s))
+                            .Distinct()
+                            .ToList();
+                        if (codes.Count > 0)
+                        {
+                            lotByMovement[g.Key] = string.Join(", ", codes);
+                        }
+                    }
+                }
+            }
+
+            return movements.Select(m =>
+            {
+                var product = products.TryGetValue(m.ProductId, out var p) ? p : null;
+                var (derivedFrom, derivedTo, outbound) = m.MovementType switch
+                {
+                    "IN" => ("Vendor / External", stockLabel, false),
+                    "OUT" => (stockLabel, "Customer / External", true),
+                    _ => ("Inventory Adjustment", stockLabel, m.QuantityChanged < 0),
+                };
+
+                var lot = !string.IsNullOrWhiteSpace(m.LotSerialNumber)
+                    ? m.LotSerialNumber
+                    : (lotByMovement.TryGetValue(m.Id, out var l) ? l : string.Empty);
+
+                return new StockMoveHistoryRow
+                {
+                    Date = m.Date,
+                    Reference = string.IsNullOrWhiteSpace(m.Reason) ? m.MovementType : m.Reason,
+                    ProductId = m.ProductId,
+                    ProductName = product?.Name ?? $"Product #{m.ProductId}",
+                    ProductSku = product?.SKU ?? string.Empty,
+                    Unit = product?.Unit ?? string.Empty,
+                    LotSerial = lot,
+                    FromLabel = string.IsNullOrWhiteSpace(m.FromLocation) ? derivedFrom : m.FromLocation,
+                    ToLabel = string.IsNullOrWhiteSpace(m.ToLocation) ? derivedTo : m.ToLocation,
+                    Quantity = Math.Abs(m.QuantityChanged),
+                    IsOutbound = outbound,
+                    MovementType = m.MovementType,
+                    Status = "Done",
+                    Operator = m.Username,
+                };
+            }).ToList();
+        }
+
         public async Task<decimal> GetTotalInventoryValueAsync()
         {
             var batches = await _databaseService.Connection.Table<PurchaseBatch>()
@@ -820,6 +961,47 @@ namespace InventoryManagementSystem.Services
         public decimal Revenue { get; set; }
         public decimal COGS { get; set; }
         public decimal Profit => Revenue - COGS;
+    }
+
+    /// <summary>One product line of the Stock report.</summary>
+    public class StockReportRow
+    {
+        public int ProductId { get; set; }
+        public string Sku { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Unit { get; set; } = string.Empty;
+        public decimal UnitCost { get; set; }
+        public decimal SalesPrice { get; set; }
+        public int OnHand { get; set; }
+        public int FreeToUse { get; set; }
+        public int Incoming { get; set; }
+        public int Outgoing { get; set; }
+        public decimal TotalValue { get; set; }
+
+        public string DisplayName => string.IsNullOrWhiteSpace(Sku) ? Name : $"[{Sku}] {Name}";
+    }
+
+    /// <summary>One line of the Stock Moves History report.</summary>
+    public class StockMoveHistoryRow
+    {
+        public DateTime Date { get; set; }
+        public string Reference { get; set; } = string.Empty;
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string ProductSku { get; set; } = string.Empty;
+        public string Unit { get; set; } = string.Empty;
+        public string LotSerial { get; set; } = string.Empty;
+        public string FromLabel { get; set; } = string.Empty;
+        public string ToLabel { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public bool IsOutbound { get; set; }
+        public string MovementType { get; set; } = string.Empty;
+        public string Status { get; set; } = "Done";
+        public string Operator { get; set; } = string.Empty;
+
+        public string DisplayProduct => string.IsNullOrWhiteSpace(ProductSku) ? ProductName : $"[{ProductSku}] {ProductName}";
+        public string QuantityDisplay => (IsOutbound ? "-" : "+") + Quantity.ToString("N0");
     }
 
     public class FinancialOverview

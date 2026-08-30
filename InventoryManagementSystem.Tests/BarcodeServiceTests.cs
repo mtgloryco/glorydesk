@@ -63,4 +63,16 @@ public class BarcodeServiceTests : IAsyncLifetime
         Assert.NotNull(found);
         Assert.Equal(byBarcode.Id, found!.Id);
     }
+
+    [Fact]
+    public async Task FindProductByBarcodeAsync_DoesNotPartialMatchSku()
+    {
+        // A scan must resolve to exactly one product; a substring of a SKU must not ring up the item.
+        var product = new Product { Name = "Partial", SKU = "ABC-123456", ProductType = "Good" };
+        await _db.Connection.InsertAsync(product);
+
+        Assert.Null(await _barcodeService.FindProductByBarcodeAsync("123"));
+        Assert.Null(await _barcodeService.FindProductByBarcodeAsync("ABC-1234"));
+        Assert.NotNull(await _barcodeService.FindProductByBarcodeAsync("ABC-123456"));
+    }
 }

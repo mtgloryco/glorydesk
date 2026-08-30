@@ -31,14 +31,16 @@ namespace InventoryManagementSystem.Services
                 .ToListAsync();
 
             // Barcode (the printed UPC/EAN) takes priority over SKU (the business's own internal
-            // code) - they're often different values. Falls back to SKU for products that only ever
-            // had a SKU set, before the dedicated Barcode field existed.
+            // code) - they're often different values. Falls back to an EXACT SKU match for products
+            // that only ever had a SKU set, before the dedicated Barcode field existed.
+            //
+            // Deliberately no partial / "contains" match: a scan must identify exactly one product,
+            // and a loose match would silently ring up the wrong item. Partial text search is still
+            // available through the product grid filter (POSViewModel.LoadProducts).
             return products.FirstOrDefault(p =>
                        p.Barcode != null && p.Barcode.Equals(normalized, StringComparison.OrdinalIgnoreCase))
                    ?? products.FirstOrDefault(p =>
-                       p.SKU != null && p.SKU.Equals(normalized, StringComparison.OrdinalIgnoreCase))
-                   ?? products.FirstOrDefault(p =>
-                       p.SKU != null && p.SKU.Contains(normalized, StringComparison.OrdinalIgnoreCase));
+                       p.SKU != null && p.SKU.Equals(normalized, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

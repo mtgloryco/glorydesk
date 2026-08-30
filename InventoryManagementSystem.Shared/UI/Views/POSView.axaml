@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
              xmlns:domain="clr-namespace:InventoryManagementSystem.Domain"
+             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
              x:Class="InventoryManagementSystem.UI.Views.POSView"
              x:DataType="vm:POSViewModel"
@@ -49,6 +50,15 @@
                     <Button Content="Orders" Command="{Binding SwitchTabCommand}" CommandParameter="Orders"
                             Classes="tab-btn" Classes.active-tab="{Binding IsOrdersTabActive}" />
                     
+                    <!-- Reporting Dropdown -->
+                    <Button Content="Reporting ▾" Classes="tab-btn" Classes.active-tab="{Binding IsReportingTabActive}">
+                        <Button.Flyout>
+                            <MenuFlyout>
+                                <MenuItem Header="Orders" Command="{Binding SwitchTabCommand}" CommandParameter="Reporting"/>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+
                     <!-- Configuration Dropdown -->
                     <Button Content="Configuration ▾" Classes="tab-btn">
                         <Button.Flyout>
@@ -107,6 +117,8 @@
                             </Grid>
                             <TextBlock Text="{Binding BarcodeStatusMessage}" FontSize="11" Foreground="#059669"
                                        IsVisible="{Binding BarcodeStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            <TextBlock Text="🔫 Scanner ready — just scan, no need to click here" FontSize="11" Foreground="Gray"
+                                       IsVisible="{Binding BarcodeStatusMessage, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
                         </StackPanel>
                     </Border>
                     
@@ -399,8 +411,17 @@
                     </StackPanel>
                 </Grid>
 
-                <TextBox Grid.Row="1" Text="{Binding OrderSearchText}" Watermark="Search by customer or order #..." Width="350" HorizontalAlignment="Left" Margin="0,0,0,15"
-                         IsVisible="{Binding IsOrdersModeSelected}"/>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12" HorizontalAlignment="Left" Margin="0,0,0,15"
+                            IsVisible="{Binding IsOrdersModeSelected}">
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="Customer" FontSize="11" Foreground="Gray"/>
+                        <ComboBox ItemsSource="{Binding PosOrderCustomerOptions}" SelectedItem="{Binding SelectedPosOrderCustomer}" Width="240"/>
+                    </StackPanel>
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="Search" FontSize="11" Foreground="Gray"/>
+                        <TextBox Text="{Binding OrderSearchText}" Watermark="Search by customer or order #..." Width="320"/>
+                    </StackPanel>
+                </StackPanel>
 
                 <!-- Customer-grouped order list -->
                 <ScrollViewer Grid.Row="2" IsVisible="{Binding IsOrdersModeSelected}">
@@ -574,6 +595,235 @@
 
                         <Button Content="Save Payment Method" Command="{Binding CreatePaymentMethodCommand}" Classes="accent" HorizontalAlignment="Stretch" Padding="10" FontWeight="SemiBold"/>
                     </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 4. REPORTING - POS ORDER ANALYSIS (Odoo-style pivot + graph) -->
+            <Grid RowDefinitions="Auto, Auto, *" Margin="24" IsVisible="{Binding IsReportingTabActive}">
+
+                <!-- Header + toolbar -->
+                <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,12">
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="POS Orders — Analysis" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                        <TextBlock Text="Pivot and graph over point-of-sale orders" FontSize="14" Foreground="Gray"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button Content="Measures ▾" Classes="tab-btn">
+                            <Button.Flyout>
+                                <MenuFlyout>
+                                    <MenuItem Header="Order (count)" Command="{Binding ToggleMeasureCommand}" CommandParameter="OrderCount">
+                                        <MenuItem.Icon>
+                                            <CheckBox IsChecked="{Binding ShowOrderCount}" BorderThickness="0" IsHitTestVisible="False"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Product Quantity" Command="{Binding ToggleMeasureCommand}" CommandParameter="ProductQuantity">
+                                        <MenuItem.Icon>
+                                            <CheckBox IsChecked="{Binding ShowProductQuantity}" BorderThickness="0" IsHitTestVisible="False"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Total Price" Command="{Binding ToggleMeasureCommand}" CommandParameter="Total">
+                                        <MenuItem.Icon>
+                                            <CheckBox IsChecked="{Binding ShowTotal}" BorderThickness="0" IsHitTestVisible="False"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Content="Pivot" Command="{Binding SetReportViewModeCommand}" CommandParameter="Pivot"
+                                Classes="tab-btn" Classes.active-tab="{Binding IsPivotViewMode}"/>
+                        <Button Content="Graph" Command="{Binding SetReportViewModeCommand}" CommandParameter="Graph"
+                                Classes="tab-btn" Classes.active-tab="{Binding IsGraphViewMode}"/>
+                        <Button Content="Export XLSX" Command="{Binding ExportOrderReportCommand}" Classes="accent" Padding="12,6"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Search field: one input that opens the Odoo-style Filters / Group By panel -->
+                <Grid Grid.Row="1" Margin="0,0,0,12" HorizontalAlignment="Left" Width="560">
+                    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6"
+                            Background="{DynamicResource ContentBackgroundColor}">
+                        <Grid ColumnDefinitions="Auto, *, Auto">
+                            <TextBlock Grid.Column="0" Text="🔎" Margin="12,0,8,0" Opacity="0.55" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ReportFilterSummary}" VerticalAlignment="Center" Padding="0,10"
+                                       TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextPrimaryColor}"/>
+                            <ToggleButton Grid.Column="2" x:Name="FilterToggle" Content="▾" Padding="14,8" CornerRadius="0,5,5,0"
+                                          Background="Transparent" BorderThickness="1,0,0,0" BorderBrush="{DynamicResource BorderColor}"/>
+                        </Grid>
+                    </Border>
+
+                    <Popup PlacementTarget="{Binding #FilterToggle}" Placement="BottomEdgeAlignedLeft"
+                           IsOpen="{Binding #FilterToggle.IsChecked, Mode=TwoWay}"
+                           IsLightDismissEnabled="True" VerticalOffset="6">
+                        <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}"
+                                BorderThickness="1" CornerRadius="8" Padding="18" BoxShadow="0 12 32 0 #33000000" MinWidth="640">
+                            <Grid ColumnDefinitions="*, Auto, *">
+
+                                <!-- Filters column -->
+                                <StackPanel Grid.Column="0" Spacing="8" Margin="0,0,18,0">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="⧩" Foreground="Gray" FontWeight="Bold"/>
+                                        <TextBlock Text="Filters" FontWeight="Bold" FontSize="14"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Order date" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                    <RadioButton GroupName="reportDatePreset" Content="All dates"
+                                                 Command="{Binding SetReportDatePresetCommand}" CommandParameter="all"/>
+                                    <RadioButton GroupName="reportDatePreset" Content="Last 7 days"
+                                                 Command="{Binding SetReportDatePresetCommand}" CommandParameter="7d"/>
+                                    <RadioButton GroupName="reportDatePreset" Content="Last 30 days"
+                                                 Command="{Binding SetReportDatePresetCommand}" CommandParameter="30d"/>
+                                    <RadioButton GroupName="reportDatePreset" Content="Last 90 days" IsChecked="True"
+                                                 Command="{Binding SetReportDatePresetCommand}" CommandParameter="90d"/>
+                                    <RadioButton GroupName="reportDatePreset" Content="This month"
+                                                 Command="{Binding SetReportDatePresetCommand}" CommandParameter="month"/>
+                                    <RadioButton GroupName="reportDatePreset" Content="This year"
+                                                 Command="{Binding SetReportDatePresetCommand}" CommandParameter="year"/>
+                                    <Separator Margin="0,4"/>
+                                    <TextBlock Text="Custom range" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                    <Grid ColumnDefinitions="*, 8, *">
+                                        <CalendarDatePicker Grid.Column="0" SelectedDate="{Binding ReportFromDate}" HorizontalAlignment="Stretch"/>
+                                        <CalendarDatePicker Grid.Column="2" SelectedDate="{Binding ReportToDate}" HorizontalAlignment="Stretch"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderColor}"/>
+
+                                <!-- Group By column -->
+                                <StackPanel Grid.Column="2" Spacing="8" Margin="18,0,0,0">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="≣" Foreground="Gray" FontWeight="Bold"/>
+                                        <TextBlock Text="Group By" FontWeight="Bold" FontSize="14"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="Rows" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                    <ComboBox ItemsSource="{Binding DimensionOptions}" SelectedItem="{Binding RowDimension1}" HorizontalAlignment="Stretch">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate DataType="vm:PosDimensionOption">
+                                                <TextBlock Text="{Binding Label}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <TextBlock Text="then" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                    <ComboBox ItemsSource="{Binding DimensionOptions}" SelectedItem="{Binding RowDimension2}" HorizontalAlignment="Stretch">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate DataType="vm:PosDimensionOption">
+                                                <TextBlock Text="{Binding Label}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <TextBlock Text="Columns" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                    <ComboBox ItemsSource="{Binding DimensionOptions}" SelectedItem="{Binding ColumnDimension}" HorizontalAlignment="Stretch">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate DataType="vm:PosDimensionOption">
+                                                <TextBlock Text="{Binding Label}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <StackPanel Spacing="8" IsVisible="{Binding IsGraphViewMode}">
+                                        <Separator Margin="0,4"/>
+                                        <TextBlock Text="Chart" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Button Content="Bar" Command="{Binding SetChartTypeCommand}" CommandParameter="Bar"
+                                                    Classes="tab-btn" Classes.active-tab="{Binding IsBarChartSelected}"/>
+                                            <Button Content="Line" Command="{Binding SetChartTypeCommand}" CommandParameter="Line"
+                                                    Classes="tab-btn" Classes.active-tab="{Binding IsLineChartSelected}"/>
+                                            <Button Content="Pie" Command="{Binding SetChartTypeCommand}" CommandParameter="Pie"
+                                                    Classes="tab-btn" Classes.active-tab="{Binding IsPieChartSelected}"/>
+                                        </StackPanel>
+                                        <TextBlock Text="Measure" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Button Content="Order" Command="{Binding SetChartMeasureCommand}" CommandParameter="OrderCount"
+                                                    Classes="tab-btn" Classes.active-tab="{Binding IsChartMeasureOrderCount}"/>
+                                            <Button Content="Qty" Command="{Binding SetChartMeasureCommand}" CommandParameter="ProductQuantity"
+                                                    Classes="tab-btn" Classes.active-tab="{Binding IsChartMeasureQuantity}"/>
+                                            <Button Content="Total" Command="{Binding SetChartMeasureCommand}" CommandParameter="Total"
+                                                    Classes="tab-btn" Classes.active-tab="{Binding IsChartMeasureTotal}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Popup>
+                </Grid>
+
+                <!-- Content -->
+                <Border Grid.Row="2" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="8" BoxShadow="0 4 6 -1 #1A000000" ClipToBounds="True">
+                    <Panel>
+                        <TextBlock Text="{Binding ReportEmptyMessage}" Foreground="Gray" FontSize="14"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   IsVisible="{Binding ReportEmptyMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                        <!-- PIVOT VIEW -->
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                      IsVisible="{Binding IsPivotViewMode}">
+                            <StackPanel>
+                                <!-- Header row -->
+                                <Grid ColumnDefinitions="Auto, *" Background="{DynamicResource PageBackgroundColor}">
+                                    <Border Width="{Binding LabelColumnWidth}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,1,1" Padding="12,8">
+                                        <TextBlock Text="Group" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                    </Border>
+                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding PivotHeaders}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="vm:PosPivotHeader">
+                                                <Border Width="{Binding #Root.DataContext.ValueCellWidth}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,1,1" Padding="8,4">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding GroupTitle}" FontSize="10" Foreground="Gray" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding MeasureTitle}" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+
+                                <!-- Data rows -->
+                                <ItemsControl ItemsSource="{Binding PivotRowsFlat}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:PosPivotRowItem">
+                                            <Grid ColumnDefinitions="Auto, *">
+                                                <Button Grid.Column="0" Width="{Binding #Root.DataContext.LabelColumnWidth}"
+                                                        Command="{Binding #Root.DataContext.TogglePivotNodeCommand}" CommandParameter="{Binding}"
+                                                        Background="Transparent" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,1,1"
+                                                        CornerRadius="0" Padding="12,6" HorizontalContentAlignment="Left" HorizontalAlignment="Stretch">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="{Binding IndentThickness}">
+                                                        <TextBlock Text="{Binding Glyph}" Width="12" Foreground="#4F46E5" FontWeight="Bold"/>
+                                                        <TextBlock Text="{Binding Label}" FontWeight="{Binding LabelFontWeight}" TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="vm:PosPivotValue">
+                                                            <Border Width="{Binding #Root.DataContext.ValueCellWidth}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,1,1" Padding="8,6">
+                                                                <TextBlock Text="{Binding Text}" HorizontalAlignment="Right" FontFamily="Consolas,Menlo,monospace"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- GRAPH VIEW -->
+                        <Grid Margin="16" IsVisible="{Binding IsGraphViewMode}">
+                            <lvc:CartesianChart Series="{Binding Series}" XAxes="{Binding XAxes}" YAxes="{Binding YAxes}"
+                                                IsVisible="{Binding IsCartesianChart}"/>
+                            <lvc:PieChart Series="{Binding Series}" IsVisible="{Binding IsPieChart}"/>
+                        </Grid>
+
+                        <Border Background="#40000000" IsVisible="{Binding IsLoadingReport}">
+                            <TextBlock Text="Loading…" Foreground="White" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Panel>
                 </Border>
             </Grid>
         </Grid>

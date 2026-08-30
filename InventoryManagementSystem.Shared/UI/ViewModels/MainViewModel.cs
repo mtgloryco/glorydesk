@@ -308,6 +308,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanAccessLeaveRequests));
         OnPropertyChanged(nameof(CanAccessCustomers));
         OnPropertyChanged(nameof(CanAccessPurchaseOrders));
+        OnPropertyChanged(nameof(CanAccessAccountsPayable));
         OnPropertyChanged(nameof(CanAccessForecasting));
         OnPropertyChanged(nameof(CanAccessExpiry));
         OnPropertyChanged(nameof(CanAccessLocations));
@@ -545,6 +546,7 @@ public partial class MainViewModel : ViewModelBase
     public bool CanAccessLeaveRequests => CanAccessEmployees;
     public bool CanAccessCustomers => HasRolePermission(RolePermissions.ManageCustomers) || HasRolePermission(RolePermissions.ViewInventory);
     public bool CanAccessPurchaseOrders => _licenseService.CanAccessPurchaseOrders() && HasRolePermission(RolePermissions.ManagePurchasing);
+    public bool CanAccessAccountsPayable => CanAccessPurchaseOrders;
     public bool CanAccessForecasting => _licenseService.CanAccessForecasting() && HasRolePermission(RolePermissions.ManagePurchasing);
     public bool CanAccessExpiry => _licenseService.CanAccessExpiryTracking() && IsModuleEnabled("Expiry") && HasRolePermission(RolePermissions.ManageInventory);
     public bool CanAccessLocations => _licenseService.CanAccessMultiLocation() && IsModuleEnabled("MultiLocation") && HasRolePermission(RolePermissions.ManageInventory);
@@ -615,9 +617,10 @@ public partial class MainViewModel : ViewModelBase
             new("Sales Orders", "Sales > Orders", GoToSalesOrders),
             new("Customers", "Customers", GoToCustomers),
             new("Suppliers", "Suppliers", GoToSuppliers),
+            new("Accounts Payable", "Money Owed > Accounts Payable", GoToAccountsPayable),
             new("Staff", "Team > Staff", GoToEmployees),
-            new("Attendance", "Team > Attendance", GoToAttendance),
-            new("Leave Requests", "Team > Leave Requests", GoToLeaveRequests),
+            new("Attendance", "Team > Attendance & Leave", GoToAttendance),
+            new("Leave Requests", "Team > Attendance & Leave", GoToLeaveRequests),
             new("Reports", "Reports", GoToReports),
             new("Analytics", "Analytics", GoToAnalytics),
             new("Advanced Analytics", "Analytics > Advanced", GoToAdvancedAnalytics),
@@ -716,7 +719,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, GoToCycleCount, GoToReorderDashboard, GoToForecasting, GoToLocations, CustomFieldService, _barcodeService, GoToDamageWriteOff, GoToPurchaseOrderDetails, GoToSalesOrderDetails));
+    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, GoToCycleCount, GoToReorderDashboard, GoToForecasting, GoToLocations, CustomFieldService, _barcodeService, GoToDamageWriteOff, GoToPurchaseOrderDetails, GoToSalesOrderDetails, () => GoToReport("stock-status"), () => GoToReport("stock-history")));
 
     [RelayCommand]
     public void GoToManufacturing() => NavigateTo(new ManufacturingViewModel(_manufacturingService, _inventoryService, Language));
@@ -770,7 +773,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GoToCustomers()
     {
-        NavigateTo(new CustomersViewModel(_customerService, Language, _documentAttachmentService));
+        NavigateTo(new CustomersViewModel(_customerService, Language, _documentAttachmentService, _salesOrderService));
     }
 
     [RelayCommand]
@@ -787,7 +790,7 @@ public partial class MainViewModel : ViewModelBase
             GoToLicense();
             return;
         }
-        NavigateTo(new ReportsViewModel(_inventoryService, _licenseService, _settingsService, Language, _accountingReportService, _accountService, _agingReportService, _vatExportService, _budgetReportService, _paymentService, _advancedAnalyticsService, _monthCloseService, GoToPurchaseOrderDetails, GoToSalesOrderDetails, reportKey));
+        NavigateTo(new ReportsViewModel(_inventoryService, _licenseService, _settingsService, Language, _accountingReportService, _accountService, _agingReportService, _vatExportService, _budgetReportService, _paymentService, _advancedAnalyticsService, _monthCloseService, _locationService, GoToPurchaseOrderDetails, GoToSalesOrderDetails, reportKey));
     }
 
     [RelayCommand]
@@ -848,6 +851,22 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    public void GoToAccountsPayable()
+    {
+        if (!_licenseService.CanAccessPurchaseOrders())
+        {
+            GoToLicense();
+            return;
+        }
+
+        if (!HasRolePermission(RolePermissions.ManagePurchasing)) return;
+
+        NavigateTo(new AccountsPayableViewModel(
+            _agingReportService, _purchaseOrderService, _inventoryService, _taxService, _paymentService,
+            GoToPurchaseOrderDetails));
+    }
+
+    [RelayCommand]
     public void GoToEmployees()
     {
         if (!_licenseService.CanAccessStaffManagement())
@@ -862,21 +881,12 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void GoToAttendance()
-    {
-        if (!_licenseService.CanAccessStaffManagement())
-        {
-            GoToLicense();
-            return;
-        }
-
-        if (!HasRolePermission(RolePermissions.ManageEmployees)) return;
-
-        NavigateTo(new AttendanceViewModel(_attendanceService, _employeeService, _locationService));
-    }
+    public void GoToAttendance() => OpenAttendanceHub("Attendance");
 
     [RelayCommand]
-    public void GoToLeaveRequests()
+    public void GoToLeaveRequests() => OpenAttendanceHub("Leave");
+
+    private void OpenAttendanceHub(string tab)
     {
         if (!_licenseService.CanAccessStaffManagement())
         {
@@ -886,7 +896,15 @@ public partial class MainViewModel : ViewModelBase
 
         if (!HasRolePermission(RolePermissions.ManageEmployees)) return;
 
-        NavigateTo(new LeaveRequestsViewModel(_leaveService, _employeeService));
+        // Attendance and Leave Requests share one workspace; `tab` picks which one opens first.
+        if (CurrentPage is AttendanceHubViewModel hub)
+        {
+            hub.ActiveTab = tab == "Leave" ? "Leave" : "Attendance";
+            return;
+        }
+
+        NavigateTo(new AttendanceHubViewModel(
+            _attendanceService, _leaveService, _employeeService, _locationService, tab));
     }
 
 

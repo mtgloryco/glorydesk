@@ -13,7 +13,7 @@ namespace InventoryManagementSystem.Infrastructure
         private readonly string _databasePath;
         private readonly string _legacyDatabasePath;
         private SQLiteAsyncConnection _connection;
-        private const int CurrentDatabaseVersion = 12;
+        private const int CurrentDatabaseVersion = 13;
 
         public DatabaseService()
         {
@@ -274,6 +274,11 @@ namespace InventoryManagementSystem.Infrastructure
                     await MigrateToV12Async();
                 }
 
+                if (metaVersion < 13)
+                {
+                    await MigrateToV13Async();
+                }
+
                 await _connection.ExecuteAsync($"PRAGMA user_version = {CurrentDatabaseVersion}");
             }
         }
@@ -488,6 +493,16 @@ namespace InventoryManagementSystem.Infrastructure
             // POS cash register sessions: opening/closing float per payment method, cash in/out,
             // and orders attached to whichever session was open when they were rung up.
             await AddColumnIfNotExistsAsync("SalesOrder", "PosSessionId", "INTEGER NULL");
+        }
+
+        private async Task MigrateToV13Async()
+        {
+            // Optional lot/serial and from/to location labels on stock movements, for the
+            // Stock Moves History report. Left empty for existing rows and any writer that
+            // does not set them; the report derives sensible values in that case.
+            await AddColumnIfNotExistsAsync("StockMovement", "LotSerialNumber", "TEXT NOT NULL DEFAULT ''");
+            await AddColumnIfNotExistsAsync("StockMovement", "FromLocation", "TEXT NOT NULL DEFAULT ''");
+            await AddColumnIfNotExistsAsync("StockMovement", "ToLocation", "TEXT NOT NULL DEFAULT ''");
         }
 
         private async Task MigrateToV9Async()

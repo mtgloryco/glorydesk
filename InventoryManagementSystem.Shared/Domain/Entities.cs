@@ -59,6 +59,12 @@ namespace InventoryManagementSystem.Domain
         public string Username { get; set; } = "System";
         public decimal UnitPrice { get; set; } // Selling Price for OUT movements
 
+        // Optional, for the Moves History report. Empty when not captured at write time; the
+        // report falls back to values derived from the movement direction / batch links.
+        public string LotSerialNumber { get; set; } = string.Empty;
+        public string FromLocation { get; set; } = string.Empty;
+        public string ToLocation { get; set; } = string.Empty;
+
         [Ignore]
         public string BatchTraceInfo { get; set; } = string.Empty;
     }
@@ -815,6 +821,18 @@ namespace InventoryManagementSystem.Domain
 
         public bool CanDeliver => SalesOrder != null && SalesOrder.DeliveryStatus != "Delivered";
         public bool CanInvoice => SalesOrder != null && SalesOrder.BillingStatus != "Invoiced";
+    }
+
+    /// <summary>One sold line of a sales order, joined to its product name for read-only display
+    /// (customer order history, order-details popups).</summary>
+    public class SalesOrderLineView
+    {
+        public string ProductName { get; set; } = string.Empty;
+        public int QuantityOrdered { get; set; }
+        public int QuantityDelivered { get; set; }
+        public int QuantityInvoiced { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal LineTotal { get; set; }
     }
 
     public class PaymentTerm

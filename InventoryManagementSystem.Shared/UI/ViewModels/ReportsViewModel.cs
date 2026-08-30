@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -28,8 +29,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             new() { Key = "profit-loss", Title = "Income vs Expenses", Category = "Money Overview", Description = "Money in and money out for the period" },
             new() { Key = "budget-vs-actual", Title = "Budget vs Reality", Category = "Money Overview", Description = "Compare planned spending to what actually happened" },
             new() { Key = "general-ledger", Title = "Account Ledger", Category = "Money Overview", Description = "Every transaction posted to one account, with running balance" },
-            new() { Key = "stock-status", Title = "Stock Levels", Category = "Stock", Description = "How much of each product you have now" },
-            new() { Key = "stock-history", Title = "Stock History", Category = "Stock", Description = "Recent stock additions and removals" },
+            new() { Key = "stock-status", Title = "Stock", Category = "Stock", Description = "On hand, free to use, incoming and outgoing per product" },
+            new() { Key = "stock-history", Title = "Moves History", Category = "Stock", Description = "Every recorded stock move, newest first" },
             new() { Key = "ar-aging", Title = "Unpaid Customer Bills", Category = "Money Owed", Description = "Which customers still owe you, and for how long" },
             new() { Key = "ap-aging", Title = "Unpaid Supplier Bills", Category = "Money Owed", Description = "Which supplier bills you still need to pay" },
             new() { Key = "vat-return", Title = "Sales Tax Summary", Category = "Tax & Bank", Description = "Sales tax collected vs tax paid on purchases" },
@@ -51,8 +52,20 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly PaymentService _paymentService;
         private readonly AdvancedAnalyticsService _advancedAnalyticsService;
         private readonly MonthCloseService _monthCloseService;
+        private readonly LocationService _locationService;
+        private readonly ReportExportService _reportExportService = new();
         private readonly Action<int?>? _goToPurchaseOrderDetails;
         private readonly Action<int?>? _goToSalesOrderDetails;
+
+        private static readonly HashSet<string> ExportableReportKeys = new()
+        {
+            "balance-sheet", "profit-loss", "ar-aging", "ap-aging",
+            "budget-vs-actual", "general-ledger", "vat-return", "stock-status",
+        };
+
+        /// <summary>Whether the currently selected report supports "Export PDF / XLSX".</summary>
+        public bool IsCurrentReportExportable =>
+            SelectedReportNavItem != null && ExportableReportKeys.Contains(SelectedReportNavItem.Key);
 
         [ObservableProperty] private string _selectedCategory = "Money Overview";
         [ObservableProperty] private ReportNavItem? _selectedReportNavItem;
@@ -179,6 +192,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             OnPropertyChanged(nameof(IsMarginByCategorySelected));
             OnPropertyChanged(nameof(IsMonthCloseSelected));
             OnPropertyChanged(nameof(IsGeneralLedgerSelected));
+            OnPropertyChanged(nameof(IsCurrentReportExportable));
+            OnPropertyChanged(nameof(IsStockAreaSelected));
         }
 
         public bool IsAbcAnalysisSelected => SelectedReportNavItem?.Key == "abc-analysis";
@@ -210,6 +225,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             PaymentService paymentService,
             AdvancedAnalyticsService advancedAnalyticsService,
             MonthCloseService monthCloseService,
+            LocationService locationService,
             Action<int?>? goToPurchaseOrderDetails = null,
             Action<int?>? goToSalesOrderDetails = null,
             string? initialReportKey = null)
@@ -226,6 +242,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             _paymentService = paymentService;
             _advancedAnalyticsService = advancedAnalyticsService;
             _monthCloseService = monthCloseService;
+            _locationService = locationService;
             _goToPurchaseOrderDetails = goToPurchaseOrderDetails;
             _goToSalesOrderDetails = goToSalesOrderDetails;
 
@@ -372,25 +389,25 @@ namespace InventoryManagementSystem.UI.ViewModels
         [RelayCommand]
         private async Task LoadStockReport()
         {
-            ReportTitle = "Current Stock Report";
+            ReportTitle = "Stock";
             IsLowStockReport = false;
             IsHistoryReport = false;
             IsProfitReport = false;
             OnPropertyChanged(nameof(IsStockReport));
-            var list = await _inventoryService.GetAllProductsAsync();
-            ReportData = new ObservableCollection<Product>(list);
+            var rows = await _inventoryService.GetStockReportRowsAsync();
+            StockRows = new ObservableCollection<StockReportRow>(rows);
         }
 
         [RelayCommand]
         private async Task LoadLowStockReport()
         {
-            ReportTitle = "Low Stock Report (< 5 items)";
+            ReportTitle = "Stock — low on hand (< 5)";
             IsLowStockReport = true;
             IsHistoryReport = false;
             IsProfitReport = false;
             OnPropertyChanged(nameof(IsStockReport));
-            var list = await _inventoryService.GetLowStockProductsAsync(5);
-            ReportData = new ObservableCollection<Product>(list);
+            var rows = await _inventoryService.GetStockReportRowsAsync();
+            StockRows = new ObservableCollection<StockReportRow>(rows.Where(r => r.OnHand < 5));
         }
 
         [RelayCommand]
@@ -402,14 +419,222 @@ namespace InventoryManagementSystem.UI.ViewModels
                 return;
             }
 
-            ReportTitle = "Stock Movement History";
+            ReportTitle = string.IsNullOrWhiteSpace(MovesFilterProductName)
+                ? "Moves History"
+                : $"Moves History — {MovesFilterProductName}";
             IsLowStockReport = false;
             IsHistoryReport = true;
             IsProfitReport = false;
             OnPropertyChanged(nameof(IsStockReport));
-            var list = await _inventoryService.GetRecentStockMovementsAsync(100);
-            StockHistoryData = new ObservableCollection<StockMovement>(list);
+            _allMoveRows = await _inventoryService.GetStockMovesAsync(MovesFilterProductId);
+            MovesPage = 1;
+            ApplyMovesView();
         }
+
+        // --- Stock report area: Odoo-style Stock grid + Moves History ---
+
+        [ObservableProperty] private ObservableCollection<StockReportRow> _stockRows = new();
+        [ObservableProperty] private int? _movesFilterProductId;
+        [ObservableProperty] private string _movesFilterProductName = string.Empty;
+
+        public bool IsStockAreaSelected => IsStockStatusSelected || IsStockHistorySelected;
+
+        // Moves History: List (paginated) or Grouped view over the full filtered set.
+        private List<StockMoveHistoryRow> _allMoveRows = new();
+
+        [ObservableProperty] private string _movesViewMode = "List";   // "List" | "Grouped"
+        [ObservableProperty] private string _movesGroupBy = "Product"; // Product | Reference | Direction | Status
+        public bool IsMovesListView => MovesViewMode == "List";
+        public bool IsMovesGroupedView => MovesViewMode == "Grouped";
+        public List<string> MovesGroupByOptions { get; } = new() { "Product", "Reference", "Direction", "Status" };
+
+        public int MovesPageSize { get; } = 80;
+        [ObservableProperty] private int _movesPage = 1;
+        [ObservableProperty] private int _movesTotalCount;
+        [ObservableProperty] private string _movesPageLabel = string.Empty;
+        public bool MovesCanPrev => MovesPage > 1;
+        public bool MovesCanNext => MovesPage * MovesPageSize < MovesTotalCount;
+
+        [ObservableProperty] private ObservableCollection<StockMoveHistoryRow> _movesPagedRows = new();
+        [ObservableProperty] private ObservableCollection<MoveGroup> _movesGroups = new();
+
+        private void ApplyMovesView()
+        {
+            MovesTotalCount = _allMoveRows.Count;
+
+            var maxPage = Math.Max(1, (int)Math.Ceiling(_allMoveRows.Count / (double)MovesPageSize));
+            if (MovesPage > maxPage) MovesPage = maxPage;
+            if (MovesPage < 1) MovesPage = 1;
+
+            var pageRows = _allMoveRows.Skip((MovesPage - 1) * MovesPageSize).Take(MovesPageSize).ToList();
+            MovesPagedRows = new ObservableCollection<StockMoveHistoryRow>(pageRows);
+
+            var first = _allMoveRows.Count == 0 ? 0 : (MovesPage - 1) * MovesPageSize + 1;
+            var last = Math.Min(MovesPage * MovesPageSize, _allMoveRows.Count);
+            MovesPageLabel = $"{first}-{last} / {_allMoveRows.Count}";
+            OnPropertyChanged(nameof(MovesCanPrev));
+            OnPropertyChanged(nameof(MovesCanNext));
+
+            Func<StockMoveHistoryRow, string> keySelector = MovesGroupBy switch
+            {
+                "Reference" => r => ReferenceGroupKey(r.Reference),
+                "Direction" => r => r.IsOutbound ? "Outgoing" : "Incoming",
+                "Status" => r => r.Status,
+                _ => r => r.DisplayProduct,
+            };
+            var groups = _allMoveRows
+                .GroupBy(keySelector)
+                .OrderByDescending(g => g.Count())
+                .Select(g => new MoveGroup(g.Key, g.ToList()))
+                .ToList();
+            MovesGroups = new ObservableCollection<MoveGroup>(groups);
+        }
+
+        private static string ReferenceGroupKey(string reference)
+        {
+            if (string.IsNullOrWhiteSpace(reference)) return "(none)";
+            var colon = reference.IndexOf(':');
+            if (colon > 0) return reference[..colon].Trim();
+            var dash = reference.IndexOf('-');
+            return dash > 0 ? reference[..dash].Trim() : reference.Trim();
+        }
+
+        [RelayCommand]
+        private void SetMovesViewMode(string mode) => MovesViewMode = mode == "Grouped" ? "Grouped" : "List";
+
+        partial void OnMovesViewModeChanged(string value)
+        {
+            OnPropertyChanged(nameof(IsMovesListView));
+            OnPropertyChanged(nameof(IsMovesGroupedView));
+        }
+
+        partial void OnMovesGroupByChanged(string value) => ApplyMovesView();
+
+        [RelayCommand]
+        private void MovesNextPage()
+        {
+            if (!MovesCanNext) return;
+            MovesPage++;
+            ApplyMovesView();
+        }
+
+        [RelayCommand]
+        private void MovesPrevPage()
+        {
+            if (!MovesCanPrev) return;
+            MovesPage--;
+            ApplyMovesView();
+        }
+
+        [RelayCommand]
+        private void ToggleMoveGroup(MoveGroup? group)
+        {
+            if (group != null) group.IsExpanded = !group.IsExpanded;
+        }
+
+        // Replenishment popup (a product's still-incoming / still-outgoing document lines)
+        [ObservableProperty] private bool _isReplenishmentModalOpen;
+        [ObservableProperty] private string _replenishmentTitle = string.Empty;
+        [ObservableProperty] private int _replenishmentOnHand;
+        [ObservableProperty] private int _replenishmentIncoming;
+        [ObservableProperty] private int _replenishmentOutgoing;
+        [ObservableProperty] private int _replenishmentForecasted;
+        [ObservableProperty] private ObservableCollection<ReplenishmentSourceLine> _replenishmentIncomingLines = new();
+        [ObservableProperty] private ObservableCollection<ReplenishmentSourceLine> _replenishmentOutgoingLines = new();
+
+        // Locations popup (a product's on-hand quantity per warehouse location)
+        [ObservableProperty] private bool _isLocationsModalOpen;
+        [ObservableProperty] private string _locationsTitle = string.Empty;
+        [ObservableProperty] private ObservableCollection<ProductLocationRow> _productLocations = new();
+
+        [RelayCommand]
+        private void SwitchStockReport(string key)
+        {
+            if (key == "stock-history")
+            {
+                MovesFilterProductId = null;
+                MovesFilterProductName = string.Empty;
+            }
+            SelectStockNav(key);
+        }
+
+        [RelayCommand]
+        private void OpenProductHistory(StockReportRow? row)
+        {
+            if (row == null) return;
+            MovesFilterProductId = row.ProductId;
+            MovesFilterProductName = row.DisplayName;
+            SelectStockNav("stock-history");
+        }
+
+        [RelayCommand]
+        private void ClearMovesFilter()
+        {
+            MovesFilterProductId = null;
+            MovesFilterProductName = string.Empty;
+            _ = LoadStockHistoryReport();
+        }
+
+        private void SelectStockNav(string key)
+        {
+            var catalogItem = ReportCatalog.FirstOrDefault(r => r.Key == key);
+            if (catalogItem == null) return;
+            if (SelectedCategory != catalogItem.Category)
+            {
+                SelectedCategory = catalogItem.Category;
+            }
+            var navItem = ReportsInCategory.FirstOrDefault(r => r.Key == key);
+            if (navItem == null) return;
+            if (ReferenceEquals(navItem, SelectedReportNavItem))
+            {
+                _ = LoadSelectedReportAsync();
+            }
+            else
+            {
+                SelectedReportNavItem = navItem;
+            }
+        }
+
+        [RelayCommand]
+        private async Task OpenReplenishment(StockReportRow? row)
+        {
+            if (row == null) return;
+            var forecast = await _inventoryService.GetReplenishmentForecastAsync(row.ProductId);
+            ReplenishmentTitle = row.DisplayName;
+            ReplenishmentOnHand = forecast.OnHand;
+            ReplenishmentIncoming = forecast.Incoming;
+            ReplenishmentOutgoing = forecast.Outgoing;
+            ReplenishmentForecasted = forecast.ForecastedAvailable;
+            ReplenishmentIncomingLines = new ObservableCollection<ReplenishmentSourceLine>(forecast.IncomingSources);
+            ReplenishmentOutgoingLines = new ObservableCollection<ReplenishmentSourceLine>(forecast.OutgoingSources);
+            IsReplenishmentModalOpen = true;
+        }
+
+        [RelayCommand]
+        private void CloseReplenishmentModal() => IsReplenishmentModalOpen = false;
+
+        [RelayCommand]
+        private async Task OpenProductLocations(StockReportRow? row)
+        {
+            if (row == null) return;
+            var locations = await _locationService.GetAllLocationsAsync();
+            var byId = locations.ToDictionary(l => l.Id, l => l.Name);
+            var stock = await _locationService.GetProductLocationsAsync(row.ProductId);
+
+            LocationsTitle = row.DisplayName;
+            ProductLocations = new ObservableCollection<ProductLocationRow>(stock
+                .Select(s => new ProductLocationRow
+                {
+                    LocationName = byId.TryGetValue(s.LocationId, out var n) ? n : $"Location #{s.LocationId}",
+                    Quantity = s.Quantity,
+                    ReorderPoint = s.ReorderPoint,
+                })
+                .OrderByDescending(r => r.Quantity));
+            IsLocationsModalOpen = true;
+        }
+
+        [RelayCommand]
+        private void CloseLocationsModal() => IsLocationsModalOpen = false;
 
         [RelayCommand]
         private async Task LoadMonthlyProfitReport()
@@ -779,10 +1004,10 @@ namespace InventoryManagementSystem.UI.ViewModels
 
             // Simple Export implementation
             var sb = new StringBuilder();
-            sb.AppendLine("ID,Name,SKU,Category,Stock,Unit,Price,Cost");
-            foreach (var p in ReportData)
+            sb.AppendLine("SKU,Name,Category,TotalValue,UnitCost,SalesPrice,OnHand,FreeToUse,Incoming,Outgoing,Unit");
+            foreach (var r in StockRows)
             {
-                sb.AppendLine($"{p.Id},{Escape(p.Name)},{Escape(p.SKU ?? "")},{Escape(p.Category)},{p.StockQuantity},{p.Unit},{p.Price},{p.Cost}");
+                sb.AppendLine($"{Escape(r.Sku)},{Escape(r.Name)},{Escape(r.Category)},{r.TotalValue},{r.UnitCost},{r.SalesPrice},{r.OnHand},{r.FreeToUse},{r.Incoming},{r.Outgoing},{r.Unit}");
             }
 
             await File.WriteAllTextAsync(file.Path.LocalPath, sb.ToString());
@@ -794,6 +1019,307 @@ namespace InventoryManagementSystem.UI.ViewModels
         {
             if (val.Contains(",")) return $"\"{val}\"";
             return val;
+        }
+
+        // --- Export the current accounting/stock report as a shareable PDF or XLSX ---
+
+        [RelayCommand]
+        private Task ExportCurrentReportPdf() => ExportCurrentReportAsync(asPdf: true);
+
+        [RelayCommand]
+        private Task ExportCurrentReportXlsx() => ExportCurrentReportAsync(asPdf: false);
+
+        private async Task ExportCurrentReportAsync(bool asPdf)
+        {
+            if (!_licenseService.CanAccessExport())
+            {
+                ReportTitle = "Export is a Premium Feature. Please Upgrade.";
+                return;
+            }
+
+            if (IsGeneralLedgerSelected && SelectedLedgerAccount == null)
+            {
+                ReportTitle = "Pick a ledger account before exporting.";
+                return;
+            }
+
+            // Make sure the on-screen figures are current before we serialise them.
+            await LoadSelectedReportAsync();
+
+            var model = BuildCurrentReportExportModel();
+            if (model == null)
+            {
+                ReportTitle = "This report can't be exported yet.";
+                return;
+            }
+
+            if (Avalonia.Application.Current?.ApplicationLifetime is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                || desktop.MainWindow == null)
+            {
+                ReportTitle = "Error: Cannot access file system.";
+                return;
+            }
+
+            var ext = asPdf ? ".pdf" : ".xlsx";
+            var typeName = asPdf ? "PDF Document" : "Excel Workbook";
+            var pattern = asPdf ? "*.pdf" : "*.xlsx";
+
+            var file = await desktop.MainWindow.StorageProvider.SaveFilePickerAsync(new Avalonia.Platform.Storage.FilePickerSaveOptions
+            {
+                Title = $"Export {model.Title}",
+                DefaultExtension = ext,
+                SuggestedFileName = $"{FileStamp(model.Title)}_{DateTime.Now:yyyyMMdd}",
+                FileTypeChoices = new[] { new Avalonia.Platform.Storage.FilePickerFileType(typeName) { Patterns = new[] { pattern } } }
+            });
+            if (file == null) return;
+
+            try
+            {
+                var bytes = asPdf ? _reportExportService.BuildPdf(model) : _reportExportService.BuildXlsx(model);
+                await using var stream = await file.OpenWriteAsync();
+                await stream.WriteAsync(bytes.AsMemory());
+                ReportTitle = $"{model.Title} — exported";
+            }
+            catch (Exception ex)
+            {
+                ReportTitle = $"Export failed: {ex.Message}";
+            }
+        }
+
+        private static string FileStamp(string title)
+        {
+            var invalid = System.IO.Path.GetInvalidFileNameChars();
+            var clean = new string(title.Select(ch => invalid.Contains(ch) ? ' ' : ch).ToArray());
+            return string.Join("_", clean.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private static string M(decimal value) => value.ToString("N2", CultureInfo.CurrentCulture);
+
+        private ReportExportModel? BuildCurrentReportExportModel()
+        {
+            var company = _settingsService.CurrentSettings.StoreName;
+
+            return SelectedReportNavItem?.Key switch
+            {
+                "balance-sheet" => StatementModel("Balance Sheet", company, BalanceSheetLines),
+                "profit-loss" => StatementModel("Profit and Loss Statement", company, ProfitAndLossLines),
+                "ar-aging" => AgingModel("Accounts Receivable Aging", company, ArAgingLines, ArAgingSummary),
+                "ap-aging" => AgingModel("Accounts Payable Aging", company, ApAgingLines, ApAgingSummary),
+                "budget-vs-actual" => BudgetModel(company),
+                "general-ledger" => LedgerModel(company),
+                "vat-return" => VatModel(company),
+                "stock-status" => StockModel(company),
+                _ => null,
+            };
+        }
+
+        private ReportExportModel StatementModel(string title, string company, IEnumerable<ReportLineWrapper> lines)
+        {
+            var rows = lines.Select(w => new ReportExportRow
+            {
+                Cells = new[] { w.Name, w.Result.HasComputations ? M(w.Result.Balance) : string.Empty },
+                Indent = Math.Max(0, w.Result.Level - 1),
+                Bold = w.Result.Level is >= 1 and <= 2,
+            }).ToList();
+
+            return new ReportExportModel
+            {
+                Title = title,
+                CompanyName = company,
+                Subtitle = $"As at {DateTime.Today:yyyy-MM-dd}  ·  Amounts in {CurrencySymbol}",
+                Columns = new[]
+                {
+                    new ReportExportColumn("Line", width: 4),
+                    new ReportExportColumn("Balance", rightAlign: true, width: 1.4),
+                },
+                Rows = rows,
+            };
+        }
+
+        private ReportExportModel AgingModel(string title, string company, IEnumerable<AgingLine> lines, AgingSummary summary)
+        {
+            var rows = lines.Select(l => new ReportExportRow
+            {
+                Cells = new[]
+                {
+                    l.PartnerName, l.DocumentNumber, l.DocumentDate.ToString("yyyy-MM-dd"),
+                    l.DueDate.ToString("yyyy-MM-dd"), l.DaysOverdue.ToString(CultureInfo.InvariantCulture),
+                    M(l.TotalAmount), M(l.OpenBalance), l.AgingBucket,
+                }
+            }).ToList();
+
+            rows.Add(new ReportExportRow
+            {
+                Bold = true,
+                Cells = new[] { "Total Open", "", "", "", "", "", M(summary.TotalOpen), "" },
+            });
+
+            return new ReportExportModel
+            {
+                Title = title,
+                CompanyName = company,
+                Subtitle = $"Generated {DateTime.Today:yyyy-MM-dd}  ·  Current {M(summary.Current)} · 1–30 {M(summary.Days1To30)} · 31–60 {M(summary.Days31To60)} · 61–90 {M(summary.Days61To90)} · 90+ {M(summary.Over90)}",
+                Columns = new[]
+                {
+                    new ReportExportColumn("Partner", width: 2),
+                    new ReportExportColumn("Document", width: 1.4),
+                    new ReportExportColumn("Doc Date"),
+                    new ReportExportColumn("Due Date"),
+                    new ReportExportColumn("Days", rightAlign: true, width: 0.7),
+                    new ReportExportColumn("Total", rightAlign: true),
+                    new ReportExportColumn("Open", rightAlign: true),
+                    new ReportExportColumn("Bucket", width: 0.9),
+                },
+                Rows = rows,
+            };
+        }
+
+        private ReportExportModel BudgetModel(string company)
+        {
+            var rows = BudgetVsActualLines.Select(l => new ReportExportRow
+            {
+                Cells = new[]
+                {
+                    l.AccountCode, l.AccountName, M(l.BudgetAmount), M(l.ActualAmount), M(l.Variance),
+                    $"{l.VariancePercent.ToString("N1", CultureInfo.CurrentCulture)}%",
+                }
+            }).ToList();
+
+            rows.Add(new ReportExportRow
+            {
+                Bold = true,
+                Cells = new[] { "", "Total", M(BudgetTotalBudget), M(BudgetTotalActual), M(BudgetTotalVariance), "" },
+            });
+
+            return new ReportExportModel
+            {
+                Title = $"Budget vs Actual — FY {BudgetFiscalYear}",
+                CompanyName = company,
+                Subtitle = (BudgetPeriodMonth is >= 1 and <= 12 ? $"Month {BudgetPeriodMonth}" : "Full year")
+                           + $"  ·  Amounts in {CurrencySymbol}",
+                Columns = new[]
+                {
+                    new ReportExportColumn("Code", width: 0.8),
+                    new ReportExportColumn("Account", width: 2.4),
+                    new ReportExportColumn("Budget", rightAlign: true),
+                    new ReportExportColumn("Actual", rightAlign: true),
+                    new ReportExportColumn("Variance", rightAlign: true),
+                    new ReportExportColumn("Var %", rightAlign: true, width: 0.8),
+                },
+                Rows = rows,
+            };
+        }
+
+        private ReportExportModel? LedgerModel(string company)
+        {
+            if (SelectedLedgerAccount == null) return null;
+
+            var rows = new List<ReportExportRow>
+            {
+                new() { Bold = true, Cells = new[] { "", "", "", "Opening balance", "", "", M(LedgerOpeningBalance) } },
+            };
+            rows.AddRange(LedgerLines.Select(l => new ReportExportRow
+            {
+                Cells = new[]
+                {
+                    l.Date.ToString("yyyy-MM-dd"), l.EntryNumber, l.Reference, l.Label,
+                    M(l.Debit), M(l.Credit), M(l.RunningBalance),
+                }
+            }));
+            rows.Add(new ReportExportRow { Bold = true, Cells = new[] { "", "", "", "Closing balance", "", "", M(LedgerClosingBalance) } });
+
+            var range = (LedgerFromDate, LedgerToDate) switch
+            {
+                ({ } f, { } t) => $"{f:yyyy-MM-dd} to {t:yyyy-MM-dd}",
+                ({ } f, null) => $"from {f:yyyy-MM-dd}",
+                (null, { } t) => $"until {t:yyyy-MM-dd}",
+                _ => "all dates",
+            };
+
+            return new ReportExportModel
+            {
+                Title = $"Account Ledger — {SelectedLedgerAccount.Code} {SelectedLedgerAccount.Name}",
+                CompanyName = company,
+                Subtitle = $"{range}  ·  Amounts in {CurrencySymbol}",
+                Columns = new[]
+                {
+                    new ReportExportColumn("Date"),
+                    new ReportExportColumn("Entry #", width: 1.1),
+                    new ReportExportColumn("Reference", width: 1.4),
+                    new ReportExportColumn("Label", width: 2.4),
+                    new ReportExportColumn("Debit", rightAlign: true),
+                    new ReportExportColumn("Credit", rightAlign: true),
+                    new ReportExportColumn("Balance", rightAlign: true),
+                },
+                Rows = rows,
+            };
+        }
+
+        private ReportExportModel? VatModel(string company)
+        {
+            if (VatSummary == null) return null;
+            var s = VatSummary;
+
+            var rows = new List<ReportExportRow>
+            {
+                new() { Cells = new[] { "Taxable sales", M(s.TaxableSales) } },
+                new() { Cells = new[] { "Output VAT (on sales)", M(s.OutputVat) } },
+                new() { Cells = new[] { "Taxable purchases", M(s.TaxablePurchases) } },
+                new() { Cells = new[] { "Input VAT (on purchases)", M(s.InputVat) } },
+                new() { Bold = true, Cells = new[] { "Net VAT payable", M(s.NetVatPayable) } },
+            };
+
+            return new ReportExportModel
+            {
+                Title = "VAT Return",
+                CompanyName = company,
+                Subtitle = $"{s.PeriodStart:yyyy-MM-dd} to {s.PeriodEnd:yyyy-MM-dd}  ·  Amounts in {CurrencySymbol}",
+                Columns = new[]
+                {
+                    new ReportExportColumn("Item", width: 3),
+                    new ReportExportColumn("Amount", rightAlign: true),
+                },
+                Rows = rows,
+            };
+        }
+
+        private ReportExportModel StockModel(string company)
+        {
+            var rows = StockRows.Select(r => new ReportExportRow
+            {
+                Cells = new[]
+                {
+                    r.Sku, r.Name, r.Category,
+                    M(r.TotalValue), M(r.UnitCost), M(r.SalesPrice),
+                    r.OnHand.ToString(CultureInfo.InvariantCulture),
+                    r.FreeToUse.ToString(CultureInfo.InvariantCulture),
+                    r.Incoming.ToString(CultureInfo.InvariantCulture),
+                    r.Outgoing.ToString(CultureInfo.InvariantCulture),
+                    r.Unit,
+                }
+            }).ToList();
+
+            return new ReportExportModel
+            {
+                Title = IsLowStockReport ? "Stock — low on hand" : "Stock",
+                CompanyName = company,
+                Subtitle = $"Generated {DateTime.Today:yyyy-MM-dd}  ·  {StockRows.Count} product(s)  ·  Total value {M(StockRows.Sum(r => r.TotalValue))}",
+                Columns = new[]
+                {
+                    new ReportExportColumn("SKU", width: 1.1),
+                    new ReportExportColumn("Name", width: 2.4),
+                    new ReportExportColumn("Category", width: 1.3),
+                    new ReportExportColumn("Total Value", rightAlign: true),
+                    new ReportExportColumn("Unit Cost", rightAlign: true),
+                    new ReportExportColumn("Sales Price", rightAlign: true),
+                    new ReportExportColumn("On Hand", rightAlign: true, width: 0.8),
+                    new ReportExportColumn("Free to Use", rightAlign: true, width: 0.9),
+                    new ReportExportColumn("Incoming", rightAlign: true, width: 0.8),
+                    new ReportExportColumn("Outgoing", rightAlign: true, width: 0.8),
+                    new ReportExportColumn("Unit", width: 0.7),
+                },
+                Rows = rows,
+            };
         }
 
         // --- Details Modal Logic ---
@@ -903,6 +1429,38 @@ namespace InventoryManagementSystem.UI.ViewModels
             ReportTitle = $"Month Close Summary — {now:MMMM yyyy}";
             MonthCloseSummary = await _monthCloseService.GetMonthCloseSummaryAsync(now.Year, now.Month);
         }
+    }
+
+    public class ProductLocationRow
+    {
+        public string LocationName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public int ReorderPoint { get; set; }
+    }
+
+    /// <summary>A collapsible group of stock moves in the Grouped view of Moves History.</summary>
+    public partial class MoveGroup : ObservableObject
+    {
+        public MoveGroup(string key, System.Collections.Generic.List<StockMoveHistoryRow> rows)
+        {
+            Key = string.IsNullOrWhiteSpace(key) ? "(none)" : key;
+            Rows = new ObservableCollection<StockMoveHistoryRow>(rows);
+            Count = rows.Count;
+            TotalIn = rows.Where(r => !r.IsOutbound).Sum(r => r.Quantity);
+            TotalOut = rows.Where(r => r.IsOutbound).Sum(r => r.Quantity);
+        }
+
+        public string Key { get; }
+        public ObservableCollection<StockMoveHistoryRow> Rows { get; }
+        public int Count { get; }
+        public int TotalIn { get; }
+        public int TotalOut { get; }
+        public string Summary => $"{Count} move(s)   +{TotalIn} / -{TotalOut}";
+        public string Glyph => IsExpanded ? "▾" : "▸";
+
+        [ObservableProperty] private bool _isExpanded;
+
+        partial void OnIsExpandedChanged(bool value) => OnPropertyChanged(nameof(Glyph));
     }
 
     public class ReportLineWrapper

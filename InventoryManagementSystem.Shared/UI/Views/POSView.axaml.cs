@@ -30,6 +30,24 @@ namespace InventoryManagementSystem.UI.Views
 
             await vm.ScanBarcodeCommand.ExecuteAsync(null);
             e.Handled = true;
+            KeepScannerFocus();
+        }
+
+        /// <summary>
+        /// Put the caret back in the product search after every scan so the cashier can keep
+        /// scanning item after item without clicking. Any leftover text (a failed scan) is
+        /// selected so the next scan overwrites it.
+        /// </summary>
+        private void KeepScannerFocus()
+        {
+            var box = this.FindControl<TextBox>("SearchBox");
+            if (box == null)
+            {
+                return;
+            }
+
+            box.Focus();
+            box.SelectAll();
         }
 
         /// <summary>
@@ -59,6 +77,7 @@ namespace InventoryManagementSystem.UI.Views
 
             await vm.ScanBarcodeCommand.ExecuteAsync(null);
             e.Handled = true;
+            KeepScannerFocus();
         }
 
         private bool CanCaptureAsBarcode(out POSViewModel? vm)

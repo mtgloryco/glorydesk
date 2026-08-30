@@ -74,8 +74,82 @@
                         <Button Content="Visit Website" Command="{Binding OpenWebsiteCommand}" FontSize="10" Padding="6,2" Margin="0,4,0,0" IsVisible="{Binding HasWebsite}" Background="#007ACC" Foreground="White" HorizontalAlignment="Left" />
                     </StackPanel>
                 </Border>
+
+                <!-- Selected customer's order history -->
+                <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6" IsVisible="{Binding SelectedCustomer, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBlock Grid.Column="0" Text="Orders" FontWeight="SemiBold" FontSize="14" />
+                            <TextBlock Grid.Column="1" Text="{Binding CustomerOrdersSummary}" FontSize="11" Foreground="Gray" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <TextBlock Text="This customer has not placed any orders yet." FontSize="12" Foreground="Gray"
+                                   IsVisible="{Binding !CustomerOrders.Count}" TextWrapping="Wrap" />
+
+                        <ItemsControl ItemsSource="{Binding CustomerOrders}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#EEE" BorderThickness="0,1,0,0" Padding="0,8">
+                                        <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto">
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding SalesOrder.SONumber}" FontWeight="SemiBold" FontSize="12" />
+                                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SalesOrder.TotalAmount, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" FontSize="12" />
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding SalesOrder.OrderDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontSize="11" Foreground="Gray" />
+                                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
+                                                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="3" Padding="5,1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding SalesOrder.Status}" FontSize="10" Foreground="Gray" />
+                                                </Border>
+                                                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="3" Padding="5,1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding SalesOrder.BillingStatus}" FontSize="10" Foreground="Gray" />
+                                                </Border>
+                                                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="3" Padding="5,1" VerticalAlignment="Center" IsVisible="{Binding SalesOrder.IsPosSale}">
+                                                    <TextBlock Text="POS" FontSize="10" Foreground="Gray" />
+                                                </Border>
+                                                <Button Content="Details" FontSize="10" Padding="6,2"
+                                                        Command="{Binding $parent[UserControl].((vm:CustomersViewModel)DataContext).ViewCustomerOrderCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Order Details Popup -->
+        <Grid Grid.RowSpan="3" Grid.ColumnSpan="2" Background="#80000000" IsVisible="{Binding IsOrderDetailsOpen}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" Width="620" MaxHeight="620" BoxShadow="0 10 30 0 #40000000">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*, Auto" Margin="0,0,0,12">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="{Binding DetailedOrder.SONumber}" FontSize="18" FontWeight="Bold" />
+                            <TextBlock Text="{Binding DetailedOrderMeta}" FontSize="12" Foreground="Gray" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="✕" Command="{Binding CloseOrderDetailsCommand}" Background="Transparent" BorderThickness="0" FontSize="14" />
+                    </Grid>
+
+                    <Border DockPanel.Dock="Bottom" BorderBrush="#DDD" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBlock Grid.Column="0" Text="Order Total" FontWeight="Bold" FontSize="14" />
+                            <TextBlock Grid.Column="1" Text="{Binding DetailedOrderTotal, StringFormat='{}{0:N2}'}" FontWeight="Bold" FontSize="14" />
+                        </Grid>
+                    </Border>
+
+                    <DataGrid ItemsSource="{Binding DetailedOrderLines}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" MaxHeight="420">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Product" Binding="{Binding ProductName}" Width="*" />
+                            <DataGridTextColumn Header="Qty" Binding="{Binding QuantityOrdered}" Width="60" />
+                            <DataGridTextColumn Header="Delivered" Binding="{Binding QuantityDelivered}" Width="80" />
+                            <DataGridTextColumn Header="Invoiced" Binding="{Binding QuantityInvoiced}" Width="80" />
+                            <DataGridTextColumn Header="Unit Price" Binding="{Binding UnitPrice, StringFormat='{}{0:N2}'}" Width="100" />
+                            <DataGridTextColumn Header="Line Total" Binding="{Binding LineTotal, StringFormat='{}{0:N2}'}" Width="110" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+        </Grid>
 
         <!-- Deletion Confirmation Dialog Overlay -->
         <Grid Grid.RowSpan="3" Grid.ColumnSpan="2" Background="#80000000" IsVisible="{Binding IsDeleteConfirmationOpen}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">

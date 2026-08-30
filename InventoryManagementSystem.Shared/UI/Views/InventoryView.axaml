@@ -46,6 +46,14 @@
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
+                    <Button Content="Reporting ▾" Background="#00838F" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4">
+                        <Button.Flyout>
+                            <MenuFlyout Placement="Bottom">
+                                <MenuItem Header="Stock" Command="{Binding GoToStockReportScreenCommand}"/>
+                                <MenuItem Header="Moves History" Command="{Binding GoToMovesHistoryScreenCommand}"/>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
                 </StackPanel>
             </Border>
 

@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+             x:Class="InventoryManagementSystem.UI.Views.AttendanceHubView"
+             x:DataType="vm:AttendanceHubViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Button.tab-btn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="Gray"/>
+            <Setter Property="BorderThickness" Value="0,0,0,3"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.tab-btn:pointerover">
+            <Setter Property="Background" Value="#10000000"/>
+        </Style>
+        <Style Selector="Button.active-tab">
+            <Setter Property="Foreground" Value="#4F46E5"/>
+            <Setter Property="BorderBrush" Value="#4F46E5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="20,4,20,0">
+            <TextBlock Text="Attendance &amp; Leave" FontSize="22" FontWeight="Bold" Margin="0,0,20,0" VerticalAlignment="Center"/>
+            <Button Content="Attendance" Command="{Binding SwitchTabCommand}" CommandParameter="Attendance"
+                    Classes="tab-btn" Classes.active-tab="{Binding IsAttendanceTab}"/>
+            <Button Content="Leave Requests" Command="{Binding SwitchTabCommand}" CommandParameter="Leave"
+                    Classes="tab-btn" Classes.active-tab="{Binding IsLeaveTab}"/>
+        </StackPanel>
+
+        <ContentControl Grid.Row="1" Content="{Binding CurrentTab}"/>
+    </Grid>
+</UserControl>

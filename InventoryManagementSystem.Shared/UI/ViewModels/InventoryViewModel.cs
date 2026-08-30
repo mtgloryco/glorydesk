@@ -239,6 +239,8 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly Action? _goToForecasting;
         private readonly Action? _goToLocations;
         private readonly Action? _goToDamageWriteOff;
+        private readonly Action? _goToStockReport;
+        private readonly Action? _goToMovesHistory;
         private readonly Action<int?>? _goToPurchaseOrderDetails;
         private readonly Action<int?>? _goToSalesOrderDetails;
         private readonly BarcodeService? _barcodeService;
@@ -290,7 +292,9 @@ namespace InventoryManagementSystem.UI.ViewModels
             BarcodeService? barcodeService = null,
             Action? goToDamageWriteOff = null,
             Action<int?>? goToPurchaseOrderDetails = null,
-            Action<int?>? goToSalesOrderDetails = null)
+            Action<int?>? goToSalesOrderDetails = null,
+            Action? goToStockReport = null,
+            Action? goToMovesHistory = null)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
@@ -309,6 +313,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             _goToForecasting = goToForecasting;
             _goToLocations = goToLocations;
             _goToDamageWriteOff = goToDamageWriteOff;
+            _goToStockReport = goToStockReport;
+            _goToMovesHistory = goToMovesHistory;
             _goToPurchaseOrderDetails = goToPurchaseOrderDetails;
             _goToSalesOrderDetails = goToSalesOrderDetails;
             _customFieldService = customFieldService;
@@ -404,6 +410,8 @@ namespace InventoryManagementSystem.UI.ViewModels
         }
 
         [RelayCommand] private void GoToRfqScreen() => _goToRfq?.Invoke();
+        [RelayCommand] private void GoToStockReportScreen() => _goToStockReport?.Invoke();
+        [RelayCommand] private void GoToMovesHistoryScreen() => _goToMovesHistory?.Invoke();
         [RelayCommand] private void GoToCycleCountScreen() => _goToCycleCount?.Invoke();
         [RelayCommand] private void GoToReorderDashboardScreen() => _goToReorderDashboard?.Invoke();
         [RelayCommand] private void GoToForecastingScreen() => _goToForecasting?.Invoke();

@@ -13,6 +13,7 @@ namespace InventoryManagementSystem.UI.ViewModels
     {
         private readonly CustomerService _customerService;
         private readonly DocumentAttachmentService? _attachmentService;
+        private readonly SalesOrderService? _salesOrderService;
 
         public LanguageService Language { get; }
 
@@ -46,6 +47,29 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty]
         private bool _isFormVisible;
 
+        // --- Selected customer's order history ---
+        [ObservableProperty]
+        private ObservableCollection<SalesOrderListItem> _customerOrders = new();
+
+        [ObservableProperty]
+        private string _customerOrdersSummary = string.Empty;
+
+        // --- Order details popup ---
+        [ObservableProperty]
+        private bool _isOrderDetailsOpen;
+
+        [ObservableProperty]
+        private SalesOrder? _detailedOrder;
+
+        [ObservableProperty]
+        private string _detailedOrderMeta = string.Empty;
+
+        [ObservableProperty]
+        private decimal _detailedOrderTotal;
+
+        [ObservableProperty]
+        private ObservableCollection<SalesOrderLineView> _detailedOrderLines = new();
+
         public ObservableCollection<string> PaymentTermsOptions { get; } = new()
         {
             "Direct Payment",
@@ -57,11 +81,13 @@ namespace InventoryManagementSystem.UI.ViewModels
         public CustomersViewModel(
             CustomerService customerService,
             LanguageService languageService,
-            DocumentAttachmentService? attachmentService = null)
+            DocumentAttachmentService? attachmentService = null,
+            SalesOrderService? salesOrderService = null)
         {
             _customerService = customerService;
             Language = languageService;
             _attachmentService = attachmentService;
+            _salesOrderService = salesOrderService;
             LoadCustomersCommand.Execute(null);
         }
 
@@ -194,6 +220,44 @@ namespace InventoryManagementSystem.UI.ViewModels
         {
             HasWebsite = value != null && !string.IsNullOrWhiteSpace(value.WebsiteUrl);
             _ = LoadCustomerAttachmentsAsync();
+            _ = LoadCustomerOrdersAsync();
+        }
+
+        private async Task LoadCustomerOrdersAsync()
+        {
+            CustomerOrders.Clear();
+            CustomerOrdersSummary = string.Empty;
+            if (_salesOrderService == null || SelectedCustomer == null || SelectedCustomer.Id <= 0) return;
+
+            var orders = await _salesOrderService.GetSalesOrdersForCustomerAsync(SelectedCustomer.Id);
+            foreach (var order in orders) CustomerOrders.Add(order);
+
+            var total = orders.Sum(o => o.SalesOrder.TotalAmount);
+            CustomerOrdersSummary = orders.Count == 0
+                ? "No orders yet"
+                : $"{orders.Count} order(s) · {total:N0} total";
+        }
+
+        [RelayCommand]
+        private async Task ViewCustomerOrder(SalesOrderListItem? item)
+        {
+            if (item == null || _salesOrderService == null) return;
+
+            DetailedOrder = item.SalesOrder;
+            DetailedOrderTotal = item.SalesOrder.TotalAmount;
+            DetailedOrderMeta =
+                $"{item.SalesOrder.OrderDate:yyyy-MM-dd HH:mm}  ·  {item.SalesOrder.Status}  ·  {item.SalesOrder.BillingStatus}"
+                + (item.SalesOrder.IsPosSale ? "  ·  POS" : "");
+
+            var lines = await _salesOrderService.GetOrderLinesDetailedAsync(item.SalesOrder.Id);
+            DetailedOrderLines = new ObservableCollection<SalesOrderLineView>(lines);
+            IsOrderDetailsOpen = true;
+        }
+
+        [RelayCommand]
+        private void CloseOrderDetails()
+        {
+            IsOrderDetailsOpen = false;
         }
 
         private async Task LoadCustomerAttachmentsAsync()

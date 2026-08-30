@@ -170,6 +170,48 @@ namespace InventoryManagementSystem.Services
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Every sales order placed by one customer - regular sales orders and POS sales alike -
+        /// newest first, for the customer profile's order history.
+        /// </summary>
+        public async Task<List<SalesOrderListItem>> GetSalesOrdersForCustomerAsync(int customerId)
+        {
+            var salesOrders = await _databaseService.Connection.Table<SalesOrder>()
+                .Where(s => s.CustomerId == customerId && !s.IsDeleted)
+                .OrderByDescending(s => s.OrderDate)
+                .ToListAsync();
+
+            var customer = await _databaseService.Connection.FindAsync<Customer>(customerId);
+            var customerName = customer?.Name ?? "Unknown Customer";
+
+            return salesOrders
+                .Select(so => new SalesOrderListItem { SalesOrder = so, CustomerName = customerName })
+                .ToList();
+        }
+
+        /// <summary>Sold lines of one order, each joined to its product name, for read-only detail popups.</summary>
+        public async Task<List<SalesOrderLineView>> GetOrderLinesDetailedAsync(int salesOrderId)
+        {
+            var items = await _databaseService.Connection.Table<SalesOrderItem>()
+                .Where(i => i.SalesOrderId == salesOrderId && !i.IsDeleted)
+                .ToListAsync();
+
+            if (items.Count == 0) return new List<SalesOrderLineView>();
+
+            var products = (await _databaseService.Connection.Table<Product>().ToListAsync())
+                .ToDictionary(p => p.Id);
+
+            return items.Select(i => new SalesOrderLineView
+            {
+                ProductName = products.TryGetValue(i.ProductId, out var p) ? p.Name : $"Product #{i.ProductId}",
+                QuantityOrdered = i.QuantityOrdered,
+                QuantityDelivered = i.QuantityDelivered,
+                QuantityInvoiced = i.QuantityInvoiced,
+                UnitPrice = i.UnitPrice,
+                LineTotal = i.QuantityOrdered * i.UnitPrice
+            }).ToList();
+        }
+
         public async Task<bool> DeleteSalesOrderAsync(int soId)
         {
             var items = await _databaseService.Connection.Table<SalesOrderItem>()
@@ -581,6 +623,80 @@ namespace InventoryManagementSystem.Services
                 });
             }
             return items;
+        }
+
+        /// <summary>
+        /// Flat, denormalised POS order lines for the Point of Sale → Reporting pivot / graph.
+        /// One <see cref="PosOrderReportRow"/> per sold line, joined in memory to product,
+        /// category, customer, payment method and session (same approach as
+        /// <see cref="GetPosSalesOrdersAsync"/>).
+        /// </summary>
+        public async Task<List<PosOrderReportRow>> GetPosOrderReportRowsAsync(DateTime? from, DateTime? to)
+        {
+            var conn = _databaseService.Connection;
+
+            var orders = await conn.Table<SalesOrder>()
+                .Where(so => so.IsPosSale && !so.IsDeleted)
+                .ToListAsync();
+
+            var fromDate = from?.Date;
+            var toExclusive = to?.Date.AddDays(1);
+            orders = orders
+                .Where(o => (fromDate == null || o.OrderDate >= fromDate)
+                         && (toExclusive == null || o.OrderDate < toExclusive))
+                .ToList();
+
+            if (orders.Count == 0) return new List<PosOrderReportRow>();
+
+            var orderIds = orders.Select(o => o.Id).ToHashSet();
+
+            var allItems = await conn.Table<SalesOrderItem>().Where(i => !i.IsDeleted).ToListAsync();
+            var items = allItems.Where(i => orderIds.Contains(i.SalesOrderId)).ToList();
+
+            var products = (await conn.Table<Product>().ToListAsync()).ToDictionary(p => p.Id);
+            var customers = (await conn.Table<Customer>().ToListAsync()).ToDictionary(c => c.Id);
+            var methods = (await conn.Table<PosPaymentMethod>().ToListAsync()).ToDictionary(m => m.Id);
+            var sessions = (await conn.Table<PosSession>().ToListAsync()).ToDictionary(s => s.Id);
+
+            var orderTotals = orders.ToDictionary(o => o.Id, o => o.TotalAmount);
+            var itemsByOrder = items.GroupBy(i => i.SalesOrderId).ToDictionary(g => g.Key, g => g.ToList());
+
+            var rows = new List<PosOrderReportRow>();
+            foreach (var order in orders)
+            {
+                var customer = order.CustomerId != 0 && customers.TryGetValue(order.CustomerId, out var c) ? c.Name : "Walk-in Customer";
+                var method = order.PosPaymentMethodId is int pm && methods.TryGetValue(pm, out var m) ? m.Name : "None";
+                var session = order.PosSessionId is int ps && sessions.TryGetValue(ps, out var s) ? s.SessionNumber : "None";
+                var cashier = string.IsNullOrWhiteSpace(order.CreatedByUsername) ? "None" : order.CreatedByUsername;
+
+                if (!itemsByOrder.TryGetValue(order.Id, out var orderItems) || orderItems.Count == 0)
+                {
+                    continue;
+                }
+
+                foreach (var item in orderItems)
+                {
+                    var product = products.TryGetValue(item.ProductId, out var p) ? p : null;
+                    rows.Add(new PosOrderReportRow
+                    {
+                        OrderId = order.Id,
+                        OrderNumber = order.SONumber,
+                        OrderDate = order.OrderDate,
+                        Cashier = cashier,
+                        PaymentMethod = method,
+                        SessionNumber = session,
+                        CustomerName = customer,
+                        ProductName = product?.Name ?? "None",
+                        ProductCategory = string.IsNullOrWhiteSpace(product?.Category) ? "None" : product!.Category,
+                        Currency = order.Currency,
+                        Quantity = item.QuantityOrdered,
+                        LineTotal = item.UnitPrice * item.QuantityOrdered,
+                        OrderTotal = orderTotals.TryGetValue(order.Id, out var t) ? t : 0m,
+                    });
+                }
+            }
+
+            return rows;
         }
 
         public async Task<string> GeneratePosNumberAsync()

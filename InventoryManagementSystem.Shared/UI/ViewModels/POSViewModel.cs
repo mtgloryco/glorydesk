@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -102,10 +103,11 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private string _lastReceiptText = string.Empty; // Keep for fallback/display
 
         // --- Screen Navigation ---
-        [ObservableProperty] private string _activeTab = "Sales"; // "Sales", "Orders", "PaymentMethods"
+        [ObservableProperty] private string _activeTab = "Sales"; // "Sales", "Orders", "PaymentMethods", "Reporting"
         public bool IsSalesTabActive => ActiveTab == "Sales";
         public bool IsOrdersTabActive => ActiveTab == "Orders";
         public bool IsPaymentMethodsTabActive => ActiveTab == "PaymentMethods";
+        public bool IsReportingTabActive => ActiveTab == "Reporting";
 
         // Only the Sales screen needs a register open - Orders history and Configuration are
         // freely usable regardless, since they're lookup/admin screens rather than a till.
@@ -149,9 +151,13 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private bool _isCheckoutSuccess;
 
         // --- POS Order History ---
+        public const string AllCustomersOption = "All Customers";
         [ObservableProperty] private ObservableCollection<SalesOrderListItem> _posOrders = new();
         [ObservableProperty] private ObservableCollection<CustomerOrderGroup> _posOrderGroups = new();
         [ObservableProperty] private string _orderSearchText = string.Empty;
+        [ObservableProperty] private ObservableCollection<string> _posOrderCustomerOptions = new() { AllCustomersOption };
+        [ObservableProperty] private string _selectedPosOrderCustomer = AllCustomersOption;
+        private bool _isLoadingPosOrders;
 
         // --- POS Order Details Modal ---
         [ObservableProperty] private bool _isOrderDetailsOpen;
@@ -236,24 +242,58 @@ namespace InventoryManagementSystem.UI.ViewModels
             _ = CheckForOpenSessionAsync();
         }
 
+        // Debounce the product-grid filter so a barcode burst (10-13 keystrokes in a few ms)
+        // doesn't kick off a dozen overlapping GetAllProductsAsync passes.
+        private CancellationTokenSource? _searchDebounceCts;
+
+        // Guards against a scanner's suffix keys (CR+LF, Enter+Tab) firing the same scan twice.
+        private string _lastScanText = string.Empty;
+        private DateTime _lastScanAtUtc;
+
         async partial void OnSearchTextChanged(string value)
         {
-            await LoadProducts();
+            _searchDebounceCts?.Cancel();
+            var cts = new CancellationTokenSource();
+            _searchDebounceCts = cts;
+            try
+            {
+                await Task.Delay(150, cts.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
+
+            if (!cts.IsCancellationRequested)
+            {
+                await LoadProducts();
+            }
         }
 
         [RelayCommand]
         private async Task ScanBarcodeAsync()
         {
-            if (string.IsNullOrWhiteSpace(SearchText))
+            var code = SearchText?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(code))
             {
                 return;
             }
 
-            var product = await _barcodeService.FindProductByBarcodeAsync(SearchText.Trim());
+            // Ignore an identical trigger within 150ms of the last one - that is the scanner's
+            // trailing CR/LF, not a second deliberate scan.
+            var now = DateTime.UtcNow;
+            if (code == _lastScanText && (now - _lastScanAtUtc).TotalMilliseconds < 150)
+            {
+                return;
+            }
+            _lastScanText = code;
+            _lastScanAtUtc = now;
+
+            var product = await _barcodeService.FindProductByBarcodeAsync(code);
             if (product == null)
             {
-                BarcodeStatusMessage = "No product found for this barcode.";
-                return;
+                BarcodeStatusMessage = $"No product matches \"{code}\".";
+                return; // keep the text so the cashier can see / retry what was scanned
             }
 
             if (!product.AvailableInPOS || !product.CanBeSold)
@@ -264,7 +304,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
             AddToCart(product);
             SearchText = string.Empty;
-            BarcodeStatusMessage = $"Added {product.Name} to cart.";
+            BarcodeStatusMessage = $"Added {product.Name}.";
             await LoadProducts();
         }
 
@@ -520,6 +560,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             OnPropertyChanged(nameof(IsSalesTabActive));
             OnPropertyChanged(nameof(IsOrdersTabActive));
             OnPropertyChanged(nameof(IsPaymentMethodsTabActive));
+            OnPropertyChanged(nameof(IsReportingTabActive));
             OnPropertyChanged(nameof(ShowSalesContent));
             OnPropertyChanged(nameof(ShowOpenRegisterPrompt));
 
@@ -531,6 +572,10 @@ namespace InventoryManagementSystem.UI.ViewModels
             {
                 _ = LoadPaymentMethodsDataAsync();
             }
+            else if (value == "Reporting")
+            {
+                _ = LoadOrderReportAsync();
+            }
         }
 
         partial void OnOrderSearchTextChanged(string value)
@@ -538,11 +583,36 @@ namespace InventoryManagementSystem.UI.ViewModels
             _ = LoadPosOrdersAsync();
         }
 
+        partial void OnSelectedPosOrderCustomerChanged(string value)
+        {
+            _ = LoadPosOrdersAsync();
+        }
+
         private async Task LoadPosOrdersAsync()
         {
+            if (_isLoadingPosOrders) return;
+            _isLoadingPosOrders = true;
             try
             {
                 var list = await _salesOrderService.GetPosSalesOrdersAsync();
+
+                // Rebuild the customer filter dropdown from the full (unfiltered) set of POS orders.
+                var options = new List<string> { AllCustomersOption };
+                options.AddRange(list.Select(o => o.CustomerName).Distinct().OrderBy(n => n));
+                if (!options.SequenceEqual(PosOrderCustomerOptions))
+                {
+                    PosOrderCustomerOptions = new ObservableCollection<string>(options);
+                }
+                if (!options.Contains(SelectedPosOrderCustomer))
+                {
+                    SelectedPosOrderCustomer = AllCustomersOption;
+                }
+
+                var filterByCustomer = SelectedPosOrderCustomer != AllCustomersOption;
+                if (filterByCustomer)
+                {
+                    list = list.Where(o => o.CustomerName == SelectedPosOrderCustomer).ToList();
+                }
 
                 if (!string.IsNullOrWhiteSpace(OrderSearchText))
                 {
@@ -569,7 +639,8 @@ namespace InventoryManagementSystem.UI.ViewModels
                 var previouslyExpanded = PosOrderGroups.Where(g => g.IsExpanded).Select(g => g.CustomerName).ToHashSet();
                 foreach (var group in groups)
                 {
-                    if (previouslyExpanded.Contains(group.CustomerName))
+                    // Keep prior expand state, but always expand when the list is narrowed to one customer.
+                    if (previouslyExpanded.Contains(group.CustomerName) || (filterByCustomer && groups.Count == 1))
                     {
                         group.IsExpanded = true;
                     }
@@ -580,6 +651,10 @@ namespace InventoryManagementSystem.UI.ViewModels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to load POS orders: {ex.Message}");
+            }
+            finally
+            {
+                _isLoadingPosOrders = false;
             }
         }
 
