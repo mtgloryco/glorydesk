@@ -7,7 +7,7 @@ This usually means **Microsoft Visual C++ 2015–2022 (x64)** is missing — **n
 ### Quick fix for users
 
 1. Uninstall any old **Inventory Management System** app (Settings → Apps)
-2. Install **`GloryDesk_Setup_v1.0.1_Windows.exe`** (run as administrator)
+2. Install **`GloryDesk_Setup_v1.2.0_Windows.exe`** (run as administrator)
 3. If it still fails, open `C:\Program Files\GloryDesk\` and double-click **`vc_redist.x64.exe`**
 4. Or download: [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe)
 5. Restart the PC and launch **Glory Desk**
@@ -37,7 +37,7 @@ Output:
 
 | File | Purpose |
 |------|---------|
-| `Releases\GloryDesk_Setup_v1.0.1_Windows.exe` | **Share this** with customers |
+| `Releases\GloryDesk_Setup_v1.2.0_Windows.exe` | **Share this** with customers |
 | `Releases\GloryDesk_Windows.zip` | Portable folder (no installer) |
 
 The installer includes **`vc_redist.x64.exe`** in the app folder so users can reinstall it manually if needed.
