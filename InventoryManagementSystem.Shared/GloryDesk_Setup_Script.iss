@@ -1,7 +1,7 @@
 ; These can be overridden from the command line, e.g.
 ;   ISCC /DMyAppVersion=1.2.3 /DPayloadDir=C:\path\to\publish /DRedistDir=C:\path\to\redist GloryDesk_Setup_Script.iss
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.1"
+  #define MyAppVersion "1.2.0"
 #endif
 #ifndef PayloadDir
   #define PayloadDir "../Releases/Windows"

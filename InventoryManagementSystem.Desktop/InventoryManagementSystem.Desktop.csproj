@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>GloryDesk</AssemblyName>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Product>Glory Desk</Product>
     <AssemblyTitle>Glory Desk</AssemblyTitle>
     <Description>Stock, sales and accounts in one place — by MT GLORY</Description>

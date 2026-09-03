@@ -3,6 +3,12 @@ name: Build and Release
 on:
     release:
         types: [published]
+    workflow_dispatch:
+        inputs:
+            version:
+                description: 'Version to build (e.g. 1.2.0)'
+                required: false
+                default: '1.2.0'
 
 permissions:
     contents: write
@@ -18,7 +24,7 @@ jobs:
             - name: Setup .NET
               uses: actions/setup-dotnet@v4
               with:
-                  dotnet-version: "8.0.x"
+                  dotnet-version: "10.0.x"
 
             - name: Install Velopack Tool
               run: dotnet tool install -g vpk
@@ -27,7 +33,13 @@ jobs:
               id: version
               shell: pwsh
               run: |
-                  $tag = "${{ github.event.release.tag_name }}"
+                  $tag = "${{ github.event.inputs.version }}"
+                  if (-not $tag) {
+                      $tag = "${{ github.event.release.tag_name }}"
+                  }
+                  if (-not $tag) {
+                      $tag = "1.2.0"
+                  }
                   $version = $tag.TrimStart('v')
                   if ($version -match '^(\d+\.\d+\.\d+)') {
                       $version = $Matches[1]
@@ -39,10 +51,10 @@ jobs:
                   Write-Host "Building version: $version"
 
             - name: Publish App
-              run: dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj -c Release -o ./publish
+              run: dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj -c Release -r win-x64 --self-contained true -o ./publish
 
             - name: Pack Release (Velopack)
-              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "GloryDesk.exe"
+              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "GloryDesk.exe" --packTitle "Glory Desk" --packAuthors "MT GLORY CO"
 
             - name: Install Inno Setup
               run: choco install innosetup -y
@@ -78,7 +90,7 @@ jobs:
             - name: Upload Release Assets
               uses: softprops/action-gh-release@v1
               with:
-                  tag_name: ${{ github.event.release.tag_name }}
+                  tag_name: ${{ github.event.release.tag_name || format('v{0}', env.VERSION) }}
                   files: Releases/*
                   token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -96,6 +108,9 @@ jobs:
                   }
 
                   $tag = "${{ github.event.release.tag_name }}"
+                  if (-not $tag) {
+                    $tag = "v$env:VERSION"
+                  }
                   $version = $env:VERSION
                   $repo = "${{ github.repository }}"
 
@@ -142,7 +157,7 @@ jobs:
             - name: Setup .NET
               uses: actions/setup-dotnet@v4
               with:
-                  dotnet-version: "8.0.x"
+                  dotnet-version: "10.0.x"
 
             - name: Install Velopack Tool
               run: dotnet tool install -g vpk
@@ -150,26 +165,32 @@ jobs:
             - name: Get Version (Strip v)
               id: version
               run: |
-                  TAG="${{ github.event.release.tag_name }}"
+                  TAG="${{ github.event.inputs.version }}"
+                  if [ -z "$TAG" ]; then
+                      TAG="${{ github.event.release.tag_name }}"
+                  fi
+                  if [ -z "$TAG" ]; then
+                      TAG="1.2.0"
+                  fi
                   VERSION="${TAG#v}"
                   if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+) ]]; then
                       VERSION="${BASH_REMATCH[1]}"
                   else
-                      echo "Release tag must be SemVer2 (e.g. v1.0.0), got: $TAG"
+                      echo "Release tag must be SemVer2 (e.g. v1.2.0), got: $TAG"
                       exit 1
                   fi
                   echo "VERSION=$VERSION" >> $GITHUB_ENV
                   echo "Building version: $VERSION"
 
             - name: Publish App
-              run: dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj -c Release -o ./publish
+              run: dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj -c Release -r linux-x64 --self-contained true -o ./publish
 
             - name: Pack Release (Velopack)
-              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "GloryDesk"
+              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "GloryDesk" --packTitle "Glory Desk" --packAuthors "MT GLORY CO"
 
             - name: Upload Release Assets
               uses: softprops/action-gh-release@v1
               with:
-                  tag_name: ${{ github.event.release.tag_name }}
+                  tag_name: ${{ github.event.release.tag_name || format('v{0}', env.VERSION) }}
                   files: Releases/*
                   token: ${{ secrets.GITHUB_TOKEN }}

@@ -1069,7 +1069,7 @@ public partial class MainViewModel : ViewModelBase
 
     private async Task CheckForUpdatesInternal(bool userInitiated)
     {
-        if (UpdateStatusText == "Checking...") return; // Prevent spam
+        if (UpdateStatusText == "Checking..." || UpdateStatusText == "Downloading...") return; // Prevent spam
 
         if (userInitiated) UpdateStatusText = "Checking...";
         
@@ -1124,7 +1124,9 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public async Task InstallUpdate()
     {
+        UpdateStatusText = "Downloading...";
         await _updateService.DownloadAndRestartAsync();
+        UpdateStatusText = "Check Updates";
     }
 
     [RelayCommand]
