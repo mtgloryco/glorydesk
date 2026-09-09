@@ -92,6 +92,114 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private Avalonia.Controls.GridLength _sidebarGridLength = new(0);
 
+    [ObservableProperty]
+    private string _activeNavKey = "Dashboard";
+
+    [ObservableProperty]
+    private bool _isSidebarCollapsed;
+
+    [ObservableProperty]
+    private bool _isCloudSyncExpanded;
+
+    public string UserInitial => string.IsNullOrWhiteSpace(CurrentUserName) ? "U" : CurrentUserName[..1].ToUpperInvariant();
+    public string UserRoleDisplay => IsAdmin ? "Administrator" : "Staff";
+
+    public bool IsDashboardActive => ActiveNavKey == "Dashboard";
+    public bool IsPOSActive => ActiveNavKey == "POS";
+    public bool IsInventoryActive => ActiveNavKey == "Inventory";
+    public bool IsManufacturingActive => ActiveNavKey == "Manufacturing";
+    public bool IsCustomersActive => ActiveNavKey == "Customers";
+    public bool IsSuppliersActive => ActiveNavKey == "Suppliers";
+    public bool IsAccountsPayableActive => ActiveNavKey == "AccountsPayable";
+    public bool IsAccountingActive => ActiveNavKey == "Accounting";
+    public bool IsEmployeesActive => ActiveNavKey == "Employees";
+    public bool IsAttendanceActive => ActiveNavKey == "Attendance";
+    public bool IsReportsActive => ActiveNavKey == "Reports";
+    public bool IsEnterpriseActive => ActiveNavKey == "Enterprise";
+    public bool IsAuditTrailActive => ActiveNavKey == "AuditTrail";
+    public bool IsReturnsActive => ActiveNavKey == "Returns";
+    public bool IsExpensesActive => ActiveNavKey == "Expenses";
+    public bool IsUsersActive => ActiveNavKey == "Users";
+    public bool IsLicenseActive => ActiveNavKey == "License";
+    public bool IsSettingsActive => ActiveNavKey == "Settings";
+
+    partial void OnActiveNavKeyChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsDashboardActive));
+        OnPropertyChanged(nameof(IsPOSActive));
+        OnPropertyChanged(nameof(IsInventoryActive));
+        OnPropertyChanged(nameof(IsManufacturingActive));
+        OnPropertyChanged(nameof(IsCustomersActive));
+        OnPropertyChanged(nameof(IsSuppliersActive));
+        OnPropertyChanged(nameof(IsAccountsPayableActive));
+        OnPropertyChanged(nameof(IsAccountingActive));
+        OnPropertyChanged(nameof(IsEmployeesActive));
+        OnPropertyChanged(nameof(IsAttendanceActive));
+        OnPropertyChanged(nameof(IsReportsActive));
+        OnPropertyChanged(nameof(IsEnterpriseActive));
+        OnPropertyChanged(nameof(IsAuditTrailActive));
+        OnPropertyChanged(nameof(IsReturnsActive));
+        OnPropertyChanged(nameof(IsExpensesActive));
+        OnPropertyChanged(nameof(IsUsersActive));
+        OnPropertyChanged(nameof(IsLicenseActive));
+        OnPropertyChanged(nameof(IsSettingsActive));
+    }
+
+    partial void OnCurrentUserNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(UserInitial));
+    }
+
+    partial void OnIsAdminChanged(bool value)
+    {
+        OnPropertyChanged(nameof(UserRoleDisplay));
+    }
+
+    partial void OnCurrentPageChanged(ViewModelBase value)
+    {
+        UpdateActiveNavKey(value);
+    }
+
+    private void UpdateActiveNavKey(ViewModelBase? page)
+    {
+        if (page == null) return;
+        ActiveNavKey = page switch
+        {
+            DashboardViewModel => "Dashboard",
+            POSViewModel => "POS",
+            InventoryViewModel or StockTransferViewModel or LocationsViewModel or CycleCountViewModel or ReorderDashboardViewModel or ExpiryDashboardViewModel or DamageWriteOffViewModel or BundleViewModel => "Inventory",
+            ManufacturingViewModel => "Manufacturing",
+            CustomersViewModel or SalesViewModel => "Customers",
+            SuppliersViewModel or PurchaseOrdersViewModel or RfqViewModel => "Suppliers",
+            AccountsPayableViewModel => "AccountsPayable",
+            AccountingViewModel => "Accounting",
+            EmployeesViewModel => "Employees",
+            AttendanceHubViewModel or AttendanceViewModel or LeaveRequestsViewModel => "Attendance",
+            ReportsViewModel or AnalyticsViewModel or AdvancedAnalyticsViewModel or ForecastingViewModel => "Reports",
+            EnterpriseViewModel => "Enterprise",
+            AuditTrailViewModel => "AuditTrail",
+            ReturnsViewModel => "Returns",
+            ExpenseViewModel => "Expenses",
+            UsersViewModel => "Users",
+            LicenseViewModel => "License",
+            SettingsViewModel => "Settings",
+            _ => ActiveNavKey
+        };
+    }
+
+    [RelayCommand]
+    public void ToggleSidebarCollapse()
+    {
+        IsSidebarCollapsed = !IsSidebarCollapsed;
+        SidebarGridLength = new Avalonia.Controls.GridLength(IsSidebarCollapsed ? 70 : 260);
+    }
+
+    [RelayCommand]
+    public void ToggleCloudSyncExpanded()
+    {
+        IsCloudSyncExpanded = !IsCloudSyncExpanded;
+    }
+
     // Update Properties
     [ObservableProperty]
     private bool _isUpdateAvailable;
@@ -255,7 +363,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         IsLoggedIn = true;
-        SidebarGridLength = new Avalonia.Controls.GridLength(250);
+        SidebarGridLength = new Avalonia.Controls.GridLength(IsSidebarCollapsed ? 70 : 260);
         CurrentUserName = UserSession.CurrentUser?.Username ?? "Unknown";
         IsAdmin = UserSession.IsAdmin;
 
@@ -309,6 +417,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanAccessCustomers));
         OnPropertyChanged(nameof(CanAccessPurchaseOrders));
         OnPropertyChanged(nameof(CanAccessAccountsPayable));
+        OnPropertyChanged(nameof(CanAccessAccounting));
         OnPropertyChanged(nameof(CanAccessForecasting));
         OnPropertyChanged(nameof(CanAccessExpiry));
         OnPropertyChanged(nameof(CanAccessLocations));
@@ -520,7 +629,7 @@ public partial class MainViewModel : ViewModelBase
             // Update UI
             if (previousPage is DashboardViewModel)
             {
-               SidebarGridLength = new Avalonia.Controls.GridLength(250);
+               SidebarGridLength = new Avalonia.Controls.GridLength(IsSidebarCollapsed ? 70 : 260);
             }
             // Add other checks if needed for sidebar visibility, though mostly Dashboard controls it
              
@@ -547,6 +656,7 @@ public partial class MainViewModel : ViewModelBase
     public bool CanAccessCustomers => HasRolePermission(RolePermissions.ManageCustomers) || HasRolePermission(RolePermissions.ViewInventory);
     public bool CanAccessPurchaseOrders => _licenseService.CanAccessPurchaseOrders() && HasRolePermission(RolePermissions.ManagePurchasing);
     public bool CanAccessAccountsPayable => CanAccessPurchaseOrders;
+    public bool CanAccessAccounting => HasRolePermission(RolePermissions.ManageSettings) || HasRolePermission(RolePermissions.ViewReports) || HasRolePermission(RolePermissions.ManagePurchasing) || HasRolePermission(RolePermissions.ManageSales);
     public bool CanAccessForecasting => _licenseService.CanAccessForecasting() && HasRolePermission(RolePermissions.ManagePurchasing);
     public bool CanAccessExpiry => _licenseService.CanAccessExpiryTracking() && IsModuleEnabled("Expiry") && HasRolePermission(RolePermissions.ManageInventory);
     public bool CanAccessLocations => _licenseService.CanAccessMultiLocation() && IsModuleEnabled("MultiLocation") && HasRolePermission(RolePermissions.ManageInventory);
@@ -618,6 +728,10 @@ public partial class MainViewModel : ViewModelBase
             new("Customers", "Customers", GoToCustomers),
             new("Suppliers", "Suppliers", GoToSuppliers),
             new("Accounts Payable", "Money Owed > Accounts Payable", GoToAccountsPayable),
+            new("Accounting", "Finance > Accounting", GoToAccounting),
+            new("Customer Invoices", "Finance > Accounting > Invoices", GoToAccounting),
+            new("Vendor Bills", "Finance > Accounting > Bills", GoToAccounting),
+            new("Chart of Accounts", "Finance > Accounting > Accounts", GoToAccounting),
             new("Staff", "Team > Staff", GoToEmployees),
             new("Attendance", "Team > Attendance & Leave", GoToAttendance),
             new("Leave Requests", "Team > Attendance & Leave", GoToLeaveRequests),
@@ -715,7 +829,7 @@ public partial class MainViewModel : ViewModelBase
     public void GoToDashboard()
     {
         NavigateTo(new DashboardViewModel(_inventoryService, _licenseService, Language, _settingsService, _dailyBriefingService, _salesOrderService, GoToInventory, GoToReports, GoToPOS));
-        SidebarGridLength = new Avalonia.Controls.GridLength(250);
+        SidebarGridLength = new Avalonia.Controls.GridLength(IsSidebarCollapsed ? 70 : 260);
     }
 
     [RelayCommand]
@@ -863,6 +977,32 @@ public partial class MainViewModel : ViewModelBase
 
         NavigateTo(new AccountsPayableViewModel(
             _agingReportService, _purchaseOrderService, _inventoryService, _taxService, _paymentService,
+            GoToPurchaseOrderDetails));
+    }
+
+    [RelayCommand]
+    public void GoToAccounting()
+    {
+        if (!CanAccessAccounting) return;
+
+        NavigateTo(new AccountingViewModel(
+            _salesOrderService,
+            _purchaseOrderService,
+            _agingReportService,
+            _paymentService,
+            _accountService,
+            _accountingReportService,
+            _journalService,
+            _taxService,
+            _vatExportService,
+            _monthCloseService,
+            _customerService,
+            _supplierService,
+            _inventoryService,
+            _settingsService,
+            Language,
+            _licenseService,
+            GoToSalesOrderDetails,
             GoToPurchaseOrderDetails));
     }
 

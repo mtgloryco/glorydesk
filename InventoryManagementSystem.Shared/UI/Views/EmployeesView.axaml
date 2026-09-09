@@ -9,29 +9,32 @@
     <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="2*,*" Margin="20">
         <!-- Header Panel with Add button -->
         <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="*, Auto" Margin="0,0,0,16">
-            <TextBlock Grid.Column="0" Text="Staff" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Content="+ Add Employee" Command="{Binding ShowAddEmployeeFormCommand}" Background="#007ACC" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4" />
+            <TextBlock Grid.Column="0" Text="Staff" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="+ Add Employee" Command="{Binding ShowAddEmployeeFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" />
         </Grid>
 
         <!-- Search Bar -->
         <Grid Grid.Row="1" Grid.Column="0" ColumnDefinitions="*,Auto" Margin="0,0,12,12">
-            <TextBox Grid.Column="0" Watermark="Search staff by name, position, department, phone, email, national ID..." Text="{Binding SearchText}" VerticalAlignment="Center" />
+            <TextBox Grid.Column="0" Watermark="Search staff by name, position, department, phone, email, national ID..." Text="{Binding SearchText}" VerticalAlignment="Center" CornerRadius="6" />
             <CheckBox Grid.Column="1" Content="Show terminated" IsChecked="{Binding ShowInactive}" Margin="12,0,0,0" VerticalAlignment="Center" />
         </Grid>
 
-        <DataGrid Grid.Row="2" Grid.Column="0" ItemsSource="{Binding Employees}" SelectedItem="{Binding SelectedEmployee}" AutoGenerateColumns="False" Margin="0,0,12,0">
+        <DataGrid Grid.Row="2" Grid.Column="0" ItemsSource="{Binding Employees}" SelectedItem="{Binding SelectedEmployee}" AutoGenerateColumns="False" Margin="0,0,12,0"
+                  GridLinesVisibility="All" BorderThickness="1" BorderBrush="{DynamicResource BorderColor}" Background="{DynamicResource ContentBackgroundColor}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
                 <DataGridTextColumn Header="Position" Binding="{Binding Position}" Width="140" />
                 <DataGridTextColumn Header="Department" Binding="{Binding Department}" Width="120" />
                 <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120" />
                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
-                <DataGridTemplateColumn Header="Actions" Width="150">
+                <DataGridTemplateColumn Header="Actions" Width="170">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:EmployeesViewModel)DataContext).EditEmployeeCommand}" CommandParameter="{Binding}" Background="#007ACC" Foreground="White" FontSize="10" Padding="8,4"/>
-                                <Button Content="Deactivate" Command="{Binding $parent[UserControl].((vm:EmployeesViewModel)DataContext).ConfirmDeactivateEmployeeCommand}" CommandParameter="{Binding}" Background="#D32F2F" Foreground="White" FontSize="10" Padding="8,4"/>
+                                <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:EmployeesViewModel)DataContext).EditEmployeeCommand}" CommandParameter="{Binding}"
+                                        Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                <Button Content="Deactivate" Command="{Binding $parent[UserControl].((vm:EmployeesViewModel)DataContext).ConfirmDeactivateEmployeeCommand}" CommandParameter="{Binding}"
+                                        Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                             </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -77,15 +80,15 @@
                         <TextBox Watermark="Emergency contact phone" Text="{Binding CurrentEmployee.EmergencyContactPhone}" />
 
                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                            <Button Content="Save" Command="{Binding SaveEmployeeCommand}" Background="#2E7D32" Foreground="White"/>
-                            <Button Content="Cancel" Command="{Binding CloseFormCommand}" />
+                            <Button Content="Save" Command="{Binding SaveEmployeeCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
+                            <Button Content="Cancel" Command="{Binding CloseFormCommand}" CornerRadius="6" Padding="12,6"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,12,0,0" IsVisible="{Binding SelectedEmployee, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,12,0,0" IsVisible="{Binding SelectedEmployee, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <StackPanel Spacing="6">
-                        <TextBlock Text="Employee Details" FontWeight="SemiBold" FontSize="14" />
+                        <TextBlock Text="Employee Details" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextPrimaryColor}" />
                         <TextBlock Text="{Binding SelectedEmployee.Name}" FontWeight="Bold" FontSize="15" />
                         <TextBlock Text="{Binding SelectedEmployee.Position, StringFormat='Position: {0}'}" />
                         <TextBlock Text="{Binding SelectedEmployee.Department, StringFormat='Department: {0}'}" />
@@ -99,14 +102,19 @@
 
         <!-- Deactivation Confirmation Dialog Overlay -->
         <Grid Grid.RowSpan="3" Grid.ColumnSpan="2" Background="#80000000" IsVisible="{Binding IsDeleteConfirmationOpen}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-            <Border Background="White" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" Width="320" BoxShadow="0 10 30 0 #40000000">
+            <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center" Width="360" BoxShadow="0 10 30 0 #40000000">
                 <StackPanel Spacing="16">
-                    <TextBlock Text="Confirm Deactivation" FontSize="18" FontWeight="Bold" Foreground="#D32F2F" />
-                    <TextBlock Text="{Binding EmployeeToDeactivate.Name, StringFormat='Are you sure you want to deactivate \'{0}\'?'}" TextWrapping="Wrap" FontSize="14" />
-                    <TextBlock Text="Their record and history are kept, but they no longer appear as active staff." FontSize="12" Foreground="Gray" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="*, Auto">
+                        <TextBlock Text="Confirm Deactivation" FontSize="18" FontWeight="Bold" Foreground="#EF4444" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Command="{Binding CancelDeactivateCommand}"
+                                Content="✕" FontSize="16" Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
+                    <TextBlock Text="{Binding EmployeeToDeactivate.Name, StringFormat='Are you sure you want to deactivate \'{0}\'?'}" TextWrapping="Wrap" FontSize="14" Foreground="{DynamicResource TextPrimaryColor}" />
+                    <TextBlock Text="Their record and history are kept, but they no longer appear as active staff." FontSize="12" Foreground="{DynamicResource TextSecondaryColor}" TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
-                        <Button Content="Cancel" Command="{Binding CancelDeactivateCommand}" Padding="10,5" />
-                        <Button Content="Deactivate" Command="{Binding ExecuteDeactivateCommand}" Background="#D32F2F" Foreground="White" Padding="10,5" />
+                        <Button Content="Cancel" Command="{Binding CancelDeactivateCommand}" CornerRadius="6" Padding="12,6" />
+                        <Button Content="Deactivate" Command="{Binding ExecuteDeactivateCommand}" Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontWeight="SemiBold" CornerRadius="6" Padding="14,6" />
                     </StackPanel>
                 </StackPanel>
             </Border>

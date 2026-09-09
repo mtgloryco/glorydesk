@@ -13,24 +13,51 @@
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <Border Grid.Column="0" Background="{DynamicResource PageBackgroundColor}" Padding="20" IsVisible="{Binding IsLoggedIn}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="15">
-                    <Image Source="/Assets/glorydesk-logo.png"
-                           Width="168"
-                           Height="47"
-                           Stretch="Uniform"
-                           HorizontalAlignment="Left"
-                           Margin="0,16,0,0"/>
-                    <TextBlock Text="MT GLORY" FontSize="11" Foreground="#888" Margin="0,0,0,12"/>
-                    <TextBlock Text="{Binding CurrentUserName}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <Border Grid.Column="0"
+                Background="{DynamicResource SidebarBackgroundColor}"
+                BorderBrush="{DynamicResource BorderColor}"
+                BorderThickness="0,0,1,0"
+                IsVisible="{Binding IsLoggedIn}">
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+                
+                <!-- Row 0: Sidebar Header -->
+                <Border Grid.Row="0" Padding="12,14,12,10">
+                    <Grid>
+                        <!-- Expanded Header -->
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding !IsSidebarCollapsed}">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Image Source="/Assets/glorydesk-logo.png"
+                                       Width="110" Height="30"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Left"/>
+                                <Border Background="{DynamicResource NavBadgeBgColor}" CornerRadius="4" Padding="5,2" VerticalAlignment="Center">
+                                    <TextBlock Text="MT GLORY" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                </Border>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="nav-btn" Command="{Binding ToggleSidebarCollapseCommand}"
+                                    ToolTip.Tip="Collapse Sidebar"
+                                    Padding="6" CornerRadius="6" HorizontalAlignment="Right">
+                                <PathIcon Data="{StaticResource IconCollapse}" Width="14" Height="14"/>
+                            </Button>
+                        </Grid>
 
-                    <!-- Quick Navigation: find any page, settings tab, or report by name without knowing where it lives -->
-                    <StackPanel Spacing="4" Margin="0,0,0,16">
-                        <TextBox Text="{Binding NavSearchText, Mode=TwoWay}" Watermark="🔍 Go to..." Padding="8,6"/>
+                        <!-- Collapsed Header -->
+                        <Button Classes="nav-btn" Command="{Binding ToggleSidebarCollapseCommand}"
+                                ToolTip.Tip="Expand Sidebar"
+                                Padding="8" HorizontalAlignment="Center"
+                                IsVisible="{Binding IsSidebarCollapsed}">
+                            <PathIcon Data="{StaticResource IconExpand}" Width="16" Height="16"/>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Row 1: Quick Navigation Search (Visible when expanded) -->
+                <Border Grid.Row="1" Padding="10,0,10,8" IsVisible="{Binding !IsSidebarCollapsed}">
+                    <StackPanel Spacing="4">
+                        <TextBox Text="{Binding NavSearchText, Mode=TwoWay}" Watermark="🔍 Go to..." Padding="8,6" CornerRadius="6" FontSize="12"/>
                         <Border Background="{DynamicResource CardBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6"
                                 IsVisible="{Binding MatchedNavItems.Count}" BoxShadow="0 4 10 -1 #20000000">
-                            <ScrollViewer MaxHeight="380">
+                            <ScrollViewer MaxHeight="320">
                                 <ItemsControl ItemsSource="{Binding MatchedNavItems}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -48,59 +75,403 @@
                             </ScrollViewer>
                         </Border>
                     </StackPanel>
+                </Border>
 
-                    <Button Content="{Binding Language.Resources[Dashboard]}" Command="{Binding GoToDashboardCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[POS]}" Command="{Binding GoToPOSCommand}" IsVisible="{Binding CanAccessPOS}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Inventory]}" Command="{Binding GoToInventoryCommand}" IsVisible="{Binding CanAccessInventory}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Manufacturing]}" Command="{Binding GoToManufacturingCommand}" IsVisible="{Binding CanAccessManufacturing}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Customers]}" Command="{Binding GoToCustomersCommand}" IsVisible="{Binding CanAccessCustomers}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Suppliers]}" Command="{Binding GoToSuppliersCommand}" IsVisible="{Binding CanAccessSuppliers}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="Accounts Payable" Command="{Binding GoToAccountsPayableCommand}" IsVisible="{Binding CanAccessAccountsPayable}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Employees]}" Command="{Binding GoToEmployeesCommand}" IsVisible="{Binding CanAccessEmployees}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="Attendance &amp; Leave" Command="{Binding GoToAttendanceCommand}" IsVisible="{Binding CanAccessAttendance}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Reports]}" Command="{Binding GoToReportsCommand}" IsVisible="{Binding CanAccessReports}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="Enterprise" Command="{Binding GoToEnterpriseCommand}" IsVisible="{Binding CanAccessEnterprise}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[AuditTrail]}" Command="{Binding GoToAuditTrailCommand}" IsVisible="{Binding CanAccessAudit}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Returns]}" Command="{Binding GoToReturnsCommand}" IsVisible="{Binding CanAccessReturns}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="Expenses" Command="{Binding GoToExpensesCommand}" IsVisible="{Binding CanAccessExpenses}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Users]}" Command="{Binding GoToUsersCommand}" IsVisible="{Binding CanManageUsers}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[License]}" Command="{Binding GoToLicenseCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding Language.Resources[Settings]}" Command="{Binding GoToSettingsCommand}" IsVisible="{Binding CanAccessSettings}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                    <Button Content="{Binding UpdateStatusText}" Command="{Binding CheckForUpdatesCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
+                <!-- Row 1 Alternative: Search Icon when collapsed -->
+                <Button Grid.Row="1" Classes="nav-btn" Command="{Binding ToggleSidebarCollapseCommand}"
+                        ToolTip.Tip="Search (Expand)"
+                        Padding="8" HorizontalAlignment="Center" Margin="0,0,0,6"
+                        IsVisible="{Binding IsSidebarCollapsed}">
+                    <PathIcon Data="{StaticResource IconSearch}" Width="16" Height="16"/>
+                </Button>
 
-                    <Border Background="{DynamicResource ThemeControlLowBrush}" CornerRadius="6" Padding="10" IsVisible="{Binding CanAccessCloudSync}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Cloud Sync" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding SyncStatusText}" FontSize="11" TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding LastSyncDisplay, StringFormat='Last sync: {0}'}" FontSize="10" Foreground="Gray"/>
-                            <TextBox Watermark="Cloud email" Text="{Binding CloudEmail}" IsEnabled="{Binding !IsSyncing}"/>
-                            <TextBox Watermark="Password" Text="{Binding CloudPassword}" PasswordChar="*" IsEnabled="{Binding !IsSyncing}"/>
-                            <TextBox Watermark="Organization" Text="{Binding CloudOrganizationName}" IsEnabled="{Binding !IsSyncing}"/>
-                            <Button Content="Connect / Register" Command="{Binding ConnectCloudCommand}" IsEnabled="{Binding !IsSyncing}" HorizontalAlignment="Stretch"/>
-                            <Button Content="Sync Now" Command="{Binding SyncNowCommand}" IsEnabled="{Binding !IsSyncing}" HorizontalAlignment="Stretch"/>
-                            <Grid ColumnDefinitions="*,*">
-                                <Button Content="Backup" Command="{Binding BackupToCloudCommand}" IsEnabled="{Binding !IsSyncing}" Margin="0,0,4,0"/>
-                                <Button Grid.Column="1" Content="Restore" Command="{Binding RestoreFromCloudCommand}" IsEnabled="{Binding !IsSyncing}" Margin="4,0,0,0"/>
+                <!-- Row 2: Scrollable Navigation Sections -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="8,0">
+                    <StackPanel Spacing="3">
+
+                        <!-- SECTION: MAIN -->
+                        <TextBlock Text="{Binding Language.Resources[Nav_Main]}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{DynamicResource NavSectionHeaderColor}"
+                                   Margin="8,8,0,2"
+                                   IsVisible="{Binding !IsSidebarCollapsed}"/>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsDashboardActive}"
+                                Command="{Binding GoToDashboardCommand}"
+                                ToolTip.Tip="{Binding Language.Resources[Dashboard]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconDashboard}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Dashboard]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
                             </Grid>
-                            <Button Content="Add Another Company" Command="{Binding AddNewCompanyProfileCommand}" IsEnabled="{Binding !IsSyncing}" HorizontalAlignment="Stretch" ToolTip.Tip="Creates a separate, isolated local database for a different organization (type its name in Organization above first). Requires an app restart to switch."/>
-                        </StackPanel>
-                    </Border>
-                    
-                    <StackPanel VerticalAlignment="Bottom" Margin="0,40,0,0" Spacing="10">
-                        <Button Content="Toggle Theme" Command="{Binding ToggleThemeCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                        
-                        <TextBlock Text="Language / Ururimi" FontSize="10" Foreground="Gray"/>
-                        <Grid ColumnDefinitions="*,*,*">
-                           <Button Content="EN" Command="{Binding ChangeLanguageCommand}" CommandParameter="en" Background="Transparent" BorderThickness="0" FontSize="10"/>
-                           <Button Grid.Column="1" Content="FR" Command="{Binding ChangeLanguageCommand}" CommandParameter="fr" Background="Transparent" BorderThickness="0" FontSize="10"/>
-                           <Button Grid.Column="2" Content="RW" Command="{Binding ChangeLanguageCommand}" CommandParameter="rw" Background="Transparent" BorderThickness="0" FontSize="10"/>
-                        </Grid>
-                    
-                         <Button Content="Switch User" Command="{Binding SwitchUserCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10"/>
-                         <Button Content="{Binding Language.Resources[Exit]}" Command="{Binding LogoutCommand}" HorizontalAlignment="Stretch" Background="Transparent" HorizontalContentAlignment="Left" Padding="10" Foreground="#FF5252"/>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsPOSActive}"
+                                Command="{Binding GoToPOSCommand}"
+                                IsVisible="{Binding CanAccessPOS}"
+                                ToolTip.Tip="{Binding Language.Resources[POS]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconPOS}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[POS]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- SECTION: OPERATIONS -->
+                        <TextBlock Text="{Binding Language.Resources[Nav_Operations]}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{DynamicResource NavSectionHeaderColor}"
+                                   Margin="8,14,0,2"
+                                   IsVisible="{Binding !IsSidebarCollapsed}"/>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsInventoryActive}"
+                                Command="{Binding GoToInventoryCommand}"
+                                IsVisible="{Binding CanAccessInventory}"
+                                ToolTip.Tip="{Binding Language.Resources[Inventory]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconInventory}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Inventory]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsManufacturingActive}"
+                                Command="{Binding GoToManufacturingCommand}"
+                                IsVisible="{Binding CanAccessManufacturing}"
+                                ToolTip.Tip="{Binding Language.Resources[Manufacturing]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconManufacturing}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Manufacturing]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsReturnsActive}"
+                                Command="{Binding GoToReturnsCommand}"
+                                IsVisible="{Binding CanAccessReturns}"
+                                ToolTip.Tip="{Binding Language.Resources[Returns]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconReturns}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Returns]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- SECTION: RELATIONSHIPS & FINANCE -->
+                        <TextBlock Text="{Binding Language.Resources[Nav_Finance]}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{DynamicResource NavSectionHeaderColor}"
+                                   Margin="8,14,0,2"
+                                   IsVisible="{Binding !IsSidebarCollapsed}"/>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsCustomersActive}"
+                                Command="{Binding GoToCustomersCommand}"
+                                IsVisible="{Binding CanAccessCustomers}"
+                                ToolTip.Tip="{Binding Language.Resources[Customers]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconCustomers}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Customers]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsSuppliersActive}"
+                                Command="{Binding GoToSuppliersCommand}"
+                                IsVisible="{Binding CanAccessSuppliers}"
+                                ToolTip.Tip="{Binding Language.Resources[Suppliers]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconSuppliers}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Suppliers]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsAccountingActive}"
+                                Command="{Binding GoToAccountingCommand}"
+                                IsVisible="{Binding CanAccessAccounting}"
+                                ToolTip.Tip="{Binding Language.Resources[Accounting]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconAccounting}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Accounting]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsAccountsPayableActive}"
+                                Command="{Binding GoToAccountsPayableCommand}"
+                                IsVisible="{Binding CanAccessAccountsPayable}"
+                                ToolTip.Tip="{Binding Language.Resources[AccountsPayable]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconAccountsPayable}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[AccountsPayable]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsExpensesActive}"
+                                Command="{Binding GoToExpensesCommand}"
+                                IsVisible="{Binding CanAccessExpenses}"
+                                ToolTip.Tip="{Binding Language.Resources[Expenses]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconExpenses}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Expenses]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- SECTION: PEOPLE & TEAMS -->
+                        <TextBlock Text="{Binding Language.Resources[Nav_People]}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{DynamicResource NavSectionHeaderColor}"
+                                   Margin="8,14,0,2"
+                                   IsVisible="{Binding !IsSidebarCollapsed}"/>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsEmployeesActive}"
+                                Command="{Binding GoToEmployeesCommand}"
+                                IsVisible="{Binding CanAccessEmployees}"
+                                ToolTip.Tip="{Binding Language.Resources[Employees]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconEmployees}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Employees]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsAttendanceActive}"
+                                Command="{Binding GoToAttendanceCommand}"
+                                IsVisible="{Binding CanAccessAttendance}"
+                                ToolTip.Tip="{Binding Language.Resources[Attendance]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconAttendance}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Attendance]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- SECTION: INTELLIGENCE -->
+                        <TextBlock Text="{Binding Language.Resources[Nav_Analytics]}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{DynamicResource NavSectionHeaderColor}"
+                                   Margin="8,14,0,2"
+                                   IsVisible="{Binding !IsSidebarCollapsed}"/>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsReportsActive}"
+                                Command="{Binding GoToReportsCommand}"
+                                IsVisible="{Binding CanAccessReports}"
+                                ToolTip.Tip="{Binding Language.Resources[Reports]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconReports}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Reports]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsEnterpriseActive}"
+                                Command="{Binding GoToEnterpriseCommand}"
+                                IsVisible="{Binding CanAccessEnterprise}"
+                                ToolTip.Tip="{Binding Language.Resources[Enterprise]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconEnterprise}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Enterprise]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsAuditTrailActive}"
+                                Command="{Binding GoToAuditTrailCommand}"
+                                IsVisible="{Binding CanAccessAudit}"
+                                ToolTip.Tip="{Binding Language.Resources[AuditTrail]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconAuditTrail}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[AuditTrail]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- SECTION: SYSTEM -->
+                        <TextBlock Text="{Binding Language.Resources[Nav_System]}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{DynamicResource NavSectionHeaderColor}"
+                                   Margin="8,14,0,2"
+                                   IsVisible="{Binding !IsSidebarCollapsed}"/>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsUsersActive}"
+                                Command="{Binding GoToUsersCommand}"
+                                IsVisible="{Binding CanManageUsers}"
+                                ToolTip.Tip="{Binding Language.Resources[Users]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconUsers}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Users]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsLicenseActive}"
+                                Command="{Binding GoToLicenseCommand}"
+                                ToolTip.Tip="{Binding Language.Resources[License]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconLicense}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[License]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn" Classes.active="{Binding IsSettingsActive}"
+                                Command="{Binding GoToSettingsCommand}"
+                                IsVisible="{Binding CanAccessSettings}"
+                                ToolTip.Tip="{Binding Language.Resources[Settings]}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconSettings}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Settings]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Classes="nav-btn"
+                                Command="{Binding CheckForUpdatesCommand}"
+                                ToolTip.Tip="{Binding UpdateStatusText}">
+                            <Grid ColumnDefinitions="22,*">
+                                <PathIcon Grid.Column="0" Data="{StaticResource IconUpdate}" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding UpdateStatusText}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSidebarCollapsed}" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- Cloud Sync Widget -->
+                        <Border Background="{DynamicResource NavHoverColor}"
+                                BorderBrush="{DynamicResource BorderColor}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="8"
+                                Margin="0,10,0,8"
+                                IsVisible="{Binding CanAccessCloudSync}">
+                            <StackPanel Spacing="6" IsVisible="{Binding !IsSidebarCollapsed}">
+                                <Grid ColumnDefinitions="Auto, *, Auto, Auto">
+                                    <PathIcon Grid.Column="0" Data="{StaticResource IconCloud}" Width="14" Height="14"
+                                              Foreground="{DynamicResource NavIconColor}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Language.Resources[Nav_CloudSync]}"
+                                               FontWeight="SemiBold" FontSize="11" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="2" Content="Sync" Command="{Binding SyncNowCommand}"
+                                            IsEnabled="{Binding !IsSyncing}" Padding="7,2" FontSize="10"
+                                            Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}"
+                                            CornerRadius="4" BorderThickness="0" Margin="0,0,3,0"/>
+                                    <Button Grid.Column="3" Command="{Binding ToggleCloudSyncExpandedCommand}"
+                                            Background="Transparent" BorderThickness="0" Padding="3,2" Cursor="Hand"
+                                            ToolTip.Tip="Settings / Credentials">
+                                        <TextBlock Text="⚙" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                    </Button>
+                                </Grid>
+                                <TextBlock Text="{Binding SyncStatusText}" FontSize="10" Foreground="{DynamicResource TextSecondaryColor}" TextTrimming="CharacterEllipsis"/>
+
+                                <!-- Collapsible Cloud Credentials & Operations -->
+                                <StackPanel Spacing="5" Margin="0,4,0,0" IsVisible="{Binding IsCloudSyncExpanded}">
+                                    <TextBlock Text="{Binding LastSyncDisplay, StringFormat='Last sync: {0}'}" FontSize="10" Foreground="Gray"/>
+                                    <TextBox Watermark="Cloud email" Text="{Binding CloudEmail}" IsEnabled="{Binding !IsSyncing}" FontSize="11" Padding="6,3"/>
+                                    <TextBox Watermark="Password" Text="{Binding CloudPassword}" PasswordChar="*" IsEnabled="{Binding !IsSyncing}" FontSize="11" Padding="6,3"/>
+                                    <TextBox Watermark="Organization" Text="{Binding CloudOrganizationName}" IsEnabled="{Binding !IsSyncing}" FontSize="11" Padding="6,3"/>
+                                    <Button Content="Connect / Register" Command="{Binding ConnectCloudCommand}" IsEnabled="{Binding !IsSyncing}" HorizontalAlignment="Stretch" FontSize="11" Padding="6,3"/>
+                                    <Grid ColumnDefinitions="*,*">
+                                        <Button Content="Backup" Command="{Binding BackupToCloudCommand}" IsEnabled="{Binding !IsSyncing}" HorizontalAlignment="Stretch" Margin="0,0,2,0" FontSize="10" Padding="6,3"/>
+                                        <Button Grid.Column="1" Content="Restore" Command="{Binding RestoreFromCloudCommand}" IsEnabled="{Binding !IsSyncing}" HorizontalAlignment="Stretch" Margin="2,0,0,0" FontSize="10" Padding="6,3"/>
+                                    </Grid>
+                                    <Button Content="Add Company" Command="{Binding AddNewCompanyProfileCommand}" IsEnabled="{Binding !IsSyncing}" HorizontalAlignment="Stretch" FontSize="10" Padding="6,3" ToolTip.Tip="Creates a separate company profile for next launch."/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Collapsed Cloud Sync Button -->
+                        <Button Classes="nav-btn" Command="{Binding SyncNowCommand}"
+                                ToolTip.Tip="{Binding SyncStatusText}"
+                                IsEnabled="{Binding !IsSyncing}"
+                                IsVisible="{Binding IsSidebarCollapsed}">
+                            <PathIcon Data="{StaticResource IconCloud}" Width="15" Height="15" HorizontalAlignment="Center"/>
+                        </Button>
+
                     </StackPanel>
-                </StackPanel>
-            </ScrollViewer>
+                </ScrollViewer>
+
+                <!-- Row 3: Pinned Bottom Footer (Always Visible, Never Lost in Scroll) -->
+                <Border Grid.Row="3" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0"
+                        Padding="8,10" Background="{DynamicResource SidebarBackgroundColor}">
+                    <StackPanel Spacing="8">
+                        <!-- User Profile Card -->
+                        <Border Background="{DynamicResource NavHoverColor}" CornerRadius="8" Padding="6">
+                            <Grid ColumnDefinitions="Auto, *">
+                                <!-- Avatar circle with initial -->
+                                <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                        Background="{DynamicResource NavActiveBgColor}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding UserInitial}" FontWeight="Bold" FontSize="12"
+                                               Foreground="{DynamicResource NavActiveTextColor}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+
+                                <!-- User text info (visible when expanded) -->
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                            IsVisible="{Binding !IsSidebarCollapsed}">
+                                    <TextBlock Text="{Binding CurrentUserName}" FontWeight="SemiBold" FontSize="12"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding UserRoleDisplay}" FontSize="10"
+                                               Foreground="{DynamicResource TextSecondaryColor}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Expanded Footer Controls -->
+                        <StackPanel Spacing="4" IsVisible="{Binding !IsSidebarCollapsed}">
+                            <!-- Theme & Language row -->
+                            <Grid ColumnDefinitions="*, Auto">
+                                <Button Classes="nav-btn" Command="{Binding ToggleThemeCommand}" Padding="6,4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <PathIcon Data="{StaticResource IconTheme}" Width="13" Height="13" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Language.Resources[ToggleTheme]}" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- Language switcher pills -->
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                    <Button Content="EN" Command="{Binding ChangeLanguageCommand}" CommandParameter="en"
+                                            Padding="4,2" FontSize="9" CornerRadius="4" Background="Transparent" BorderThickness="0"/>
+                                    <Button Content="FR" Command="{Binding ChangeLanguageCommand}" CommandParameter="fr"
+                                            Padding="4,2" FontSize="9" CornerRadius="4" Background="Transparent" BorderThickness="0"/>
+                                    <Button Content="RW" Command="{Binding ChangeLanguageCommand}" CommandParameter="rw"
+                                            Padding="4,2" FontSize="9" CornerRadius="4" Background="Transparent" BorderThickness="0"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Switch User -->
+                            <Button Classes="nav-btn" Command="{Binding SwitchUserCommand}" Padding="6,4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Data="{StaticResource IconSwitchUser}" Width="13" Height="13" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Language.Resources[SwitchUser]}" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Exit / Logout -->
+                            <Button Classes="nav-btn" Command="{Binding LogoutCommand}" Padding="6,4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <PathIcon Data="{StaticResource IconLogout}" Width="13" Height="13" Foreground="#EF4444" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Language.Resources[Exit]}" Foreground="#EF4444" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Collapsed Footer Controls -->
+                        <StackPanel Spacing="2" IsVisible="{Binding IsSidebarCollapsed}" HorizontalAlignment="Center">
+                            <Button Classes="nav-btn" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Toggle Theme" Padding="6">
+                                <PathIcon Data="{StaticResource IconTheme}" Width="14" Height="14" HorizontalAlignment="Center"/>
+                            </Button>
+                            <Button Classes="nav-btn" Command="{Binding SwitchUserCommand}" ToolTip.Tip="Switch User" Padding="6">
+                                <PathIcon Data="{StaticResource IconSwitchUser}" Width="14" Height="14" HorizontalAlignment="Center"/>
+                            </Button>
+                            <Button Classes="nav-btn" Command="{Binding LogoutCommand}" ToolTip.Tip="Exit" Padding="6">
+                                <PathIcon Data="{StaticResource IconLogout}" Width="14" Height="14" Foreground="#EF4444" HorizontalAlignment="Center"/>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+            </Grid>
         </Border>
 
         <!-- Main Content (Spans entire window if not logged in) -->

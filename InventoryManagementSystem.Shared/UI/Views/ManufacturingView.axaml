@@ -18,7 +18,7 @@
                             <TextBlock Text="Bills of Materials" FontSize="20" FontWeight="Bold" />
                             <TextBlock Text="Define and configure production recipes and ingredient list for goods." FontSize="11" Foreground="Gray" />
                         </StackPanel>
-                        <Button Grid.Column="1" Content="+ New BoM" Command="{Binding ShowCreateBomFormCommand}" Background="#007ACC" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4" />
+                        <Button Grid.Column="1" Content="+ New BoM" Command="{Binding ShowCreateBomFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" />
                     </Grid>
 
                     <!-- Search Bar -->
@@ -41,8 +41,10 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                                <Button Content="Open / Edit" Command="{Binding $parent[UserControl].((vm:ManufacturingViewModel)DataContext).OpenBomDetailCommand}" CommandParameter="{Binding}" Background="#007ACC" Foreground="White" FontSize="10" Padding="8,4" CornerRadius="4"/>
-                                                <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:ManufacturingViewModel)DataContext).DeleteBomCommand}" CommandParameter="{Binding}" Background="#D32F2F" Foreground="White" FontSize="10" Padding="8,4" CornerRadius="4"/>
+                                                <Button Content="Open / Edit" Command="{Binding $parent[UserControl].((vm:ManufacturingViewModel)DataContext).OpenBomDetailCommand}" CommandParameter="{Binding}"
+                                                        Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                                <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:ManufacturingViewModel)DataContext).DeleteBomCommand}" CommandParameter="{Binding}"
+                                                        Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -57,14 +59,14 @@
                     <!-- Form Header & Actions -->
                     <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,16">
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-                            <Button Content="← Back to Recipes" Command="{Binding CloseFormCommand}" Background="Transparent" Foreground="#007ACC" Padding="0" VerticalAlignment="Center" FontSize="13"/>
+                            <Button Content="← Back to Recipes" Command="{Binding CloseFormCommand}" Background="Transparent" Foreground="{DynamicResource NavActiveBgColor}" Padding="0" VerticalAlignment="Center" FontSize="13"/>
                             <TextBlock Text="/" Foreground="Gray" VerticalAlignment="Center" FontSize="13"/>
                             <TextBlock Text="{Binding Reference, FallbackValue='New Recipe'}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                            <Button Content="Discard" Command="{Binding CloseFormCommand}" Padding="12,6" FontSize="13" CornerRadius="4"/>
-                            <Button Content="Save Recipe" Command="{Binding SaveBomCommand}" Background="#2E7D32" Foreground="White" Padding="14,6" FontSize="13" FontWeight="SemiBold" CornerRadius="4"/>
+                            <Button Content="Discard" Command="{Binding CloseFormCommand}" Padding="14,6" FontSize="13" CornerRadius="6"/>
+                            <Button Content="Save Recipe" Command="{Binding SaveBomCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="16,6" FontSize="13" FontWeight="SemiBold" CornerRadius="6"/>
                         </StackPanel>
                     </Grid>
 
@@ -146,7 +148,7 @@
                                         <Border BorderThickness="0" Padding="0,12,0,0">
                                             <DockPanel>
                                                 <!-- Bottom Add Row Button -->
-                                                <Button DockPanel.Dock="Bottom" Content="+ Add a line" Command="{Binding AddComponentLineCommand}" Background="Transparent" Foreground="#007ACC" FontWeight="SemiBold" FontSize="12" Margin="0,6,0,0"/>
+                                                <Button DockPanel.Dock="Bottom" Content="+ Add a line" Command="{Binding AddComponentLineCommand}" Background="Transparent" Foreground="{DynamicResource NavActiveBgColor}" FontWeight="SemiBold" FontSize="12" Margin="0,6,0,0"/>
 
                                                 <StackPanel Spacing="6">
                                                     <!-- Table Header -->
@@ -224,7 +226,7 @@
                             <TextBlock Text="Manufacturing Orders" FontSize="20" FontWeight="Bold" />
                             <TextBlock Text="Create production jobs and track expected vs. actual yield." FontSize="11" Foreground="Gray" />
                         </StackPanel>
-                        <Button Grid.Column="1" Content="+ New MO" Command="{Binding ShowCreateMOFormCommand}" Background="#007ACC" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4" />
+                        <Button Grid.Column="1" Content="+ New MO" Command="{Binding ShowCreateMOFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" />
                     </Grid>
 
                     <!-- Search Bar -->
@@ -259,7 +261,7 @@
                                                         <Setter Property="Background" Value="#F57C00"/>
                                                     </Style>
                                                     <Style Selector="Border[Tag=Done]">
-                                                        <Setter Property="Background" Value="#2E7D32"/>
+                                                        <Setter Property="Background" Value="#10B981"/>
                                                     </Style>
                                                 </Border.Styles>
                                                 <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
@@ -272,8 +274,10 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                                <Button Content="Open" Command="{Binding $parent[UserControl].((vm:ManufacturingViewModel)DataContext).OpenMODetailCommand}" CommandParameter="{Binding}" Background="#007ACC" Foreground="White" FontSize="10" Padding="8,4" CornerRadius="4"/>
-                                                <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:ManufacturingViewModel)DataContext).DeleteMOCommand}" CommandParameter="{Binding}" Background="#D32F2F" Foreground="White" FontSize="10" Padding="8,4" CornerRadius="4"/>
+                                                <Button Content="Open" Command="{Binding $parent[UserControl].((vm:ManufacturingViewModel)DataContext).OpenMODetailCommand}" CommandParameter="{Binding}"
+                                                        Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                                <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:ManufacturingViewModel)DataContext).DeleteMOCommand}" CommandParameter="{Binding}"
+                                                        Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -288,7 +292,7 @@
                     <!-- Form Header -->
                     <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,16">
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-                            <Button Content="← Back to Orders" Command="{Binding CloseMOFormCommand}" Background="Transparent" Foreground="#007ACC" Padding="0" VerticalAlignment="Center" FontSize="13"/>
+                            <Button Content="← Back to Orders" Command="{Binding CloseMOFormCommand}" Background="Transparent" Foreground="{DynamicResource NavActiveBgColor}" Padding="0" VerticalAlignment="Center" FontSize="13"/>
                             <TextBlock Text="/" Foreground="Gray" VerticalAlignment="Center" FontSize="13"/>
                             <TextBlock Text="{Binding MONumber, FallbackValue='New MO'}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                         </StackPanel>
@@ -296,18 +300,18 @@
                         <!-- Actions based on state -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
                             <!-- Draft mode actions -->
-                            <Button Content="Save Draft" Command="{Binding SaveMODraftCommand}" IsVisible="{Binding IsDraftState}" Padding="12,6" FontSize="13" CornerRadius="4"/>
-                            <Button Content="Confirm" Command="{Binding ConfirmMOCommand}" IsVisible="{Binding IsDraftState}" Background="#007ACC" Foreground="White" Padding="14,6" FontSize="13" FontWeight="SemiBold" CornerRadius="4"/>
+                            <Button Content="Save Draft" Command="{Binding SaveMODraftCommand}" IsVisible="{Binding IsDraftState}" Padding="14,6" FontSize="13" CornerRadius="6"/>
+                            <Button Content="Confirm" Command="{Binding ConfirmMOCommand}" IsVisible="{Binding IsDraftState}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontSize="13" FontWeight="SemiBold" CornerRadius="6"/>
 
                             <!-- Confirmed mode actions -->
-                            <Button Content="Produce All" Command="{Binding StartProductionInputCommand}" IsVisible="{Binding IsConfirmedState}" Background="#007ACC" Foreground="White" Padding="16,6" FontSize="13" FontWeight="SemiBold" CornerRadius="4"/>
+                            <Button Content="Produce All" Command="{Binding StartProductionInputCommand}" IsVisible="{Binding IsConfirmedState}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="16,6" FontSize="13" FontWeight="SemiBold" CornerRadius="6"/>
 
                             <!-- Produce input active actions -->
-                            <Button Content="Cancel Produce" Command="{Binding CloseMOFormCommand}" IsVisible="{Binding IsProduceStateActive}" Padding="12,6" FontSize="13" CornerRadius="4"/>
-                            <Button Content="Mark as Done" Command="{Binding RecordProductionCommand}" IsVisible="{Binding IsProduceStateActive}" Background="#2E7D32" Foreground="White" Padding="16,6" FontSize="13" FontWeight="SemiBold" CornerRadius="4"/>
+                            <Button Content="Cancel Produce" Command="{Binding CloseMOFormCommand}" IsVisible="{Binding IsProduceStateActive}" Padding="14,6" FontSize="13" CornerRadius="6"/>
+                            <Button Content="Mark as Done" Command="{Binding RecordProductionCommand}" IsVisible="{Binding IsProduceStateActive}" Background="#1410B981" Foreground="#10B981" BorderBrush="#3310B981" BorderThickness="1" Padding="16,6" FontSize="13" FontWeight="SemiBold" CornerRadius="6"/>
 
                             <!-- Closed/Done mode actions -->
-                            <Button Content="Close Details" Command="{Binding CloseMOFormCommand}" IsVisible="{Binding IsDoneState}" Padding="12,6" FontSize="13" CornerRadius="4"/>
+                            <Button Content="Close Details" Command="{Binding CloseMOFormCommand}" IsVisible="{Binding IsDoneState}" Padding="14,6" FontSize="13" CornerRadius="6"/>
                         </StackPanel>
                     </Grid>
 

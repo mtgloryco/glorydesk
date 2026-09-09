@@ -24,7 +24,7 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
             </StackPanel>
-            <Button Grid.Column="3" Content="Save Day" Command="{Binding SaveAttendanceCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" VerticalAlignment="Bottom" FontWeight="SemiBold" CornerRadius="4" />
+            <Button Grid.Column="3" Content="Save Day" Command="{Binding SaveAttendanceCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" VerticalAlignment="Bottom" FontWeight="SemiBold" CornerRadius="6" />
         </Grid>
 
         <TextBlock Grid.Row="2" Text="{Binding SummaryText}" FontSize="13" Foreground="Gray" Margin="0,0,0,12" />

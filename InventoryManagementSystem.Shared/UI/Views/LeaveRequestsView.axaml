@@ -8,14 +8,15 @@
              x:DataType="vm:LeaveRequestsViewModel">
     <Grid RowDefinitions="Auto,*" ColumnDefinitions="2*,*" Margin="20">
         <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
-            <TextBlock Grid.Column="0" Text="Leave Requests" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Content="+ Request Leave" Command="{Binding ShowAddLeaveRequestFormCommand}" Background="#007ACC" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4" />
+            <TextBlock Grid.Column="0" Text="Leave Requests" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="+ Request Leave" Command="{Binding ShowAddLeaveRequestFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" />
         </Grid>
 
         <StackPanel Grid.Row="1" Grid.Column="0" Spacing="16" Margin="0,0,12,0">
             <StackPanel Spacing="6">
-                <TextBlock Text="Pending Approval" FontWeight="SemiBold" FontSize="16" />
-                <DataGrid ItemsSource="{Binding PendingRequests}" AutoGenerateColumns="False" Height="260">
+                <TextBlock Text="Pending Approval" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextPrimaryColor}" />
+                <DataGrid ItemsSource="{Binding PendingRequests}" AutoGenerateColumns="False" Height="260"
+                          GridLinesVisibility="All" BorderThickness="1" BorderBrush="{DynamicResource BorderColor}" Background="{DynamicResource ContentBackgroundColor}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Employee ID" Binding="{Binding EmployeeId}" Width="90" IsReadOnly="True" />
                         <DataGridTextColumn Header="Start" Binding="{Binding StartDate, StringFormat={}{0:yyyy-MM-dd}}" Width="100" IsReadOnly="True" />
@@ -26,8 +27,10 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                        <Button Content="Approve" Command="{Binding $parent[UserControl].((vm:LeaveRequestsViewModel)DataContext).ApproveRequestCommand}" CommandParameter="{Binding}" Background="#2E7D32" Foreground="White" FontSize="10" Padding="8,4"/>
-                                        <Button Content="Reject" Command="{Binding $parent[UserControl].((vm:LeaveRequestsViewModel)DataContext).RejectRequestCommand}" CommandParameter="{Binding}" Background="#D32F2F" Foreground="White" FontSize="10" Padding="8,4"/>
+                                        <Button Content="Approve" Command="{Binding $parent[UserControl].((vm:LeaveRequestsViewModel)DataContext).ApproveRequestCommand}" CommandParameter="{Binding}"
+                                                Background="#1410B981" Foreground="#10B981" BorderBrush="#3310B981" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                        <Button Content="Reject" Command="{Binding $parent[UserControl].((vm:LeaveRequestsViewModel)DataContext).RejectRequestCommand}" CommandParameter="{Binding}"
+                                                Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -52,9 +55,9 @@
 
         <ScrollViewer Grid.Row="1" Grid.Column="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="10">
-                <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6" IsVisible="{Binding IsFormVisible}">
+                <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="14" CornerRadius="8" IsVisible="{Binding IsFormVisible}">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="Request Leave" FontWeight="SemiBold" FontSize="16" />
+                        <TextBlock Text="Request Leave" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource TextPrimaryColor}" />
 
                         <TextBlock Text="Employee" FontSize="11" Foreground="Gray" />
                         <ComboBox ItemsSource="{Binding Employees}" SelectedItem="{Binding FormEmployee}" HorizontalAlignment="Stretch" PlaceholderText="Select employee...">
@@ -83,15 +86,15 @@
                         <TextBox Watermark="Reason" Text="{Binding FormReason}" AcceptsReturn="True" Height="60" TextWrapping="Wrap" />
 
                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                            <Button Content="Submit" Command="{Binding SubmitLeaveRequestCommand}" Background="#2E7D32" Foreground="White"/>
-                            <Button Content="Cancel" Command="{Binding CloseFormCommand}" />
+                            <Button Content="Submit" Command="{Binding SubmitLeaveRequestCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
+                            <Button Content="Cancel" Command="{Binding CloseFormCommand}" CornerRadius="6" Padding="12,6"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <Border BorderBrush="#DDD" BorderThickness="1" Padding="12" CornerRadius="6" IsVisible="{Binding FormEmployee, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="12" CornerRadius="6" IsVisible="{Binding FormEmployee, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Leave Balance (this year)" FontWeight="SemiBold" FontSize="14" />
+                        <TextBlock Text="Leave Balance (this year)" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextPrimaryColor}" />
                         <ItemsControl ItemsSource="{Binding SelectedEmployeeBalances}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>

@@ -21,7 +21,7 @@
                 
                 <!-- New PO button -->
                 <Button Grid.Column="3" Content="New Purchase Order" Command="{Binding OpenCreateFormCommand}" 
-                        Background="#2E7D32" Foreground="White" Padding="12,8" CornerRadius="4" VerticalAlignment="Center"/>
+                        Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" VerticalAlignment="Center"/>
             </Grid>
 
             <!-- Advanced Filters row -->
@@ -112,7 +112,8 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Button Content="Details" Command="{Binding $parent[UserControl].((vm:PurchaseOrdersViewModel)DataContext).OpenDetailsCommand}" 
-                                        CommandParameter="{Binding .}" FontSize="10" Padding="8,4" CornerRadius="3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        CommandParameter="{Binding .}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                        FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -248,7 +249,7 @@
                             <StackPanel Spacing="8" Margin="0,10,0,0" IsVisible="{Binding IsBilled}">
                                 <Grid ColumnDefinitions="*, Auto">
                                     <TextBlock Text="Vendor Bill Payments" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1" Content="Record Payment" Command="{Binding OpenRecordPaymentCommand}" IsEnabled="{Binding CanRecordPayment}" Background="#2E7D32" Foreground="White" Padding="10,6"/>
+                                    <Button Grid.Column="1" Content="Record Payment" Command="{Binding OpenRecordPaymentCommand}" IsEnabled="{Binding CanRecordPayment}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="12,6" FontWeight="SemiBold" CornerRadius="6"/>
                                 </Grid>
                                 <Grid ColumnDefinitions="Auto, Auto, Auto">
                                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,20,0">
@@ -258,7 +259,7 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,20,0">
                                         <TextBlock Text="Open Balance:" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding DetailedOpenBalance, StringFormat='{}{0:N2}'}" Foreground="#D32F2F" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding DetailedOpenBalance, StringFormat='{}{0:N2}'}" Foreground="#EF4444" FontWeight="Bold"/>
                                         <TextBlock Text="{Binding DetailedPo.Currency}"/>
                                     </StackPanel>
                                 </Grid>
@@ -274,11 +275,16 @@
                                     </DataGrid>
                                 </Border>
                             </StackPanel>
+
+                            <StackPanel Spacing="5" Margin="0,15,0,0">
+                                <TextBlock Text="Linked Documents" FontSize="14" FontWeight="Bold"/>
+                                <TextBlock Text="Audit log and tracking reference numbers are automatically attached." FontSize="11" Foreground="Gray"/>
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- Footer Action Buttons & Total -->
-                    <Border Grid.Row="2" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,20,0,0">
+                    <!-- Footer of the Details Modal: Totals & Action Buttons -->
+                    <Border Grid.Row="2" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,15,0,0">
                         <Grid ColumnDefinitions="Auto, *">
                             <StackPanel Orientation="Vertical" Spacing="4" VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
@@ -289,22 +295,22 @@
                                 <TextBlock Text="{Binding DetailedTaxBreakdownText}" FontSize="11" Foreground="Gray" TextWrapping="Wrap" MaxWidth="400"/>
                                 <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,5,0,0">
                                     <TextBlock Text="Total Amount:" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding DetailedTotal, StringFormat='{}{0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="#007ACC" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DetailedTotal, StringFormat='{}{0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource NavActiveBgColor}" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding DetailedPo.Currency}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding DetailedBaseCurrencyEquivalent}" FontSize="12" Foreground="Gray" IsVisible="{Binding DetailedBaseCurrencyEquivalent, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             </StackPanel>
                             
                             <WrapPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                                <Button Content="Validate / Receive Goods" Command="{Binding ValidateReceiptCommand}" IsEnabled="{Binding CanValidate}" Background="#2E7D32" Foreground="White" Margin="5"/>
-                                <Button Content="Create Bill" Command="{Binding CreateBillCommand}" IsEnabled="{Binding CanCreateBill}" Background="#EF6C00" Foreground="White" Margin="5"/>
-                                <Button Content="Print PO (PDF)" Command="{Binding PrintDetailedPoPdfCommand}" Background="#007ACC" Foreground="White" Margin="5"/>
-                                <Button Content="Print Bill (PDF)" Command="{Binding PrintDetailedBillPdfCommand}" IsVisible="{Binding IsBilled}" Background="#2E7D32" Foreground="White" Margin="5"/>
-                                <Button Content="Cancel Order" Command="{Binding CancelDetailedPoCommand}" IsEnabled="{Binding CanCancelDetailedPo}" Background="#E53935" Foreground="White" Margin="5"/>
-                                <Button Content="Return Items" Command="{Binding OpenReturnOrderCommand}" IsEnabled="{Binding CanReturnDetailedPo}" Background="#f44336" Foreground="White" Margin="5"/>
-                                <Button Content="{Binding ArchiveButtonText}" Command="{Binding ToggleArchiveDetailedPoCommand}" Background="#78909C" Foreground="White" Margin="5"/>
-                                <Button Content="Delete Order" Command="{Binding DeleteDetailedPoCommand}" Background="#D32F2F" Foreground="White" Margin="5"/>
-                                <Button Content="Close" Command="{Binding CloseDetailsCommand}" Margin="5"/>
+                                <Button Content="Validate / Receive Goods" Command="{Binding ValidateReceiptCommand}" IsEnabled="{Binding CanValidate}" Background="#1410B981" Foreground="#10B981" BorderBrush="#3310B981" BorderThickness="1" FontWeight="SemiBold" CornerRadius="6" Padding="12,6" Margin="4"/>
+                                <Button Content="Create Bill" Command="{Binding CreateBillCommand}" IsEnabled="{Binding CanCreateBill}" Background="#14F59E0B" Foreground="#D97706" BorderBrush="#33F59E0B" BorderThickness="1" FontWeight="SemiBold" CornerRadius="6" Padding="12,6" Margin="4"/>
+                                <Button Content="Print PO (PDF)" Command="{Binding PrintDetailedPoPdfCommand}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimaryColor}" FontWeight="SemiBold" CornerRadius="6" Padding="12,6" Margin="4"/>
+                                <Button Content="Print Bill (PDF)" Command="{Binding PrintDetailedBillPdfCommand}" IsVisible="{Binding IsBilled}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimaryColor}" FontWeight="SemiBold" CornerRadius="6" Padding="12,6" Margin="4"/>
+                                <Button Content="Cancel Order" Command="{Binding CancelDetailedPoCommand}" IsEnabled="{Binding CanCancelDetailedPo}" Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontWeight="SemiBold" CornerRadius="6" Padding="12,6" Margin="4"/>
+                                <Button Content="Return Items" Command="{Binding OpenReturnOrderCommand}" IsEnabled="{Binding CanReturnDetailedPo}" Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontWeight="SemiBold" CornerRadius="6" Padding="12,6" Margin="4"/>
+                                <Button Content="{Binding ArchiveButtonText}" Command="{Binding ToggleArchiveDetailedPoCommand}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextSecondaryColor}" FontWeight="SemiBold" CornerRadius="6" Padding="12,6" Margin="4"/>
+                                <Button Content="Delete Order" Command="{Binding DeleteDetailedPoCommand}" Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontWeight="SemiBold" CornerRadius="6" Padding="12,6" Margin="4"/>
+                                <Button Content="Close" Command="{Binding CloseDetailsCommand}" Padding="12,6" CornerRadius="6" Margin="4"/>
                             </WrapPanel>
                         </Grid>
                     </Border>
@@ -480,7 +486,7 @@
                                     </StackPanel>
                                 </Border>
                                 
-                                <Button Content="Add Line" Command="{Binding AddPoItemRowCommand}" Background="#007ACC" Foreground="White" FontSize="12" Padding="10,5" CornerRadius="3" HorizontalAlignment="Left"/>
+                                <Button Content="Add Line" Command="{Binding AddPoItemRowCommand}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimaryColor}" FontSize="12" FontWeight="SemiBold" Padding="12,6" CornerRadius="6" HorizontalAlignment="Left"/>
                             </StackPanel>
 
                             <!-- Notes/Terms Box -->
@@ -490,7 +496,7 @@
                             </StackPanel>
 
                             <!-- Error Message -->
-                            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF5252" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                            <TextBlock Text="{Binding ErrorMessage}" Foreground="#EF4444" TextWrapping="Wrap" Margin="0,10,0,0"/>
                         </StackPanel>
                     </ScrollViewer>
 
@@ -506,14 +512,14 @@
                                 <TextBlock Text="{Binding PoTaxBreakdownText}" FontSize="11" Foreground="Gray" TextWrapping="Wrap" MaxWidth="400"/>
                                 <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,5,0,0">
                                     <TextBlock Text="Total Amount:" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding PoTotalAmount, StringFormat='{}{0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="#2E7D32" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding PoTotalAmount, StringFormat='{}{0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource NavActiveBgColor}" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding NewPo.Currency}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </StackPanel>
                             
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                                <Button Content="Cancel" Command="{Binding CancelCreateFormCommand}"/>
-                                <Button Content="Confirm &amp; Save Order" Command="{Binding ConfirmSaveOrderCommand}" Background="#2E7D32" Foreground="White"/>
+                                <Button Content="Cancel" Command="{Binding CancelCreateFormCommand}" Padding="14,6" CornerRadius="6"/>
+                                <Button Content="Confirm &amp; Save Order" Command="{Binding ConfirmSaveOrderCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="16,8" FontWeight="SemiBold" CornerRadius="6"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -533,7 +539,10 @@
                     BoxShadow="0 8 32 0 #40000000"
                     Padding="20">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="Create Supplier on the Fly" FontSize="16" FontWeight="Bold"/>
+                    <Grid ColumnDefinitions="*, Auto">
+                        <TextBlock Text="Create Supplier on the Fly" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="✕" Command="{Binding CancelCreateSupplierCommand}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
                     
                     <StackPanel Spacing="5">
                         <TextBlock Text="Supplier Name *" FontSize="12"/>
@@ -550,11 +559,11 @@
                         <TextBox Text="{Binding NewSupplierEmail}"/>
                     </StackPanel>
                     
-                    <TextBlock Text="{Binding NewSupplierErrorMessage}" Foreground="#FF5252" TextWrapping="Wrap" IsVisible="{Binding NewSupplierErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding NewSupplierErrorMessage}" Foreground="#EF4444" TextWrapping="Wrap" IsVisible="{Binding NewSupplierErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,10,0,0">
-                        <Button Content="Cancel" Command="{Binding CancelCreateSupplierCommand}"/>
-                        <Button Content="Save" Command="{Binding SaveNewSupplierCommand}" Background="#007ACC" Foreground="White"/>
+                        <Button Content="Cancel" Command="{Binding CancelCreateSupplierCommand}" Padding="14,6" CornerRadius="6"/>
+                        <Button Content="Save" Command="{Binding SaveNewSupplierCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -572,7 +581,10 @@
                     BoxShadow="0 8 32 0 #40000000"
                     Padding="20">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="Create Product on the Fly" FontSize="16" FontWeight="Bold"/>
+                    <Grid ColumnDefinitions="*, Auto">
+                        <TextBlock Text="Create Product on the Fly" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="✕" Command="{Binding CancelCreateProductCommand}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
                     
                     <StackPanel Spacing="5">
                         <TextBlock Text="Product Name *" FontSize="12"/>
@@ -590,11 +602,11 @@
                         </StackPanel>
                     </Grid>
                     
-                    <TextBlock Text="{Binding NewProductErrorMessage}" Foreground="#FF5252" TextWrapping="Wrap" IsVisible="{Binding NewProductErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding NewProductErrorMessage}" Foreground="#EF4444" TextWrapping="Wrap" IsVisible="{Binding NewProductErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,10,0,0">
-                        <Button Content="Cancel" Command="{Binding CancelCreateProductCommand}"/>
-                        <Button Content="Save" Command="{Binding SaveNewProductCommand}" Background="#007ACC" Foreground="White"/>
+                        <Button Content="Cancel" Command="{Binding CancelCreateProductCommand}" Padding="14,6" CornerRadius="6"/>
+                        <Button Content="Save" Command="{Binding SaveNewProductCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -604,7 +616,10 @@
         <Grid Background="#B0000000" IsVisible="{Binding IsReturnModalOpen}" ZIndex="20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Width="700" Height="450" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid RowDefinitions="Auto, *, Auto">
-                    <TextBlock Grid.Row="0" Margin="0,0,0,12" Text="Return Purchase Order Items" FontSize="16" FontWeight="Bold" Foreground="#f44336"/>
+                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,12">
+                        <TextBlock Text="Return Purchase Order Items" FontSize="16" FontWeight="Bold" Foreground="#EF4444" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="✕" Command="{Binding CloseReturnModalCommand}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
                     
                     <!-- Table Grid of items to return -->
                     <ScrollViewer Grid.Row="1">
@@ -640,9 +655,9 @@
                     </ScrollViewer>
 
                     <StackPanel Grid.Row="2" Margin="0,12,0,0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
-                        <TextBlock Text="{Binding ReturnErrorMessage}" Foreground="Red" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <Button Content="Cancel" Command="{Binding CloseReturnModalCommand}" Background="#757575" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12"/>
-                        <Button Content="Confirm Return" Command="{Binding SubmitReturnCommand}" Background="#f44336" Foreground="White" Padding="12,6" CornerRadius="4" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding ReturnErrorMessage}" Foreground="#EF4444" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Button Content="Cancel" Command="{Binding CloseReturnModalCommand}" Padding="12,6" CornerRadius="6" FontSize="12"/>
+                        <Button Content="Confirm Return" Command="{Binding SubmitReturnCommand}" Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" Padding="14,6" CornerRadius="6" FontSize="12" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -653,7 +668,10 @@
             <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
                     CornerRadius="8" Width="900" MaxHeight="700" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="20">
                 <Grid RowDefinitions="Auto,Auto,*,Auto">
-                    <TextBlock Grid.Row="0" Text="Receive Goods" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,10">
+                        <TextBlock Text="Receive Goods" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="✕" Command="{Binding CancelReceiveCommand}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
                     <Grid Grid.Row="1" ColumnDefinitions="Auto,120,Auto,120" Margin="0,0,0,10">
                         <TextBlock Text="Freight:" VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1" Text="{Binding LandedCostFreight}" Margin="8,0,20,0"/>
@@ -664,7 +682,7 @@
                         <ItemsControl ItemsSource="{Binding ReceiveRows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="8" Margin="0,4">
+                                    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="8" Margin="0,4">
                                         <StackPanel Spacing="6">
                                             <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold"/>
                                             <Grid ColumnDefinitions="Auto,80,Auto,*,Auto,*">
@@ -686,9 +704,9 @@
                         </ItemsControl>
                     </ScrollViewer>
                     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,12,0,0">
-                        <TextBlock Text="{Binding ReceiveErrorMessage}" Foreground="Red" VerticalAlignment="Center"/>
-                        <Button Content="Cancel" Command="{Binding CancelReceiveCommand}"/>
-                        <Button Content="Confirm Receive" Command="{Binding ConfirmReceiveCommand}" Background="#2E7D32" Foreground="White"/>
+                        <TextBlock Text="{Binding ReceiveErrorMessage}" Foreground="#EF4444" VerticalAlignment="Center"/>
+                        <Button Content="Cancel" Command="{Binding CancelReceiveCommand}" Padding="14,6" CornerRadius="6"/>
+                        <Button Content="Confirm Receive" Command="{Binding ConfirmReceiveCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -698,7 +716,10 @@
         <Grid Background="#B0000000" IsVisible="{Binding IsPaymentModalOpen}" ZIndex="25" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Width="420" Padding="20" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="Record Vendor Payment" FontSize="16" FontWeight="Bold" Foreground="#2E7D32"/>
+                    <Grid ColumnDefinitions="*, Auto">
+                        <TextBlock Text="Record Vendor Payment" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource NavActiveBgColor}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="✕" Command="{Binding ClosePaymentModalCommand}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
                     <StackPanel Spacing="4">
                         <TextBlock Text="Amount" FontSize="12" FontWeight="SemiBold"/>
                         <TextBox Text="{Binding PaymentAmount}"/>
@@ -711,10 +732,10 @@
                         <TextBlock Text="Reference" FontSize="12" FontWeight="SemiBold"/>
                         <TextBox Text="{Binding PaymentReference}" Watermark="Check #, transfer ref, etc."/>
                     </StackPanel>
-                    <TextBlock Text="{Binding PaymentErrorMessage}" Foreground="Red" FontSize="11"/>
+                    <TextBlock Text="{Binding PaymentErrorMessage}" Foreground="#EF4444" FontSize="11"/>
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
-                        <Button Content="Cancel" Command="{Binding ClosePaymentModalCommand}" Background="#757575" Foreground="White" Padding="12,6"/>
-                        <Button Content="Record Payment" Command="{Binding SubmitPaymentCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" FontWeight="SemiBold"/>
+                        <Button Content="Cancel" Command="{Binding ClosePaymentModalCommand}" Padding="12,6" CornerRadius="6"/>
+                        <Button Content="Record Payment" Command="{Binding SubmitPaymentCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

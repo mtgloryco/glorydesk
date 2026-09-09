@@ -104,7 +104,8 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Content="Replenish" Command="{Binding $parent[UserControl].((vm:DamageWriteOffViewModel)DataContext).ReplenishCommand}"
-                                                CommandParameter="{Binding .}" FontSize="10" Padding="8,4" CornerRadius="3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                CommandParameter="{Binding .}" Background="#1410B981" Foreground="#10B981" BorderBrush="#3310B981" BorderThickness="1"
+                                                FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

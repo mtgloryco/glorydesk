@@ -16,8 +16,8 @@
             <!-- Quick Actions Toolbar -->
             <Border Grid.Row="0" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="0,0,0,12" Margin="0,0,0,12">
                 <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="Quick Actions:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0" />
-                    <Button Content="Buying ▾" Background="#007ACC" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4">
+                    <TextBlock Text="Quick Actions:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextSecondaryColor}"/>
+                    <Button Content="Buying ▾" Background="#14007ACC" Foreground="#007ACC" BorderBrush="#33007ACC" BorderThickness="1" Padding="12,6" FontWeight="SemiBold" CornerRadius="6">
                         <Button.Flyout>
                             <MenuFlyout Placement="Bottom">
                                 <MenuItem Header="Ask Supplier for Price" Command="{Binding GoToRfqScreenCommand}"/>
@@ -26,7 +26,7 @@
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
-                    <Button Content="Selling ▾" Background="#2E7D32" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4">
+                    <Button Content="Selling ▾" Background="#1410B981" Foreground="#10B981" BorderBrush="#3310B981" BorderThickness="1" Padding="12,6" FontWeight="SemiBold" CornerRadius="6">
                         <Button.Flyout>
                             <MenuFlyout Placement="Bottom">
                                 <MenuItem Header="Price Quotes" Command="{Binding GoToSalesQuotationsScreenCommand}"/>
@@ -35,7 +35,7 @@
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
-                    <Button Content="Stock Tools ▾" Background="#5E35B1" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4">
+                    <Button Content="Stock Tools ▾" Background="#148B5CF6" Foreground="#8B5CF6" BorderBrush="#338B5CF6" BorderThickness="1" Padding="12,6" FontWeight="SemiBold" CornerRadius="6">
                         <Button.Flyout>
                             <MenuFlyout Placement="Bottom">
                                 <MenuItem Header="Stock Counts" Command="{Binding GoToCycleCountScreenCommand}"/>
@@ -46,7 +46,7 @@
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
-                    <Button Content="Reporting ▾" Background="#00838F" Foreground="White" Padding="12,6" FontWeight="SemiBold" CornerRadius="4">
+                    <Button Content="Reporting ▾" Background="#1406B6D4" Foreground="#06B6D4" BorderBrush="#3306B6D4" BorderThickness="1" Padding="12,6" FontWeight="SemiBold" CornerRadius="6">
                         <Button.Flyout>
                             <MenuFlyout Placement="Bottom">
                                 <MenuItem Header="Stock" Command="{Binding GoToStockReportScreenCommand}"/>
@@ -60,7 +60,7 @@
             <!-- Header / Toolbar -->
             <Grid Grid.Row="1" ColumnDefinitions="*, Auto, Auto" Margin="0,0,0,15">
                 <StackPanel Spacing="4">
-                    <TextBox x:Name="InventorySearchBox" Text="{Binding SearchText}" Watermark="Scan barcode or search products..." Width="300" HorizontalAlignment="Left" KeyDown="OnSearchKeyDown"/>
+                    <TextBox x:Name="InventorySearchBox" Text="{Binding SearchText}" Watermark="Scan barcode or search products..." Width="320" HorizontalAlignment="Left" KeyDown="OnSearchKeyDown" CornerRadius="6"/>
                     <TextBlock Text="{Binding BarcodeStatusMessage}" FontSize="11" Foreground="#059669" IsVisible="{Binding BarcodeStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                 </StackPanel>
                 
@@ -69,9 +69,16 @@
                         Command="{Binding ImportProductsCommand}" 
                         IsEnabled="{Binding CanBulkImport}"
                         ToolTip.Tip="{Binding BulkImportTooltip}"
-                        Background="{DynamicResource PageBackgroundColor}" />
+                        Background="{DynamicResource ContentBackgroundColor}"
+                        BorderBrush="{DynamicResource BorderColor}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12,6"
+                        FontWeight="SemiBold"/>
                         
-                <Button Grid.Column="2" Content="{Binding Language.Resources[Inv_NewProduct]}" Command="{Binding OpenAddProductPaneCommand}" Background="#2E7D32" Foreground="White"/>
+                <Button Grid.Column="2" Content="{Binding Language.Resources[Inv_NewProduct]}" Command="{Binding OpenAddProductPaneCommand}"
+                        Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}"
+                        CornerRadius="6" Padding="14,6" FontWeight="SemiBold"/>
             </Grid>
 
             <!-- Product List -->
@@ -86,27 +93,39 @@
                     <DataGridTextColumn Header="{Binding Language.Resources[Inv_SKU]}" Binding="{Binding SKU}" Width="100"/>
                     <DataGridTextColumn Header="{Binding Language.Resources[Inv_ProductName]}" Binding="{Binding Name}" Width="*"/>
                     <DataGridTextColumn Header="{Binding Language.Resources[Inv_Category]}" Binding="{Binding Category}" Width="120"/>
-                    <DataGridTextColumn Header="{Binding Language.Resources[Inv_Stock]}" Binding="{Binding StockQuantity}" Width="80"/>
+                    <DataGridTemplateColumn Header="{Binding Language.Resources[Inv_Stock]}" Width="90">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="8,2" CornerRadius="10" Background="{DynamicResource NavHoverColor}">
+                                    <TextBlock Text="{Binding StockQuantity}" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="{Binding Language.Resources[Inv_Unit]}" Binding="{Binding Unit}" Width="70"/>
                     <DataGridTemplateColumn Header="{Binding Language.Resources[Inv_SellingPrice]}" Width="110">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock VerticalAlignment="Center" Margin="5,0,0,0">
+                                <TextBlock VerticalAlignment="Center" Margin="5,0,0,0" FontWeight="SemiBold">
                                     <Run Text="{Binding Price, StringFormat='{}{0:N0}'}"/>
-                                    <Run Text="{Binding #Root.DataContext.CurrencySymbol}"/>
+                                    <Run Text="{Binding #Root.DataContext.CurrencySymbol}" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
                                 </TextBlock>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     
-                    <DataGridTemplateColumn Header="{Binding Language.Resources[Inv_Actions]}" Width="250">
+                    <DataGridTemplateColumn Header="{Binding Language.Resources[Inv_Actions]}" Width="270">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                    <Button Content="History" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).OpenProductHistoryCommand}" CommandParameter="{Binding .}" Background="#5C6BC0" Foreground="White" FontSize="10" Padding="6,3" CornerRadius="3"/>
-                                    <Button Content="Stock" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).OpenStockPaneCommand}" CommandParameter="{Binding .}" Background="#F57C00" Foreground="White" FontSize="10" Padding="6,3" CornerRadius="3"/>
-                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).OpenEditProductPaneCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,3" CornerRadius="3"/>
-                                    <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).DeleteProductCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="10" Padding="6,3" CornerRadius="3"/>
+                                    <Button Content="History" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).OpenProductHistoryCommand}" CommandParameter="{Binding .}"
+                                            Background="#143B82F6" Foreground="#3B82F6" BorderBrush="#333B82F6" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                    <Button Content="Stock" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).OpenStockPaneCommand}" CommandParameter="{Binding .}"
+                                            Background="#14F59E0B" Foreground="#F59E0B" BorderBrush="#33F59E0B" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).OpenEditProductPaneCommand}" CommandParameter="{Binding .}"
+                                            Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                    <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:InventoryViewModel)DataContext).DeleteProductCommand}" CommandParameter="{Binding .}"
+                                            Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                                 </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
@@ -133,7 +152,12 @@
                     helpers:ResizableHelper.CanResize="True">
                 <Grid RowDefinitions="Auto, *, Auto">
                     <!-- Header -->
-                    <TextBlock Grid.Row="0" Text="{Binding PaneTitle}" FontSize="20" FontWeight="Bold" Margin="0,0,0,15"/>
+                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,15">
+                        <TextBlock Text="{Binding PaneTitle}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Command="{Binding CancelPaneCommand}"
+                                Content="✕" FontSize="16" Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
                     
                     <!-- Scrollable Body -->
                     <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
@@ -329,8 +353,8 @@
 
                     <!-- Footer buttons -->
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,20,0,0">
-                        <Button Content="Cancel" Command="{Binding CancelPaneCommand}"/>
-                        <Button Content="Save" Command="{Binding SaveProductCommand}" Classes="accent" Background="#007ACC" Foreground="White"/>
+                        <Button Content="Cancel" Command="{Binding CancelPaneCommand}" Padding="14,6" CornerRadius="6"/>
+                        <Button Content="Save" Command="{Binding SaveProductCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="16,8" FontWeight="SemiBold" CornerRadius="6"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -349,9 +373,14 @@
                     BoxShadow="0 8 32 0 #40000000"
                     Padding="20">
                 <Grid RowDefinitions="Auto, Auto, *, Auto">
-                    <TextBlock Grid.Row="0" Text="Units of Measure" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,10">
+                        <TextBlock Text="Units of Measure" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Command="{Binding CancelSearchMoreCommand}"
+                                Content="✕" FontSize="16" Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
                     
-                    <Button Grid.Row="1" Content="Create New Unit" Command="{Binding OpenCreateUnitFromSearchMoreCommand}" Background="#2E7D32" Foreground="White" HorizontalAlignment="Right" Margin="0,0,0,10"/>
+                    <Button Grid.Row="1" Content="Create New Unit" Command="{Binding OpenCreateUnitFromSearchMoreCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="12,6" FontWeight="SemiBold" CornerRadius="6" HorizontalAlignment="Right" Margin="0,0,0,10"/>
                     
                     <ScrollViewer Grid.Row="2" MaxHeight="300" Margin="0,0,0,10">
                         <ListBox ItemsSource="{Binding AllProductUnits}">
@@ -387,7 +416,12 @@
                     BoxShadow="0 8 32 0 #40000000"
                     Padding="20">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="Create New Unit" FontSize="16" FontWeight="Bold"/>
+                    <Grid ColumnDefinitions="*, Auto">
+                        <TextBlock Text="Create New Unit" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Command="{Binding CancelCreateUnitCommand}"
+                                Content="✕" FontSize="16" Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
                     
                     <StackPanel Spacing="5">
                         <TextBlock Text="Unit Name" FontSize="12"/>
@@ -406,11 +440,11 @@
                     
                     <CheckBox Content="Group products in POS" IsChecked="{Binding NewUnitGroupInPOS}"/>
                     
-                    <TextBlock Text="{Binding NewUnitErrorMessage}" Foreground="#FF5252" TextWrapping="Wrap" IsVisible="{Binding NewUnitErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding NewUnitErrorMessage}" Foreground="#EF4444" TextWrapping="Wrap" IsVisible="{Binding NewUnitErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,10,0,0">
-                        <Button Content="Cancel" Command="{Binding CancelCreateUnitCommand}"/>
-                        <Button Content="Save" Command="{Binding SaveNewUnitCommand}" Background="#007ACC" Foreground="White"/>
+                        <Button Content="Cancel" Command="{Binding CancelCreateUnitCommand}" Padding="14,6" CornerRadius="6"/>
+                        <Button Content="Save" Command="{Binding SaveNewUnitCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -428,7 +462,12 @@
                     BoxShadow="0 8 32 0 #40000000"
                     Padding="20">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="Create New Category" FontSize="16" FontWeight="Bold"/>
+                    <Grid ColumnDefinitions="*, Auto">
+                        <TextBlock Text="Create New Category" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Command="{Binding CancelCreateCategoryCommand}"
+                                Content="✕" FontSize="16" Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
                     
                     <StackPanel Spacing="5">
                         <TextBlock Text="Category Name" FontSize="12"/>
@@ -440,11 +479,11 @@
                         <TextBox Watermark="Category description" Text="{Binding NewCategoryDescription}" Height="60" TextWrapping="Wrap"/>
                     </StackPanel>
                     
-                    <TextBlock Text="{Binding NewCategoryErrorMessage}" Foreground="#FF5252" TextWrapping="Wrap" IsVisible="{Binding NewCategoryErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding NewCategoryErrorMessage}" Foreground="#EF4444" TextWrapping="Wrap" IsVisible="{Binding NewCategoryErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,10,0,0">
-                        <Button Content="Cancel" Command="{Binding CancelCreateCategoryCommand}"/>
-                        <Button Content="Save" Command="{Binding SaveNewCategoryCommand}" Background="#007ACC" Foreground="White"/>
+                        <Button Content="Cancel" Command="{Binding CancelCreateCategoryCommand}" Padding="14,6" CornerRadius="6"/>
+                        <Button Content="Save" Command="{Binding SaveNewCategoryCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -463,7 +502,12 @@
                     Padding="20">
                 <ScrollViewer MaxHeight="450">
                     <StackPanel Spacing="15">
-                        <TextBlock Text="Create New Sales Tax" FontSize="16" FontWeight="Bold"/>
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBlock Text="Create New Sales Tax" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Command="{Binding CancelCreateTaxCommand}"
+                                    Content="✕" FontSize="16" Background="Transparent" BorderThickness="0"
+                                    Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                        </Grid>
                         
                         <StackPanel Spacing="5">
                             <TextBlock Text="Tax Name" FontSize="12"/>
@@ -502,11 +546,11 @@
                             <TextBox Watermark="Tax description" Text="{Binding NewTaxDescription}" Height="50" TextWrapping="Wrap"/>
                         </StackPanel>
                         
-                        <TextBlock Text="{Binding NewTaxErrorMessage}" Foreground="#FF5252" TextWrapping="Wrap" IsVisible="{Binding NewTaxErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <TextBlock Text="{Binding NewTaxErrorMessage}" Foreground="#EF4444" TextWrapping="Wrap" IsVisible="{Binding NewTaxErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                         
                         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,10,0,0">
-                            <Button Content="Cancel" Command="{Binding CancelCreateTaxCommand}"/>
-                            <Button Content="Save" Command="{Binding SaveNewSalesTaxCommand}" Background="#007ACC" Foreground="White"/>
+                            <Button Content="Cancel" Command="{Binding CancelCreateTaxCommand}" Padding="14,6" CornerRadius="6"/>
+                            <Button Content="Save" Command="{Binding SaveNewSalesTaxCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

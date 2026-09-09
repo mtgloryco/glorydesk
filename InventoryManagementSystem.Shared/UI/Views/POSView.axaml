@@ -1226,8 +1226,8 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
-                        <Button Content="Cancel" Command="{Binding CloseCashMovementModalCommand}" Background="#757575" Foreground="White" Padding="12,6" CornerRadius="4"/>
-                        <Button Content="Confirm" Command="{Binding ConfirmCashMovementCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" CornerRadius="4" FontWeight="SemiBold"/>
+                        <Button Content="Cancel" Command="{Binding CloseCashMovementModalCommand}" Padding="14,6" CornerRadius="6"/>
+                        <Button Content="Confirm" Command="{Binding ConfirmCashMovementCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" CornerRadius="6" FontWeight="SemiBold"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

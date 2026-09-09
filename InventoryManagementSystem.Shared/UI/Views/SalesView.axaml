@@ -20,11 +20,13 @@
                         <TextBlock Text="Sales" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0,0,0"/>
                     </StackPanel>
                     
-                    <TabStrip Grid.Column="1" SelectedIndex="{Binding SelectedTabIndex}" Margin="0,0,15,0">
-                        <TabItem Header="Price Quotes"/>
-                        <TabItem Header="Customer Orders"/>
-                        <TabItem Header="Repeat Bills"/>
-                    </TabStrip>
+                    <Border Grid.Column="1" Background="{DynamicResource NavHoverColor}" CornerRadius="8" Padding="3" Margin="0,0,15,0" VerticalAlignment="Center">
+                        <TabStrip SelectedIndex="{Binding SelectedTabIndex}">
+                            <TabItem Header="Price Quotes"/>
+                            <TabItem Header="Customer Orders"/>
+                            <TabItem Header="Repeat Bills"/>
+                        </TabStrip>
+                    </Border>
                 </Grid>
             </Border>
 
@@ -96,11 +98,15 @@
                         <DataGridTemplateColumn Header="Actions" Width="260">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="domain:SalesOrderListItem">
-                                    <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                        <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).OpenEditSaleCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,4" CornerRadius="3"/>
-                                        <Button Content="Approve Order" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).ConfirmQuotationCommand}" CommandParameter="{Binding .}" Background="#2E7D32" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3"/>
-                                        <Button Content="Print PDF" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PrintPdfCommand}" CommandParameter="{Binding .}" Background="#007ACC" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3"/>
-                                        <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).DeleteOrderCommand}" CommandParameter="{Binding .}" Background="#C62828" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                        <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).OpenEditSaleCommand}" CommandParameter="{Binding .}"
+                                                Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                        <Button Content="Approve Order" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).ConfirmQuotationCommand}" CommandParameter="{Binding .}"
+                                                Background="#1410B981" Foreground="#10B981" BorderBrush="#3310B981" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                        <Button Content="Print PDF" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PrintPdfCommand}" CommandParameter="{Binding .}"
+                                                Background="#143B82F6" Foreground="#3B82F6" BorderBrush="#333B82F6" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                        <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).DeleteOrderCommand}" CommandParameter="{Binding .}"
+                                                Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -137,10 +143,13 @@
                         <DataGridTemplateColumn Header="Actions" Width="280">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate DataType="domain:SalesOrderListItem">
-                                    <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
-                                        <Button Content="Details" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).OpenDetailsCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,4" CornerRadius="3"/>
-                                        <Button Content="Delivery Slip" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PrintDeliveryNoteCommand}" CommandParameter="{Binding .}" Background="#E65100" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3" ToolTip.Tip="Print Delivery Slip"/>
-                                        <Button Content="Packing List" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PrintPackingSlipCommand}" CommandParameter="{Binding .}" Background="#6D4C41" Foreground="White" FontSize="10" Padding="6,4" CornerRadius="3" ToolTip.Tip="Print Packing List"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                        <Button Content="Details" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).OpenDetailsCommand}" CommandParameter="{Binding .}"
+                                                Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                        <Button Content="Delivery Slip" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PrintDeliveryNoteCommand}" CommandParameter="{Binding .}"
+                                                Background="#14F59E0B" Foreground="#F59E0B" BorderBrush="#33F59E0B" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" ToolTip.Tip="Print Delivery Slip"/>
+                                        <Button Content="Packing List" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PrintPackingSlipCommand}" CommandParameter="{Binding .}"
+                                                Background="#148B5CF6" Foreground="#8B5CF6" BorderBrush="#338B5CF6" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" ToolTip.Tip="Print Packing List"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -166,9 +175,11 @@
                             <DataGridTemplateColumn Header="Actions" Width="180">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate DataType="domain:RecurringInvoice">
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <Button Content="Pause" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PauseRecurringCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,4"/>
-                                            <Button Content="Resume" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).ResumeRecurringCommand}" CommandParameter="{Binding .}" FontSize="10" Padding="6,4"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Button Content="Pause" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).PauseRecurringCommand}" CommandParameter="{Binding .}"
+                                                    Background="#14F59E0B" Foreground="#F59E0B" BorderBrush="#33F59E0B" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                            <Button Content="Resume" Command="{Binding $parent[UserControl].((vm:SalesViewModel)DataContext).ResumeRecurringCommand}" CommandParameter="{Binding .}"
+                                                    Background="#1410B981" Foreground="#10B981" BorderBrush="#3310B981" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -631,7 +642,7 @@
                                 <Button Content="Cancel Order" Command="{Binding CancelDetailedSoCommand}" IsEnabled="{Binding CanCancelDetailedSo}" Background="#E53935" Foreground="White" Margin="5"/>
                                 <Button Content="Return Items" Command="{Binding OpenReturnOrderCommand}" IsEnabled="{Binding CanReturnDetailedSo}" Background="#f44336" Foreground="White" Margin="5"/>
                                 <Button Content="{Binding ArchiveDetailedSoButtonText}" Command="{Binding ToggleArchiveDetailedSoCommand}" Background="#78909C" Foreground="White" Margin="5"/>
-                                <Button Content="Delete Order" Command="{Binding DeleteDetailedSoCommand}" Background="#D32F2F" Foreground="White" Margin="5"/>
+                                <Button Content="Delete Order" Command="{Binding DeleteDetailedSoCommand}" Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontWeight="SemiBold" CornerRadius="4" Margin="5"/>
                                 <Button Content="Close" Command="{Binding CloseDetailsCommand}" Margin="5"/>
                             </WrapPanel>
                         </Grid>

@@ -10,56 +10,36 @@
              x:DataType="vm:SettingsViewModel"
              Background="{DynamicResource PageBackgroundColor}">
 
-    <UserControl.Styles>
-        <!-- Premium Tab Navigation Button Styling -->
-        <Style Selector="Button.tab-btn">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="Gray"/>
-            <Setter Property="BorderThickness" Value="0,0,0,3"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="CornerRadius" Value="0"/>
-            <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <Style Selector="Button.tab-btn:pointerover">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryColor}"/>
-            <Setter Property="Background" Value="#10000000"/>
-        </Style>
-        <Style Selector="Button.active-tab">
-            <Setter Property="Foreground" Value="#007ACC"/>
-            <Setter Property="BorderBrush" Value="#007ACC"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-        </Style>
-    </UserControl.Styles>
-
     <Grid RowDefinitions="Auto, Auto, *" Margin="30">
         <!-- Header -->
         <TextBlock Text="{Binding Language.Resources[Settings_Title]}" FontSize="28" FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryColor}" Margin="0,0,0,20" />
 
-        <!-- Inline Tab Bar -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5" Margin="0,0,0,20">
-            <Button Content="General Settings" Command="{Binding SelectTabCommand}" CommandParameter="General"
-                    Classes="tab-btn" Classes.active-tab="{Binding IsGeneralTabActive}" />
-            <Button Content="Taxes Setup" Command="{Binding SelectTabCommand}" CommandParameter="Taxes"
-                    Classes="tab-btn" Classes.active-tab="{Binding IsTaxesTabActive}" />
-            <Button Content="Accounting" Command="{Binding SelectTabCommand}" CommandParameter="Accounting"
-                    Classes="tab-btn" Classes.active-tab="{Binding IsAccountingTabActive}" />
-            <Button Content="Payments Setup" Command="{Binding SelectTabCommand}" CommandParameter="Payments"
-                    Classes="tab-btn" Classes.active-tab="{Binding IsPaymentsTabActive}" />
-            <Button Content="Financial" Command="{Binding SelectTabCommand}" CommandParameter="Financial"
-                    Classes="tab-btn" Classes.active-tab="{Binding IsFinancialTabActive}" />
-            <Button Content="Business Setup" Command="{Binding SelectTabCommand}" CommandParameter="BusinessSetup"
-                    Classes="tab-btn" Classes.active-tab="{Binding IsBusinessSetupTabActive}" />
-            <Button Content="Custom Fields" Command="{Binding SelectTabCommand}" CommandParameter="CustomFields"
-                    Classes="tab-btn" Classes.active-tab="{Binding IsCustomFieldsTabActive}" />
-            <Button Content="Word Labels" Command="{Binding SelectTabCommand}" CommandParameter="Terminology"
-                    Classes="tab-btn" Classes.active-tab="{Binding IsTerminologyTabActive}" />
-            <Button Content="Modules" Command="{Binding SelectTabCommand}" CommandParameter="Modules"
-                    Classes="tab-btn" Classes.active-tab="{Binding IsModulesTabActive}" />
-        </StackPanel>
+        <!-- Modern Segmented Tab Bar -->
+        <Border Grid.Row="1" Background="{DynamicResource NavHoverColor}" CornerRadius="8" Padding="4" Margin="0,0,0,20">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Button Content="General Settings" Command="{Binding SelectTabCommand}" CommandParameter="General"
+                            Classes="tab-btn" Classes.active-tab="{Binding IsGeneralTabActive}" />
+                    <Button Content="Taxes Setup" Command="{Binding SelectTabCommand}" CommandParameter="Taxes"
+                            Classes="tab-btn" Classes.active-tab="{Binding IsTaxesTabActive}" />
+                    <Button Content="Accounting" Command="{Binding SelectTabCommand}" CommandParameter="Accounting"
+                            Classes="tab-btn" Classes.active-tab="{Binding IsAccountingTabActive}" />
+                    <Button Content="Payments Setup" Command="{Binding SelectTabCommand}" CommandParameter="Payments"
+                            Classes="tab-btn" Classes.active-tab="{Binding IsPaymentsTabActive}" />
+                    <Button Content="Financial" Command="{Binding SelectTabCommand}" CommandParameter="Financial"
+                            Classes="tab-btn" Classes.active-tab="{Binding IsFinancialTabActive}" />
+                    <Button Content="Business Setup" Command="{Binding SelectTabCommand}" CommandParameter="BusinessSetup"
+                            Classes="tab-btn" Classes.active-tab="{Binding IsBusinessSetupTabActive}" />
+                    <Button Content="Custom Fields" Command="{Binding SelectTabCommand}" CommandParameter="CustomFields"
+                            Classes="tab-btn" Classes.active-tab="{Binding IsCustomFieldsTabActive}" />
+                    <Button Content="Word Labels" Command="{Binding SelectTabCommand}" CommandParameter="Terminology"
+                            Classes="tab-btn" Classes.active-tab="{Binding IsTerminologyTabActive}" />
+                    <Button Content="Modules" Command="{Binding SelectTabCommand}" CommandParameter="Modules"
+                            Classes="tab-btn" Classes.active-tab="{Binding IsModulesTabActive}" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
 
         <!-- Content Area -->
         <Border Grid.Row="2" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" Padding="30" BorderThickness="1" BorderBrush="{DynamicResource BorderColor}">
@@ -121,19 +101,19 @@
                         
                         <StackPanel Orientation="Horizontal" Spacing="15" Margin="0,20,0,0">
                             <Button Content="{Binding Language.Resources[Settings_Save]}" Command="{Binding SaveSettingsCommand}"
-                                    Classes="accent" Background="#2E7D32" Foreground="White" Padding="20,10" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Foreground="#4CAF50" FontWeight="Medium"/>
+                                    Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="16,8" FontWeight="SemiBold" CornerRadius="6"/>
+                            <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Foreground="#10B981" FontWeight="Medium"/>
                         </StackPanel>
 
                         <Separator Height="1" Background="{DynamicResource BorderColor}" Margin="0,25,0,15" IsVisible="{Binding IsSudoModeEnabled}"/>
 
                         <StackPanel Spacing="10" IsVisible="{Binding IsSudoModeEnabled}">
-                            <TextBlock Text="Database Maintenance" FontSize="18" FontWeight="Bold" Foreground="#D32F2F"/>
+                            <TextBlock Text="Database Maintenance" FontSize="18" FontWeight="Bold" Foreground="#EF4444"/>
                             <TextBlock Text="Warning: Clearing transaction data will permanently delete all sales orders, purchase orders, stock movements, and journal entries. Your product list and configurations will remain, but all stock levels and account balances will be reset to 0." 
                                        Foreground="Gray" TextWrapping="Wrap"/>
                             <Button Content="Clear Transaction Data (Reset Stock &amp; Balances)" 
                                     Command="{Binding ClearTransactionDataCommand}"
-                                    Classes="accent" Background="#D32F2F" Foreground="White" Padding="20,10" FontWeight="SemiBold"
+                                    Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" Padding="14,8" FontWeight="SemiBold" CornerRadius="6"
                                     HorizontalAlignment="Left" Margin="0,10,0,0"/>
                         </StackPanel>
                     </StackPanel>
@@ -146,7 +126,7 @@
                                 <TextBlock Text="Manage Taxes" FontSize="20" FontWeight="Bold"/>
                                 <TextBlock Text="Set up product tax rules for purchases and sales." Foreground="Gray"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="+ Create Tax" Command="{Binding OpenAddTaxFormCommand}" Background="#007ACC" Foreground="White" Padding="15,8" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding !IsTaxFormVisible}" />
+                            <Button Grid.Column="1" Content="+ Create Tax" Command="{Binding OpenAddTaxFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding !IsTaxFormVisible}" />
                         </Grid>
 
                         <!-- Add/Edit Tax Form (2-column layout) -->
@@ -220,11 +200,11 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <TextBlock Text="{Binding TaxErrorMessage}" Foreground="#D32F2F" FontSize="12" Margin="0,5,0,0" IsVisible="{Binding TaxErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                <TextBlock Text="{Binding TaxErrorMessage}" Foreground="#EF4444" FontSize="12" Margin="0,5,0,0" IsVisible="{Binding TaxErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                                 <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,15,0,0">
-                                    <Button Content="Cancel" Command="{Binding CloseTaxFormCommand}" Padding="15,8" />
-                                    <Button Content="Save Tax Rule" Command="{Binding SaveTaxCommand}" Background="#2E7D32" Foreground="White" Padding="15,8" FontWeight="SemiBold" />
+                                    <Button Content="Cancel" Command="{Binding CloseTaxFormCommand}" Padding="14,6" CornerRadius="6" />
+                                    <Button Content="Save Tax Rule" Command="{Binding SaveTaxCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -243,8 +223,8 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Panel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <Button Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).ToggleTaxStatusCommand}" CommandParameter="{Binding .}" IsVisible="{Binding IsActive}" Background="#2E7D32" Foreground="White" Content="Active" FontSize="11" Padding="10,4" CornerRadius="4" Cursor="Hand" />
-                                                <Button Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).ToggleTaxStatusCommand}" CommandParameter="{Binding .}" IsVisible="{Binding !IsActive}" Background="#D32F2F" Foreground="White" Content="Inactive" FontSize="11" Padding="10,4" CornerRadius="4" Cursor="Hand" />
+                                                <Button Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).ToggleTaxStatusCommand}" CommandParameter="{Binding .}" IsVisible="{Binding IsActive}" Background="#1410B981" Foreground="#10B981" BorderBrush="#3310B981" BorderThickness="1" Content="Active" FontSize="11" FontWeight="SemiBold" Padding="10,4" CornerRadius="4" Cursor="Hand" />
+                                                <Button Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).ToggleTaxStatusCommand}" CommandParameter="{Binding .}" IsVisible="{Binding !IsActive}" Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" Content="Inactive" FontSize="11" FontWeight="SemiBold" Padding="10,4" CornerRadius="4" Cursor="Hand" />
                                             </Panel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -253,8 +233,10 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Spacing="5" Margin="5,0">
-                                                <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditTaxFormCommand}" CommandParameter="{Binding .}" FontSize="11" Padding="6,3" />
-                                                <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteTaxCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="11" Padding="6,3" />
+                                                <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditTaxFormCommand}" CommandParameter="{Binding .}"
+                                                        Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
+                                                <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteTaxCommand}" CommandParameter="{Binding .}"
+                                                        Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -272,8 +254,8 @@
                                 <ComboBox ItemsSource="{Binding AccountingSubTabs}" SelectedItem="{Binding SelectedAccountingSubTab}" Width="220" VerticalAlignment="Center"/>
                             </StackPanel>
                             <Panel Grid.Column="2">
-                                <Button Content="+ Create Account" Command="{Binding OpenAddAccountFormCommand}" Background="#007ACC" Foreground="White" Padding="15,8" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding IsCreateAccountButtonVisible}" />
-                                <Button Content="+ Create Journal" Command="{Binding OpenAddJournalFormCommand}" Background="#007ACC" Foreground="White" Padding="15,8" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding IsCreateJournalButtonVisible}" />
+                                <Button Content="+ Create Account" Command="{Binding OpenAddAccountFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding IsCreateAccountButtonVisible}" />
+                                <Button Content="+ Create Journal" Command="{Binding OpenAddJournalFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding IsCreateJournalButtonVisible}" />
                             </Panel>
                         </Grid>
 
@@ -322,8 +304,8 @@
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <Panel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                            <Button Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).ToggleAccountStatusCommand}" CommandParameter="{Binding .}" IsVisible="{Binding IsActive}" Background="#2E7D32" Foreground="White" Content="Active" FontSize="11" Padding="10,4" CornerRadius="4" Cursor="Hand" />
-                                                            <Button Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).ToggleAccountStatusCommand}" CommandParameter="{Binding .}" IsVisible="{Binding !IsActive}" Background="#D32F2F" Foreground="White" Content="Inactive" FontSize="11" Padding="10,4" CornerRadius="4" Cursor="Hand" />
+                                                            <Button Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).ToggleAccountStatusCommand}" CommandParameter="{Binding .}" IsVisible="{Binding IsActive}" Background="#1410B981" Foreground="#10B981" BorderBrush="#3310B981" BorderThickness="1" Content="Active" FontSize="11" FontWeight="SemiBold" Padding="10,4" CornerRadius="4" Cursor="Hand" />
+                                                            <Button Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).ToggleAccountStatusCommand}" CommandParameter="{Binding .}" IsVisible="{Binding !IsActive}" Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" Content="Inactive" FontSize="11" FontWeight="SemiBold" Padding="10,4" CornerRadius="4" Cursor="Hand" />
                                                         </Panel>
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
@@ -332,8 +314,10 @@
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <StackPanel Orientation="Horizontal" Spacing="5" Margin="5,0">
-                                                            <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditAccountFormCommand}" CommandParameter="{Binding .}" FontSize="11" Padding="6,3" />
-                                                            <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteAccountCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="11" Padding="6,3" />
+                                                            <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditAccountFormCommand}" CommandParameter="{Binding .}"
+                                                                    Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
+                                                            <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteAccountCommand}" CommandParameter="{Binding .}"
+                                                                    Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
                                                         </StackPanel>
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
@@ -388,10 +372,10 @@
                                                 <ToggleSwitch IsChecked="{Binding NewAccountPaymentReconciliation}" OnContent="Enabled" OffContent="Disabled" VerticalAlignment="Center" Margin="10,0,0,0" />
                                             </StackPanel>
                                         </Grid>
-                                        <TextBlock Text="{Binding AccountErrorMessage}" Foreground="#D32F2F" FontSize="12" Margin="0,5,0,0" IsVisible="{Binding AccountErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        <TextBlock Text="{Binding AccountErrorMessage}" Foreground="#EF4444" FontSize="12" Margin="0,5,0,0" IsVisible="{Binding AccountErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                                         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,15,0,0">
-                                            <Button Content="Cancel" Command="{Binding CloseAccountFormCommand}" Padding="15,8" />
-                                            <Button Content="Save Account" Command="{Binding SaveAccountCommand}" Background="#2E7D32" Foreground="White" Padding="15,8" FontWeight="SemiBold" />
+                                            <Button Content="Cancel" Command="{Binding CloseAccountFormCommand}" Padding="14,6" CornerRadius="6" />
+                                            <Button Content="Save Account" Command="{Binding SaveAccountCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" />
                                         </StackPanel>
                                     </StackPanel>
                                 </ScrollViewer>
@@ -410,8 +394,10 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal" Spacing="5" Margin="5,0">
-                                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditJournalFormCommand}" CommandParameter="{Binding .}" FontSize="11" Padding="6,3" />
-                                                    <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteJournalCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="11" Padding="6,3" />
+                                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditJournalFormCommand}" CommandParameter="{Binding .}"
+                                                            Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
+                                                    <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteJournalCommand}" CommandParameter="{Binding .}"
+                                                            Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
                                                 </StackPanel>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
@@ -793,16 +779,16 @@
                                                                  </StackPanel>
                                                              </DataTemplate>
                                                          </ComboBox.ItemTemplate>
-                                                     </ComboBox>
+                                                                     </ComboBox>
                                                      <TextBlock Text="Linking this connects incoming bank transactions directly to this double-entry accounting journal." FontSize="11" Foreground="Gray" Margin="2,2,0,0"/>
                                                  </StackPanel>
                                              </StackPanel>
                                              </Border>
-                                             <TextBlock Text="{Binding JournalErrorMessage}" Foreground="#D32F2F" FontSize="12" Margin="0,5,0,0" IsVisible="{Binding JournalErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                             <TextBlock Text="{Binding JournalErrorMessage}" Foreground="#EF4444" FontSize="12" Margin="0,5,0,0" IsVisible="{Binding JournalErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
                                              <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,15,0,0">
-                                                 <Button Content="Cancel" Command="{Binding CloseJournalFormCommand}" Padding="15,8" />
-                                                 <Button Content="Save Journal" Command="{Binding SaveJournalCommand}" Background="#2E7D32" Foreground="White" Padding="15,8" FontWeight="SemiBold" />
+                                                 <Button Content="Cancel" Command="{Binding CloseJournalFormCommand}" Padding="14,6" CornerRadius="6" />
+                                                 <Button Content="Save Journal" Command="{Binding SaveJournalCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" />
                                              </StackPanel>
                                          </StackPanel>
                                      </ScrollViewer>
@@ -857,7 +843,7 @@
                                         <TextBlock Text="{Binding ReportDetailTitle}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <TextBlock Text="Structure &amp; Balances Configuration" FontSize="12" Foreground="Gray" VerticalAlignment="Center" Margin="5,4,0,0"/>
                                     </StackPanel>
-                                    <Button Grid.Column="2" Content="Refresh Balances" Command="{Binding LoadReportLinesAsyncCommand}" Background="#007ACC" Foreground="White" Padding="12,8" FontSize="12" FontWeight="SemiBold" CornerRadius="6" />
+                                    <Button Grid.Column="2" Content="Refresh Balances" Command="{Binding LoadReportLinesAsyncCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontSize="12" FontWeight="SemiBold" CornerRadius="6" />
                                 </Grid>
 
                                 <!-- Hierarchical Lines Table -->
@@ -897,8 +883,10 @@
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <StackPanel Orientation="Horizontal" Spacing="5" Margin="5,0">
-                                                            <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditLineFormCommand}" CommandParameter="{Binding .}" FontSize="11" Padding="6,3" />
-                                                            <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteLineCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="11" Padding="6,3" />
+                                                            <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditLineFormCommand}" CommandParameter="{Binding .}"
+                                                                    Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
+                                                            <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteLineCommand}" CommandParameter="{Binding .}"
+                                                                    Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
                                                         </StackPanel>
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
@@ -929,8 +917,8 @@
                                  <ComboBox ItemsSource="{Binding PaymentsManagementTypes}" SelectedItem="{Binding SelectedPaymentsManagementType}" Width="220" VerticalAlignment="Center"/>
                              </StackPanel>
                              <Panel Grid.Column="2">
-                                 <Button Content="+ Create Bank" Command="{Binding OpenAddBankFormCommand}" Background="#007ACC" Foreground="White" Padding="15,8" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding IsBanksSubTabActive}" />
-                                 <Button Content="+ Create Bank Account" Command="{Binding OpenAddBankAccountFormCommand}" Background="#007ACC" Foreground="White" Padding="15,8" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding IsBankAccountsSubTabActive}" />
+                                 <Button Content="+ Create Bank" Command="{Binding OpenAddBankFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding IsBanksSubTabActive}" />
+                                 <Button Content="+ Create Bank Account" Command="{Binding OpenAddBankAccountFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding IsBankAccountsSubTabActive}" />
                              </Panel>
                          </Grid>
 
@@ -951,8 +939,10 @@
                                                      <DataGridTemplateColumn.CellTemplate>
                                                          <DataTemplate x:DataType="domain:Bank">
                                                              <StackPanel Orientation="Horizontal" Spacing="5" Margin="5,0">
-                                                                 <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditBankFormCommand}" CommandParameter="{Binding .}" FontSize="11" Padding="6,3" />
-                                                                 <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteBankCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="11" Padding="6,3" />
+                                                                 <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditBankFormCommand}" CommandParameter="{Binding .}"
+                                                                         Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
+                                                                 <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteBankCommand}" CommandParameter="{Binding .}"
+                                                                         Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
                                                              </StackPanel>
                                                          </DataTemplate>
                                                      </DataGridTemplateColumn.CellTemplate>
@@ -999,12 +989,12 @@
                                                  </StackPanel>
                                              </Grid>
 
-                                             <TextBlock Text="{Binding BankErrorMessage}" Foreground="#D32F2F" FontSize="12" IsVisible="{Binding BankErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                              <TextBlock Text="{Binding BankErrorMessage}" Foreground="#EF4444" FontSize="12" IsVisible="{Binding BankErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                                             <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
-                                                 <Button Content="Save" Command="{Binding SaveBankCommand}" Background="#007ACC" Foreground="White" Padding="20,8" FontWeight="SemiBold"/>
-                                                 <Button Content="Cancel" Command="{Binding CancelBankFormCommand}" Background="#3A3F4C" Foreground="White" Padding="15,8"/>
-                                             </StackPanel>
+                                              <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                                                  <Button Content="Save" Command="{Binding SaveBankCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
+                                                  <Button Content="Cancel" Command="{Binding CancelBankFormCommand}" Padding="14,6" CornerRadius="6"/>
+                                              </StackPanel>
                                          </StackPanel>
                                      </Border>
                                  </Panel>
@@ -1032,8 +1022,10 @@
                                                      <DataGridTemplateColumn.CellTemplate>
                                                          <DataTemplate x:DataType="vm:BankAccountDisplayRow">
                                                              <StackPanel Orientation="Horizontal" Spacing="5" Margin="5,0">
-                                                                 <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditBankAccountFormCommand}" CommandParameter="{Binding .}" FontSize="11" Padding="6,3" />
-                                                                 <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteBankAccountCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="11" Padding="6,3" />
+                                                                 <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditBankAccountFormCommand}" CommandParameter="{Binding .}"
+                                                                         Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
+                                                                 <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteBankAccountCommand}" CommandParameter="{Binding .}"
+                                                                         Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4" />
                                                              </StackPanel>
                                                          </DataTemplate>
                                                      </DataGridTemplateColumn.CellTemplate>
@@ -1091,11 +1083,11 @@
                                                  <ToggleSwitch IsChecked="{Binding BankAccountSendMoney}" OnContent="Send Money Enabled" OffContent="Send Money Disabled"/>
                                              </StackPanel>
 
-                                             <TextBlock Text="{Binding BankAccountErrorMessage}" Foreground="#D32F2F" FontSize="12" IsVisible="{Binding BankAccountErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                             <TextBlock Text="{Binding BankAccountErrorMessage}" Foreground="#EF4444" FontSize="12" IsVisible="{Binding BankAccountErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
                                              <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
-                                                 <Button Content="Save" Command="{Binding SaveBankAccountCommand}" Background="#007ACC" Foreground="White" Padding="20,8" FontWeight="SemiBold"/>
-                                                 <Button Content="Cancel" Command="{Binding CancelBankAccountFormCommand}" Background="#3A3F4C" Foreground="White" Padding="15,8"/>
+                                                 <Button Content="Save" Command="{Binding SaveBankAccountCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
+                                                 <Button Content="Cancel" Command="{Binding CancelBankAccountFormCommand}" Padding="14,6" CornerRadius="6"/>
                                              </StackPanel>
                                          </StackPanel>
                                      </Border>
@@ -1115,7 +1107,7 @@
                         <StackPanel Spacing="12">
                             <Grid ColumnDefinitions="*, Auto">
                                 <TextBlock Text="Exchange Rates" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                <Button Grid.Column="1" Content="+ Add Rate" Command="{Binding OpenAddExchangeRateFormCommand}" Background="#007ACC" Foreground="White" Padding="12,6"/>
+                                <Button Grid.Column="1" Content="+ Add Rate" Command="{Binding OpenAddExchangeRateFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                             </Grid>
                             <Grid ColumnDefinitions="*, *, *, Auto, Auto" RowDefinitions="Auto, Auto" Margin="0,0,0,8">
                                 <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,8,0">
@@ -1134,9 +1126,9 @@
                                     <TextBlock Text="Effective Date" FontSize="11" FontWeight="SemiBold"/>
                                     <CalendarDatePicker SelectedDate="{Binding ExchangeEffectiveDate}"/>
                                 </StackPanel>
-                                <Button Grid.Column="4" Content="Save Rate" Command="{Binding SaveExchangeRateCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" VerticalAlignment="Bottom"/>
+                                <Button Grid.Column="4" Content="Save Rate" Command="{Binding SaveExchangeRateCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" VerticalAlignment="Bottom"/>
                             </Grid>
-                            <TextBlock Text="{Binding ExchangeRateErrorMessage}" Foreground="#D32F2F" IsVisible="{Binding ExchangeRateErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            <TextBlock Text="{Binding ExchangeRateErrorMessage}" Foreground="#EF4444" IsVisible="{Binding ExchangeRateErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             <DataGrid ItemsSource="{Binding ExchangeRates}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" Height="180">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="From" Binding="{Binding FromCurrency}" Width="80"/>
@@ -1147,8 +1139,10 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate x:DataType="domain:ExchangeRate">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditExchangeRateFormCommand}" CommandParameter="{Binding .}" Padding="6,2" FontSize="11"/>
-                                                    <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteExchangeRateCommand}" CommandParameter="{Binding .}" Padding="6,2" FontSize="11" Background="#D32F2F" Foreground="White"/>
+                                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditExchangeRateFormCommand}" CommandParameter="{Binding .}"
+                                                            Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                                    <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteExchangeRateCommand}" CommandParameter="{Binding .}"
+                                                            Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
@@ -1167,8 +1161,8 @@
                                     <TextBlock Text="Fiscal Year:" VerticalAlignment="Center"/>
                                     <NumericUpDown Value="{Binding BudgetLineFiscalYear}" Minimum="2000" Maximum="2100" Width="100"/>
                                 </StackPanel>
-                                <Button Grid.Column="1" Content="+ Add Budget Line" Command="{Binding OpenAddBudgetLineFormCommand}" Background="#007ACC" Foreground="White" Padding="12,6" Margin="0,0,8,0"/>
-                                <Button Grid.Column="2" Content="Refresh" Command="{Binding LoadBudgetLinesCommand}" Background="#78909C" Foreground="White" Padding="12,6"/>
+                                <Button Grid.Column="1" Content="+ Add Budget Line" Command="{Binding OpenAddBudgetLineFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" Margin="0,0,8,0"/>
+                                <Button Grid.Column="2" Content="Refresh" Command="{Binding LoadBudgetLinesCommand}" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimaryColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                             </Grid>
                             <Grid ColumnDefinitions="*, *, Auto, Auto" RowDefinitions="Auto, Auto">
                                 <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,8,0">
@@ -1190,10 +1184,10 @@
                                     <TextBlock Text="Amount" FontSize="11" FontWeight="SemiBold"/>
                                     <TextBox Text="{Binding BudgetLineAmount}"/>
                                 </StackPanel>
-                                <Button Grid.Column="3" Content="Save Line" Command="{Binding SaveBudgetLineCommand}" Background="#2E7D32" Foreground="White" Padding="12,6" VerticalAlignment="Bottom"/>
+                                <Button Grid.Column="3" Content="Save Line" Command="{Binding SaveBudgetLineCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" VerticalAlignment="Bottom"/>
                             </Grid>
                             <TextBox Text="{Binding BudgetLineNotes}" Watermark="Notes (optional)"/>
-                            <TextBlock Text="{Binding BudgetLineErrorMessage}" Foreground="#D32F2F" IsVisible="{Binding BudgetLineErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            <TextBlock Text="{Binding BudgetLineErrorMessage}" Foreground="#EF4444" IsVisible="{Binding BudgetLineErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             <DataGrid ItemsSource="{Binding BudgetLines}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" Height="200">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Account" Binding="{Binding AccountDisplay}" Width="*"/>
@@ -1204,8 +1198,10 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate x:DataType="vm:BudgetLineDisplayRow">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditBudgetLineFormCommand}" CommandParameter="{Binding .}" Padding="6,2" FontSize="11"/>
-                                                    <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteBudgetLineCommand}" CommandParameter="{Binding .}" Padding="6,2" FontSize="11" Background="#D32F2F" Foreground="White"/>
+                                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditBudgetLineFormCommand}" CommandParameter="{Binding .}"
+                                                            Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                                    <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteBudgetLineCommand}" CommandParameter="{Binding .}"
+                                                            Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
@@ -1214,7 +1210,7 @@
                             </DataGrid>
                         </StackPanel>
 
-                        <TextBlock Text="{Binding FinancialStatusMessage}" Foreground="#4CAF50" FontWeight="Medium"/>
+                        <TextBlock Text="{Binding FinancialStatusMessage}" Foreground="#10B981" FontWeight="Medium"/>
                     </StackPanel>
 
                     <!-- TAB 5: BUSINESS SETUP -->
@@ -1228,7 +1224,7 @@
                             <StackPanel Spacing="10">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <TextBlock Text="Current Business Type:" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding CurrentBusinessTypeDisplay}" Foreground="#007ACC" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding CurrentBusinessTypeDisplay}" Foreground="{DynamicResource NavActiveBgColor}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <TextBlock Text="Setup Completed:" FontWeight="SemiBold"/>
@@ -1245,7 +1241,7 @@
                                         <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
                                             <StackPanel Spacing="4">
                                                 <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding Description}" Foreground="Gray" TextWrapping="Wrap" FontSize="12"/>
+                                                <TextBlock Text="{Binding Description}" Foreground="{DynamicResource TextSecondaryColor}" TextWrapping="Wrap" FontSize="12"/>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
@@ -1254,15 +1250,15 @@
                         </StackPanel>
 
                         <Button Content="Run / Re-run Setup Wizard" Command="{Binding RunSetupWizardCommand}"
-                                Classes="accent" Background="#2E7D32" Foreground="White" Padding="20,10" FontWeight="SemiBold" HorizontalAlignment="Left"/>
-                        <TextBlock Text="Re-running the wizard is additive: it only adds missing categories, custom fields, terminology and enables modules — it never deletes your existing data." Foreground="Gray" TextWrapping="Wrap" FontSize="12"/>
+                                Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="16,8" FontWeight="SemiBold" CornerRadius="6" HorizontalAlignment="Left"/>
+                        <TextBlock Text="Re-running the wizard is additive: it only adds missing categories, custom fields, terminology and enables modules — it never deletes your existing data." Foreground="{DynamicResource TextSecondaryColor}" TextWrapping="Wrap" FontSize="12"/>
                     </StackPanel>
 
                     <!-- TAB 6: CUSTOM FIELDS -->
                     <Grid RowDefinitions="Auto, Auto, *" IsVisible="{Binding IsCustomFieldsTabActive}" Margin="0,10,0,0" MaxWidth="800" HorizontalAlignment="Left">
                         <StackPanel Grid.Row="0" Spacing="5" Margin="0,0,0,15">
                             <TextBlock Text="Custom Fields" FontSize="20" FontWeight="Bold"/>
-                            <TextBlock Text="Add extra fields per record type without writing code." Foreground="Gray"/>
+                            <TextBlock Text="Add extra fields per record type without writing code." Foreground="{DynamicResource TextSecondaryColor}"/>
                         </StackPanel>
 
                         <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,15">
@@ -1270,14 +1266,17 @@
                                 <TextBlock Text="Entity Type:" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 <ComboBox ItemsSource="{Binding CustomFieldEntityTypes}" SelectedItem="{Binding SelectedCustomFieldEntityType}" Width="180"/>
                             </StackPanel>
-                            <Button Grid.Column="2" Content="+ Add Field" Command="{Binding OpenAddCustomFieldFormCommand}" Background="#007ACC" Foreground="White" Padding="15,8" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding !IsCustomFieldFormVisible}"/>
+                            <Button Grid.Column="2" Content="+ Add Field" Command="{Binding OpenAddCustomFieldFormCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" IsVisible="{Binding !IsCustomFieldFormVisible}"/>
                         </Grid>
 
                         <StackPanel Grid.Row="2" Spacing="15">
                             <!-- Add/Edit Field Form -->
-                            <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="20" CornerRadius="8" IsVisible="{Binding IsCustomFieldFormVisible}">
+                            <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="20" CornerRadius="8" Background="{DynamicResource ContentBackgroundColor}" IsVisible="{Binding IsCustomFieldFormVisible}">
                                 <StackPanel Spacing="12">
-                                    <TextBlock Text="Field Details" FontSize="16" FontWeight="SemiBold"/>
+                                    <Grid ColumnDefinitions="*, Auto">
+                                        <TextBlock Text="Field Details" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="✕" Command="{Binding CloseCustomFieldFormCommand}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                                    </Grid>
                                     <StackPanel Spacing="5">
                                         <TextBlock Text="Field Label" FontWeight="Medium" FontSize="12"/>
                                         <TextBox Text="{Binding CustomFieldFormLabel}" Watermark="e.g. Grade, Moisture %, Crop Season"/>
@@ -1294,10 +1293,10 @@
                                         <TextBlock Text="Required" FontWeight="Medium" FontSize="12" VerticalAlignment="Center"/>
                                         <ToggleSwitch IsChecked="{Binding CustomFieldFormIsRequired}" OnContent="Yes" OffContent="No"/>
                                     </StackPanel>
-                                    <TextBlock Text="{Binding CustomFieldErrorMessage}" Foreground="#D32F2F" FontSize="12" IsVisible="{Binding CustomFieldErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    <TextBlock Text="{Binding CustomFieldErrorMessage}" Foreground="#EF4444" FontSize="12" IsVisible="{Binding CustomFieldErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
-                                        <Button Content="Cancel" Command="{Binding CloseCustomFieldFormCommand}" Padding="15,8"/>
-                                        <Button Content="Save Field" Command="{Binding SaveCustomFieldCommand}" Background="#2E7D32" Foreground="White" Padding="15,8" FontWeight="SemiBold"/>
+                                        <Button Content="Cancel" Command="{Binding CloseCustomFieldFormCommand}" Padding="14,6" CornerRadius="6"/>
+                                        <Button Content="Save Field" Command="{Binding SaveCustomFieldCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -1314,8 +1313,10 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate x:DataType="domain:CustomFieldDefinition">
                                                 <StackPanel Orientation="Horizontal" Spacing="5" Margin="5,0">
-                                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditCustomFieldFormCommand}" CommandParameter="{Binding .}" FontSize="11" Padding="6,3"/>
-                                                    <Button Content="Deactivate" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeactivateCustomFieldCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="11" Padding="6,3"/>
+                                                    <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).OpenEditCustomFieldFormCommand}" CommandParameter="{Binding .}"
+                                                            Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                                    <Button Content="Deactivate" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeactivateCustomFieldCommand}" CommandParameter="{Binding .}"
+                                                            Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
@@ -1329,21 +1330,21 @@
                     <StackPanel Spacing="20" MaxWidth="600" HorizontalAlignment="Left" IsVisible="{Binding IsTerminologyTabActive}">
                         <StackPanel Spacing="5">
                             <TextBlock Text="Word Labels" FontSize="20" FontWeight="Bold"/>
-                            <TextBlock Text="Choose everyday English or classic accounting words. You can also rename individual terms below." Foreground="Gray" TextWrapping="Wrap"/>
+                            <TextBlock Text="Choose everyday English or classic accounting words. You can also rename individual terms below." Foreground="{DynamicResource TextSecondaryColor}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <Button Content="Use Simple English" Command="{Binding ApplySimpleEnglishLabelsCommand}"
-                                    Background="#2E7D32" Foreground="White" Padding="16,10" FontWeight="SemiBold"/>
+                                    Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,8" FontWeight="SemiBold" CornerRadius="6"/>
                             <Button Content="Use Accounting Terms" Command="{Binding ApplyAccountingLabelsCommand}"
-                                    Background="#455A64" Foreground="White" Padding="16,10" FontWeight="SemiBold"/>
+                                    Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimaryColor}" Padding="14,8" FontWeight="SemiBold" CornerRadius="6"/>
                         </StackPanel>
 
                         <ItemsControl ItemsSource="{Binding TerminologyTerms}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TerminologyTermItem">
                                     <StackPanel Spacing="5" Margin="0,0,0,12">
-                                        <TextBlock Text="{Binding Key}" FontSize="11" Foreground="Gray"/>
+                                        <TextBlock Text="{Binding Key}" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
                                         <TextBlock Text="{Binding DefaultLabel}" FontWeight="SemiBold"/>
                                         <TextBox Text="{Binding OverrideText}" Watermark="{Binding DefaultLabel}"/>
                                     </StackPanel>
@@ -1353,8 +1354,8 @@
 
                         <StackPanel Orientation="Horizontal" Spacing="15" Margin="0,10,0,0">
                             <Button Content="Save Labels" Command="{Binding SaveTerminologyCommand}"
-                                    Classes="accent" Background="#2E7D32" Foreground="White" Padding="20,10" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding TerminologyStatusMessage}" VerticalAlignment="Center" Foreground="#4CAF50" FontWeight="Medium"/>
+                                    Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="16,8" FontWeight="SemiBold" CornerRadius="6"/>
+                            <TextBlock Text="{Binding TerminologyStatusMessage}" VerticalAlignment="Center" Foreground="#10B981" FontWeight="Medium"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -1362,7 +1363,7 @@
                     <StackPanel Spacing="20" MaxWidth="600" HorizontalAlignment="Left" IsVisible="{Binding IsModulesTabActive}">
                         <StackPanel Spacing="5">
                             <TextBlock Text="Modules" FontSize="20" FontWeight="Bold"/>
-                            <TextBlock Text="Turn features on or off based on how your business operates. This is independent of your license tier." Foreground="Gray" TextWrapping="Wrap"/>
+                            <TextBlock Text="Turn features on or off based on how your business operates. This is independent of your license tier." Foreground="{DynamicResource TextSecondaryColor}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <ItemsControl ItemsSource="{Binding ModuleToggles}">
@@ -1378,8 +1379,8 @@
 
                         <StackPanel Orientation="Horizontal" Spacing="15" Margin="0,10,0,0">
                             <Button Content="Save Modules" Command="{Binding SaveModulesCommand}"
-                                    Classes="accent" Background="#2E7D32" Foreground="White" Padding="20,10" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding ModulesStatusMessage}" VerticalAlignment="Center" Foreground="#4CAF50" FontWeight="Medium"/>
+                                    Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="16,8" FontWeight="SemiBold" CornerRadius="6"/>
+                            <TextBlock Text="{Binding ModulesStatusMessage}" VerticalAlignment="Center" Foreground="#10B981" FontWeight="Medium"/>
                         </StackPanel>
                     </StackPanel>
                  </Panel>
@@ -1566,29 +1567,22 @@
                                                 <ComboBox Grid.Column="1" ItemsSource="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).ComputationEngineOptions}" SelectedItem="{Binding ComputationEngine}" Margin="0,0,5,0" Height="30" FontSize="11" />
                                                 <TextBox Grid.Column="2" Text="{Binding Formula}" Watermark="e.g. 101,102\(1021) or assets" Margin="0,0,5,0" Height="30" FontSize="12" />
                                                 <TextBox Grid.Column="3" Text="{Binding Subformula}" Margin="0,0,5,0" Height="30" FontSize="12" />
-                                                <Button Grid.Column="4" Content="🗑" Foreground="#D32F2F" Background="Transparent" Width="30" Height="30" CornerRadius="4" Cursor="Hand" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).RemoveComputationRowCommand}" CommandParameter="{Binding .}"/>
+                                                <Button Grid.Column="4" Content="🗑" Foreground="#EF4444" Background="Transparent" Width="30" Height="30" CornerRadius="4" Cursor="Hand" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).RemoveComputationRowCommand}" CommandParameter="{Binding .}"/>
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
                                 <!-- Add a line link -->
-                                <Button Content="Add a line" Command="{Binding AddComputationRowCommand}" Background="Transparent" Foreground="#009688" BorderThickness="0" FontSize="12" FontWeight="SemiBold" Cursor="Hand" HorizontalAlignment="Left" Margin="5,5,0,0">
-                                    <Button.Styles>
-                                        <Style Selector="Button:pointerover">
-                                            <Setter Property="Foreground" Value="#00796B"/>
-                                            <Setter Property="Background" Value="#10009688"/>
-                                        </Style>
-                                    </Button.Styles>
-                                </Button>
+                                <Button Content="Add a line" Command="{Binding AddComputationRowCommand}" Background="Transparent" Foreground="{DynamicResource NavActiveBgColor}" BorderThickness="0" FontSize="12" FontWeight="SemiBold" Cursor="Hand" HorizontalAlignment="Left" Margin="5,5,0,0"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
 
                     <!-- Save & Discard buttons at bottom -->
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left" Margin="0,15,0,0">
-                        <Button Content="Save" Command="{Binding SaveLineCommand}" Background="#7B1FA2" Foreground="White" Padding="25,8" FontWeight="SemiBold" CornerRadius="6" Cursor="Hand" />
-                        <Button Content="Discard" Command="{Binding DiscardLineCommand}" Background="#3A3F4C" Foreground="White" Padding="20,8" CornerRadius="6" Cursor="Hand" />
+                        <Button Content="Save" Command="{Binding SaveLineCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="20,8" FontWeight="SemiBold" CornerRadius="6" Cursor="Hand" />
+                        <Button Content="Discard" Command="{Binding DiscardLineCommand}" Padding="18,8" CornerRadius="6" Cursor="Hand" />
                     </StackPanel>
                 </StackPanel>
             </Border>

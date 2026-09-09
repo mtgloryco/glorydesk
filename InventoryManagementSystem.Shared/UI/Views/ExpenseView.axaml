@@ -7,18 +7,18 @@
              x:Class="InventoryManagementSystem.UI.Views.ExpenseView"
              x:DataType="vm:ExpenseViewModel">
     <Grid RowDefinitions="Auto, *">
-        <Border Grid.Row="0" Background="#00838F" Padding="20">
+        <Border Grid.Row="0" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="20">
             <Grid ColumnDefinitions="*, Auto">
-                <TextBlock Grid.Column="0" Text="Expenses" FontSize="24" FontWeight="Bold" Foreground="White"/>
-                <TextBlock Grid.Column="1" Text="{Binding TotalThisMonth, StringFormat='This month: {0:N2}'}" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="0" Text="Expenses" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                <TextBlock Grid.Column="1" Text="{Binding TotalThisMonth, StringFormat='This month: {0:N2}'}" Foreground="{DynamicResource TextSecondaryColor}" FontSize="14" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
         <Grid Grid.Row="1" ColumnDefinitions="380, *" Margin="10">
-            <Border Grid.Column="0" Margin="5" Padding="20" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" BoxShadow="0 10 30 0 #10000000" VerticalAlignment="Top">
+            <Border Grid.Column="0" Margin="5" Padding="20" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" BoxShadow="0 10 30 0 #10000000" VerticalAlignment="Top">
                 <StackPanel Spacing="14">
                     <TextBlock Text="Record an Expense" FontSize="18" FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#D32F2F" FontSize="12" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#EF4444" FontSize="12" IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
                     <StackPanel Spacing="5">
                         <TextBlock Text="Date" FontSize="12" Foreground="Gray"/>
@@ -60,7 +60,7 @@
                         <TextBox Text="{Binding Notes}" Height="60" AcceptsReturn="True"/>
                     </StackPanel>
 
-                    <Button Content="Record Expense" Command="{Binding RecordExpenseCommand}" HorizontalAlignment="Stretch" Padding="15" Background="#00838F" Foreground="White" FontWeight="SemiBold"/>
+                    <Button Content="Record Expense" Command="{Binding RecordExpenseCommand}" HorizontalAlignment="Stretch" Padding="12,10" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" FontWeight="SemiBold" CornerRadius="6"/>
                 </StackPanel>
             </Border>
 

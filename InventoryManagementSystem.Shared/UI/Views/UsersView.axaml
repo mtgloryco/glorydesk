@@ -10,23 +10,28 @@
     <SplitView IsPaneOpen="{Binding IsPaneOpen}"
                DisplayMode="Overlay"
                OpenPaneLength="420"
-               PaneBackground="White">
+               PaneBackground="{DynamicResource ContentBackgroundColor}">
         <SplitView.Pane>
             <ScrollViewer Padding="20">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="{Binding PaneTitle}" FontSize="20" FontWeight="Bold" Foreground="#333"/>
+                    <Grid ColumnDefinitions="*, Auto">
+                        <TextBlock Text="{Binding PaneTitle}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Command="{Binding ClosePaneCommand}"
+                                Content="✕" FontSize="16" Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource TextSecondaryColor}" Padding="6,2" Cursor="Hand"/>
+                    </Grid>
                     
                     <TextBox Watermark="Username" Text="{Binding Username}" IsReadOnly="{Binding IsUsernameReadOnly}"/>
                     <TextBox Watermark="Password" Text="{Binding Password}" PasswordChar="*"/>
                     <TextBlock Text="Leave password blank when editing to keep the current password." FontSize="11" Foreground="#888"
                                IsVisible="{Binding IsUsernameReadOnly}"/>
                     
-                    <TextBlock Text="Role (template)" Foreground="#666" FontSize="12"/>
+                    <TextBlock Text="Role (template)" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12"/>
                     <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding SelectedRole}" HorizontalAlignment="Stretch"/>
                     <Button Content="Apply role defaults to modules" Command="{Binding ApplyRoleTemplateCommand}" HorizontalAlignment="Left" Background="Transparent"/>
 
                     <TextBlock Text="Module access (customize per user)" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                    <TextBlock Text="Check only the apps this user should see. This overrides the role template." FontSize="11" Foreground="#666" TextWrapping="Wrap"/>
+                    <TextBlock Text="Check only the apps this user should see. This overrides the role template." FontSize="11" Foreground="{DynamicResource TextSecondaryColor}" TextWrapping="Wrap"/>
                     <ItemsControl ItemsSource="{Binding ModuleAccess}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:UserModuleAccessItem">
@@ -39,8 +44,8 @@
                     <TextBlock Text="{Binding SuccessMessage}" Foreground="#2E7D32" TextWrapping="Wrap"/>
 
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,12,0,0">
-                        <Button Content="Close" Command="{Binding ClosePaneCommand}" />
-                        <Button Content="Save" Classes="accent" Command="{Binding SaveUserCommand}" Background="#007ACC" Foreground="White" />
+                        <Button Content="Close" Command="{Binding ClosePaneCommand}" CornerRadius="6" Padding="12,6"/>
+                        <Button Content="Save" Classes="accent" Command="{Binding SaveUserCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6" />
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
@@ -49,8 +54,8 @@
         <SplitView.Content>
             <Grid RowDefinitions="Auto, Auto, *" Margin="30">
                 <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,15">
-                    <TextBlock Text="User Management" FontSize="28" FontWeight="SemiBold" Foreground="#333" VerticalAlignment="Center"/>
-                    <Button Grid.Column="1" Content="+ New User" Command="{Binding OpenAddUserPaneCommand}" Background="#2E7D32" Foreground="White"/>
+                    <TextBlock Text="User Management" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="+ New User" Command="{Binding OpenAddUserPaneCommand}" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}" Padding="14,6" FontWeight="SemiBold" CornerRadius="6"/>
                 </Grid>
 
                 <TextBlock Grid.Row="1" Text="{Binding SuccessMessage}" Foreground="#2E7D32" TextWrapping="Wrap" Margin="0,0,0,10"/>
@@ -59,7 +64,7 @@
                           AutoGenerateColumns="False" 
                           IsReadOnly="True" 
                           GridLinesVisibility="All"
-                          BorderThickness="1" BorderBrush="#EEE" Background="White">
+                          BorderThickness="1" BorderBrush="{DynamicResource BorderColor}" Background="{DynamicResource ContentBackgroundColor}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="*"/>
                         <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="120"/>
@@ -67,9 +72,11 @@
                         <DataGridTemplateColumn Header="Actions" Width="160">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).OpenEditUserPaneCommand}" CommandParameter="{Binding .}" Background="#007ACC" Foreground="White" FontSize="10" Padding="6,2"/>
-                                        <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).DeleteUserCommand}" CommandParameter="{Binding .}" Background="#D32F2F" Foreground="White" FontSize="10" Padding="6,2"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                        <Button Content="Edit" Command="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).OpenEditUserPaneCommand}" CommandParameter="{Binding .}"
+                                                Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
+                                        <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:UsersViewModel)DataContext).DeleteUserCommand}" CommandParameter="{Binding .}"
+                                                Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" FontSize="11" FontWeight="SemiBold" Padding="8,3" CornerRadius="4"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
