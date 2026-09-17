@@ -66,11 +66,29 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private decimal _landedCostDuties;
         [ObservableProperty] private string _receiveErrorMessage = string.Empty;
 
-        public bool CanReturnDetailedPo => DetailedPo != null && DetailedPo.ReceiptStatus != "Pending" && DetailedPo.Status != "Cancelled";
+        public bool CanReturnDetailedPo =>
+            DetailedPo != null &&
+            DetailedPo.Id > 0 &&
+            DetailedPo.Status != "Cancelled" &&
+            DetailedPo.Status != "Draft" &&
+            (DetailedPo.ReceiptStatus == "Received" ||
+             DetailedPo.ReceiptStatus == "Partially Received" ||
+             DetailedPo.Status == "Received" ||
+             (DetailedItems != null && DetailedItems.Any(i => i.QuantityReceived > 0)));
 
         public bool IsBilled => DetailedPo?.BillingStatus == "Billed";
         public bool CanValidate => DetailedPo?.ReceiptStatus != "Received" && DetailedPo?.Status != "Draft";
         public bool CanCreateBill => DetailedPo?.ReceiptStatus != "Pending" && DetailedPo?.BillingStatus == "Waiting Bill";
+
+        partial void OnDetailedPoChanged(PurchaseOrder value)
+        {
+            OnPropertyChanged(nameof(CanReturnDetailedPo));
+            OnPropertyChanged(nameof(CanValidate));
+            OnPropertyChanged(nameof(CanCreateBill));
+            OnPropertyChanged(nameof(IsBilled));
+            OnPropertyChanged(nameof(CanCancelDetailedPo));
+            OnPropertyChanged(nameof(DetailedPoIsArchived));
+        }
 
         // Creation Modal properties
         [ObservableProperty] private bool _isCreateOpen;
@@ -430,6 +448,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             try
             {
                 DetailedPo = po;
+                SelectedPurchaseOrder = displayItem;
                 DetailedSupplier = await _supplierService.GetSupplierByIdAsync(po.SupplierId);
                 
                 var dbItems = await _purchaseOrderService.GetItemsAsync(po.Id);
@@ -1268,27 +1287,48 @@ namespace InventoryManagementSystem.UI.ViewModels
         }
 
         [RelayCommand]
-        private async Task OpenReturnOrder(PurchaseOrderDisplayItem? item)
+        private async Task OpenReturnOrder(object? parameter = null)
         {
-            var target = item ?? SelectedPurchaseOrder;
-            if (target == null) return;
+            PurchaseOrder? targetPo = null;
+            if (parameter is PurchaseOrderDisplayItem pdi)
+            {
+                targetPo = pdi.PurchaseOrder;
+            }
+            else if (parameter is PurchaseOrder po)
+            {
+                targetPo = po;
+            }
+            else
+            {
+                targetPo = DetailedPo?.Id > 0 ? DetailedPo : SelectedPurchaseOrder?.PurchaseOrder;
+            }
+
+            if (targetPo == null || targetPo.Id <= 0)
+            {
+                StatusMessage = "Please select a purchase order to return items from.";
+                return;
+            }
 
             ReturnErrorMessage = string.Empty;
-            var orderItems = await _purchaseOrderService.GetItemsAsync(target.PurchaseOrder.Id);
+            var orderItems = await _purchaseOrderService.GetItemsAsync(targetPo.Id);
+
+            var products = await _inventoryService.GetAllProductsAsync();
+            AllProducts = products;
             
             ReturnRows.Clear();
             foreach (var it in orderItems)
             {
                 if (it.QuantityReceived <= 0) continue;
 
-                var prod = AllProducts.FirstOrDefault(p => p.Id == it.ProductId);
+                var prod = products.FirstOrDefault(p => p.Id == it.ProductId);
                 
                 ReturnRows.Add(new PurchaseOrderReturnRow
                 {
                     ItemId = it.Id,
                     ProductId = it.ProductId,
-                    ProductName = prod?.Name ?? "Unknown Product",
+                    ProductName = prod?.Name ?? $"Product #{it.ProductId}",
                     QuantityReceived = it.QuantityReceived,
+                    UnitCost = it.UnitCost,
                     QuantityToReturn = it.QuantityReceived, // Default to full return
                     CreditAmount = it.QuantityReceived * it.UnitCost, // Default full refund cost
                     Reason = "Supplier Return"
@@ -1301,7 +1341,7 @@ namespace InventoryManagementSystem.UI.ViewModels
                 return;
             }
 
-            DetailedPo = target.PurchaseOrder;
+            DetailedPo = targetPo;
             IsReturnModalOpen = true;
         }
 
@@ -1309,6 +1349,12 @@ namespace InventoryManagementSystem.UI.ViewModels
         private async Task SubmitReturn()
         {
             ReturnErrorMessage = string.Empty;
+            if (DetailedPo == null || DetailedPo.Id <= 0)
+            {
+                ReturnErrorMessage = "No purchase order selected for return.";
+                return;
+            }
+
             if (ReturnRows.Any(r => r.QuantityToReturn < 0))
             {
                 ReturnErrorMessage = "Return quantity cannot be negative.";
@@ -1335,10 +1381,11 @@ namespace InventoryManagementSystem.UI.ViewModels
 
                 await _returnsService.ProcessPurchaseOrderReturnAsync(DetailedPo.Id, payload, UserSession.CurrentUser?.Username ?? "System");
                 IsReturnModalOpen = false;
+                StatusMessage = $"Return processed successfully for {DetailedPo.PONumber}.";
                 
                 // Refresh Order Details
-                var updatedPo = (await _purchaseOrderService.GetAllPurchaseOrdersAsync())
-                    .FirstOrDefault(x => x.PurchaseOrder.Id == DetailedPo.Id);
+                var allPos = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
+                var updatedPo = allPos.FirstOrDefault(x => x.PurchaseOrder.Id == DetailedPo.Id);
                 if (updatedPo != null)
                 {
                     DetailedPo = updatedPo.PurchaseOrder;
@@ -1350,6 +1397,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             catch (Exception ex)
             {
                 ReturnErrorMessage = $"Return failed: {ex.Message}";
+                StatusMessage = $"Return failed: {ex.Message}";
             }
         }
 
@@ -1366,12 +1414,19 @@ namespace InventoryManagementSystem.UI.ViewModels
         public int ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
         public int QuantityReceived { get; set; }
+        public decimal UnitCost { get; set; }
         
         private int _quantityToReturn;
         public int QuantityToReturn
         {
             get => _quantityToReturn;
-            set => SetProperty(ref _quantityToReturn, value);
+            set
+            {
+                if (SetProperty(ref _quantityToReturn, value))
+                {
+                    CreditAmount = Math.Max(0, value) * UnitCost;
+                }
+            }
         }
 
         private string _reason = "Supplier Return";

@@ -80,6 +80,11 @@ namespace InventoryManagementSystem.Services
                     throw new InvalidOperationException($"Insufficient stock for return. Available: {product.StockQuantity}, Returning: {ret.Quantity}");
                 }
 
+                if (string.IsNullOrWhiteSpace(ret.ReturnNumber))
+                {
+                    ret.ReturnNumber = $"RET-SUP-{DateTime.Now:yyyyMMddHHmmss}-{ret.ProductId}";
+                }
+
                 if (ret.CreditAmount <= 0)
                 {
                     ret.CreditAmount = ret.Quantity * product.Cost;
@@ -255,14 +260,9 @@ namespace InventoryManagementSystem.Services
                         CreditAmount = creditAmount,
                         ProcessedByUsername = processedByUsername,
                         ReturnDate = DateTime.Now,
-                        OriginalReceiptId = purchaseOrderId.ToString()
+                        OriginalReceiptId = po.PONumber
                     };
                     conn.Insert(supplierReturn);
-
-                    var previousStock = product.StockQuantity;
-                    product.StockQuantity -= ret.quantityToReturn;
-                    conn.Update(product);
-                    LocationStockSync.ApplyDelta(conn, product.Id, product.StockQuantity - previousStock);
 
                     var movement = new StockMovement
                     {
@@ -277,6 +277,11 @@ namespace InventoryManagementSystem.Services
                     conn.Insert(movement);
 
                     BatchTrackingService.DeductBatchesOnIssue(conn, product, ret.quantityToReturn, movement.Id);
+
+                    var previousStock = product.StockQuantity;
+                    product.StockQuantity -= ret.quantityToReturn;
+                    conn.Update(product);
+                    LocationStockSync.ApplyDelta(conn, product.Id, product.StockQuantity - previousStock);
 
                     PostSupplierReturnJournal(conn, supplierReturn, product);
                     debitNotes.Add(CreateDebitNote(conn, po.SupplierId, supplierReturn.Id, purchaseOrderId, creditAmount, ret.reason, processedByUsername));
@@ -305,6 +310,10 @@ namespace InventoryManagementSystem.Services
         private static CreditNote CreateCreditNote(SQLiteConnection conn, int customerId, int customerReturnId, int? salesOrderId, decimal amount, string reason, string username)
         {
             var count = conn.Table<CreditNote>().Count() + 1;
+            while (conn.Table<CreditNote>().Any(c => c.CreditNoteNumber == $"CN-{DateTime.Now:yyyyMMdd}-{count:D4}"))
+            {
+                count++;
+            }
             var note = new CreditNote
             {
                 CreditNoteNumber = $"CN-{DateTime.Now:yyyyMMdd}-{count:D4}",
@@ -326,6 +335,10 @@ namespace InventoryManagementSystem.Services
         private static DebitNote CreateDebitNote(SQLiteConnection conn, int supplierId, int supplierReturnId, int? purchaseOrderId, decimal amount, string reason, string username)
         {
             var count = conn.Table<DebitNote>().Count() + 1;
+            while (conn.Table<DebitNote>().Any(d => d.DebitNoteNumber == $"DN-{DateTime.Now:yyyyMMdd}-{count:D4}"))
+            {
+                count++;
+            }
             var note = new DebitNote
             {
                 DebitNoteNumber = $"DN-{DateTime.Now:yyyyMMdd}-{count:D4}",
@@ -646,6 +659,11 @@ namespace InventoryManagementSystem.Services
                     LinkedReturnNumber = ret?.ReturnNumber ?? "—"
                 };
             }).ToList();
+        }
+
+        public async Task<List<Supplier>> GetSuppliersAsync()
+        {
+            return await _databaseService.Connection.Table<Supplier>().ToListAsync();
         }
     }
 

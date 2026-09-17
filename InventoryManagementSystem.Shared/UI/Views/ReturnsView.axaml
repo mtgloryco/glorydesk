@@ -102,6 +102,20 @@
             <Border Grid.Column="1" Margin="5" Padding="15" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" CornerRadius="8">
                 <StackPanel Spacing="15">
                     <TextBlock Text="Process New Return" FontSize="18" FontWeight="SemiBold"/>
+
+                    <TextBlock Text="Return Type" FontSize="12" Foreground="Gray"/>
+                    <ComboBox ItemsSource="{Binding ReturnTypes}" SelectedItem="{Binding ReturnType}" HorizontalAlignment="Stretch"/>
+
+                    <StackPanel Spacing="5" IsVisible="{Binding IsSupplierReturn}">
+                        <TextBlock Text="Supplier" FontSize="12" Foreground="Gray"/>
+                        <ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
                     
                     <TextBlock Text="Product" FontSize="12" Foreground="Gray"/>
                     <ComboBox ItemsSource="{Binding Products}" SelectedItem="{Binding SelectedProduct}" HorizontalAlignment="Stretch">
@@ -115,18 +129,20 @@
                     <TextBlock Text="Quantity" FontSize="12" Foreground="Gray"/>
                     <NumericUpDown Value="{Binding Quantity}" Minimum="1" HorizontalAlignment="Stretch"/>
 
-                    <TextBlock Text="Refund Amount" FontSize="12" Foreground="Gray"/>
+                    <TextBlock Text="{Binding RefundAmountLabel}" FontSize="12" Foreground="Gray"/>
                     <NumericUpDown Value="{Binding RefundAmount}" Minimum="0" HorizontalAlignment="Stretch"/>
 
-                    <TextBlock Text="Condition" FontSize="12" Foreground="Gray"/>
-                    <ComboBox SelectedValue="{Binding Condition}" SelectedIndex="0" HorizontalAlignment="Stretch">
-                        <ComboBoxItem Content="Resaleable"/>
-                        <ComboBoxItem Content="Damaged"/>
-                        <ComboBoxItem Content="Destroyed"/>
-                    </ComboBox>
+                    <StackPanel Spacing="5" IsVisible="{Binding IsCustomerReturn}">
+                        <TextBlock Text="Condition" FontSize="12" Foreground="Gray"/>
+                        <ComboBox SelectedValue="{Binding Condition}" SelectedIndex="0" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="Resaleable"/>
+                            <ComboBoxItem Content="Damaged"/>
+                            <ComboBoxItem Content="Destroyed"/>
+                        </ComboBox>
+                    </StackPanel>
 
                     <TextBlock Text="Reason" FontSize="12" Foreground="Gray"/>
-                    <TextBox Text="{Binding Reason}" Watermark="e.g. Defective, Wrong Item" Height="80" AcceptsReturn="True"/>
+                    <TextBox Text="{Binding Reason}" Watermark="e.g. Defective, Wrong Item, Overstock" Height="80" AcceptsReturn="True"/>
 
                     <Button Content="Submit Return" Command="{Binding ProcessReturnCommand}" HorizontalAlignment="Stretch" Classes="danger" Background="#f44336" Foreground="White" Padding="15"/>
                 </StackPanel>

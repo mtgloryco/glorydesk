@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using InventoryManagementSystem.Domain;
 using InventoryManagementSystem.Infrastructure;
 using InventoryManagementSystem.Services;
+using InventoryManagementSystem.UI.ViewModels;
 using Xunit;
 
 namespace InventoryManagementSystem.Tests;
@@ -12,8 +14,10 @@ public class CriticalFixesTests : IAsyncLifetime
 {
     private readonly string _dbPath = TempFile.CreateDbPath();
     private DatabaseService _db = null!;
+    private AuditService _auditService = null!;
     private InventoryService _inventoryService = null!;
     private SalesOrderService _salesOrderService = null!;
+    private PurchaseOrderService _purchaseOrderService = null!;
     private ReturnsService _returnsService = null!;
     private DailyBriefingService _briefingService = null!;
 
@@ -24,10 +28,11 @@ public class CriticalFixesTests : IAsyncLifetime
 
         var licenseService = new LicenseService(_db, new HardwareIdService(), new LicenseCryptoService());
         await licenseService.InitializeAsync();
-        var auditService = new AuditService(_db);
-        _inventoryService = new InventoryService(_db, licenseService, auditService);
+        _auditService = new AuditService(_db);
+        _inventoryService = new InventoryService(_db, licenseService, _auditService);
         _salesOrderService = new SalesOrderService(_db, _inventoryService);
-        _returnsService = new ReturnsService(_db, auditService);
+        _purchaseOrderService = new PurchaseOrderService(_db, _inventoryService, _auditService);
+        _returnsService = new ReturnsService(_db, _auditService);
         _briefingService = new DailyBriefingService(_db);
     }
 
@@ -223,6 +228,190 @@ public class CriticalFixesTests : IAsyncLifetime
         Assert.Contains("up 50%", salesItem!.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task PurchaseOrderReturn_ProcessesReturnDeductsStockAndCreatesDebitNote()
+    {
+        var conn = _db.Connection;
+        var supplier = await conn.Table<Supplier>().FirstAsync();
+        var product = await SeedProductWithStockAsync("PO Return Widget", stock: 0, cost: 25m, price: 50m);
+
+        var po = new PurchaseOrder
+        {
+            PONumber = "PO-RET-TEST",
+            SupplierId = supplier.Id,
+            OrderDate = DateTime.Now,
+            Status = "Confirmed",
+            ReceiptStatus = "Pending",
+            BillingStatus = "Waiting Bill",
+            TotalAmount = 250m
+        };
+        await conn.InsertAsync(po);
+
+        var item = new PurchaseOrderItem
+        {
+            PurchaseOrderId = po.Id,
+            ProductId = product.Id,
+            QuantityOrdered = 10,
+            QuantityReceived = 0,
+            UnitCost = 25m
+        };
+        await conn.InsertAsync(item);
+
+        // Receive the items
+        await _purchaseOrderService.ReceivePurchaseOrderAsync(po.Id, new List<PurchaseReceiveLine>
+        {
+            new PurchaseReceiveLine { ItemId = item.Id, QuantityReceived = 10 }
+        });
+
+        // Verify received
+        var updatedItem = await conn.FindAsync<PurchaseOrderItem>(item.Id);
+        Assert.Equal(10, updatedItem!.QuantityReceived);
+        var updatedProd = await conn.FindAsync<Product>(product.Id);
+        Assert.Equal(10, updatedProd!.StockQuantity);
+
+        // Process return of 4 items
+        await _returnsService.ProcessPurchaseOrderReturnAsync(po.Id, new List<(int itemId, int quantityToReturn, string reason, decimal creditAmount)>
+        {
+            (item.Id, 4, "Defective Goods", 100m)
+        }, "tester");
+
+        // Verify item QuantityReceived decremented
+        updatedItem = await conn.FindAsync<PurchaseOrderItem>(item.Id);
+        Assert.Equal(6, updatedItem!.QuantityReceived);
+
+        // Verify product stock decremented
+        updatedProd = await conn.FindAsync<Product>(product.Id);
+        Assert.Equal(6, updatedProd!.StockQuantity);
+
+        // Verify PO receipt status is Partially Received
+        var updatedPo = await conn.FindAsync<PurchaseOrder>(po.Id);
+        Assert.Equal("Partially Received", updatedPo!.ReceiptStatus);
+
+        // Verify SupplierReturn record
+        var supplierReturns = await conn.Table<SupplierReturn>().Where(r => r.ProductId == product.Id).ToListAsync();
+        Assert.Single(supplierReturns);
+        Assert.Equal(4, supplierReturns[0].Quantity);
+        Assert.Equal(100m, supplierReturns[0].CreditAmount);
+        Assert.Equal(po.PONumber, supplierReturns[0].OriginalReceiptId);
+
+        // Verify DebitNote record
+        var debitNotes = await conn.Table<DebitNote>().Where(d => d.PurchaseOrderId == po.Id).ToListAsync();
+        Assert.Single(debitNotes);
+        Assert.Equal(100m, debitNotes[0].Amount);
+        Assert.Equal(100m, debitNotes[0].AppliedAmount);
+        Assert.Equal(po.Id, debitNotes[0].AppliedToPurchaseOrderId);
+    }
+
+    [Fact]
+    public async Task PurchaseOrdersViewModel_OpenReturnOrderAndSubmit_WorksCorrectly()
+    {
+        var conn = _db.Connection;
+        var supplier = await conn.Table<Supplier>().FirstAsync();
+        var product = await SeedProductWithStockAsync("VM Return Widget", stock: 0, cost: 15m, price: 30m);
+
+        var po = new PurchaseOrder
+        {
+            PONumber = "PO-VM-RET",
+            SupplierId = supplier.Id,
+            OrderDate = DateTime.Now,
+            Status = "Confirmed",
+            ReceiptStatus = "Pending",
+            BillingStatus = "Waiting Bill",
+            TotalAmount = 75m
+        };
+        await conn.InsertAsync(po);
+
+        var item = new PurchaseOrderItem
+        {
+            PurchaseOrderId = po.Id,
+            ProductId = product.Id,
+            QuantityOrdered = 5,
+            QuantityReceived = 0,
+            UnitCost = 15m
+        };
+        await conn.InsertAsync(item);
+
+        await _purchaseOrderService.ReceivePurchaseOrderAsync(po.Id, new List<PurchaseReceiveLine>
+        {
+            new PurchaseReceiveLine { ItemId = item.Id, QuantityReceived = 5 }
+        });
+
+        var taxService = new TaxService(_db);
+        var settingsService = new SettingsService();
+        var currencyService = new CurrencyService(_db, _auditService);
+        var paymentService = new PaymentService(_db, _auditService, currencyService, settingsService);
+        var languageService = new LanguageService();
+        var supplierService = new SupplierService(_db);
+
+        var vm = new PurchaseOrdersViewModel(
+            _purchaseOrderService,
+            supplierService,
+            _inventoryService,
+            taxService,
+            settingsService,
+            _returnsService,
+            paymentService,
+            currencyService,
+            languageService);
+
+        var displayItem = new PurchaseOrderDisplayItem(po, supplier.Name);
+        await vm.OpenDetailsCommand.ExecuteAsync(displayItem);
+
+        Assert.True(vm.CanReturnDetailedPo);
+
+        // Open return order without passing parameter (simulates clicking button in modal)
+        await vm.OpenReturnOrderCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsReturnModalOpen);
+        Assert.Single(vm.ReturnRows);
+        Assert.Equal(5, vm.ReturnRows[0].QuantityToReturn);
+        Assert.Equal("VM Return Widget", vm.ReturnRows[0].ProductName);
+        Assert.Equal(75m, vm.ReturnRows[0].CreditAmount);
+
+        // Change quantity to return to 2 -> CreditAmount dynamically recalculates to 30
+        vm.ReturnRows[0].QuantityToReturn = 2;
+        Assert.Equal(30m, vm.ReturnRows[0].CreditAmount);
+
+        // Submit return
+        await vm.SubmitReturnCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsReturnModalOpen);
+        Assert.Contains("Return processed successfully", vm.StatusMessage);
+
+        var prodAfter = await conn.FindAsync<Product>(product.Id);
+        Assert.Equal(3, prodAfter!.StockQuantity);
+    }
+
+    [Fact]
+    public async Task ReturnsViewModel_SupplierReturn_ProcessesAndRecordsDebitNote()
+    {
+        var conn = _db.Connection;
+        var supplier = await conn.Table<Supplier>().FirstAsync();
+        var product = await SeedProductWithStockAsync("ReturnsVM Supplier Widget", stock: 10, cost: 20m, price: 40m);
+
+        var vm = new ReturnsViewModel(_returnsService, _inventoryService, _salesOrderService, _purchaseOrderService);
+        await vm.LoadInitialData();
+
+        vm.ReturnType = "Supplier Return";
+        vm.SelectedProduct = vm.Products.First(p => p.Id == product.Id);
+        vm.SelectedSupplier = vm.Suppliers.First(s => s.Id == supplier.Id);
+        vm.Quantity = 3;
+        vm.Reason = "Overstocked";
+
+        Assert.True(vm.IsSupplierReturn);
+        Assert.Equal(60m, vm.RefundAmount);
+
+        await vm.ProcessReturnCommand.ExecuteAsync(null);
+
+        Assert.Contains("processed successfully", vm.StatusMessage);
+
+        var prodAfter = await conn.FindAsync<Product>(product.Id);
+        Assert.Equal(7, prodAfter!.StockQuantity);
+
+        var supReturns = await _returnsService.GetSupplierReturnsAsync(DateTime.Now.AddDays(-1), DateTime.Now.AddDays(1));
+        Assert.Contains(supReturns, r => r.ProductId == product.Id && r.Quantity == 3);
+    }
+
     private async Task<Product> SeedProductWithStockAsync(string name, int stock, decimal cost, decimal price)
     {
         var product = new Product
@@ -237,8 +426,11 @@ public class CriticalFixesTests : IAsyncLifetime
         };
         await _db.Connection.InsertAsync(product);
 
-        await _inventoryService.AddStockMovementAsync(
-            product.Id, stock, "IN", "Seed stock", "tester", customCost: cost, unitPrice: price);
+        if (stock > 0)
+        {
+            await _inventoryService.AddStockMovementAsync(
+                product.Id, stock, "IN", "Seed stock", "tester", customCost: cost, unitPrice: price);
+        }
 
         return product;
     }

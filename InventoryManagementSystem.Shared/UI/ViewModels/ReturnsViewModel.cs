@@ -17,6 +17,8 @@ public partial class ReturnsViewModel : ViewModelBase
     private readonly PurchaseOrderService? _purchaseOrderService;
 
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private string _returnType = "Customer Return";
+    [ObservableProperty] private Supplier? _selectedSupplier;
     [ObservableProperty] private Product? _selectedProduct;
     [ObservableProperty] private int _quantity;
     [ObservableProperty] private string _reason = "";
@@ -30,11 +32,43 @@ public partial class ReturnsViewModel : ViewModelBase
     [ObservableProperty] private int _applyToPurchaseOrderId;
     [ObservableProperty] private decimal _applyDebitAmount;
 
+    public ObservableCollection<string> ReturnTypes { get; } = new() { "Customer Return", "Supplier Return" };
+    public ObservableCollection<Supplier> Suppliers { get; } = new();
     public ObservableCollection<Product> Products { get; } = new();
     public ObservableCollection<CustomerReturn> RecentReturns { get; } = new();
     public ObservableCollection<SupplierReturn> RecentSupplierReturns { get; } = new();
     public ObservableCollection<CreditNoteDisplayRow> CreditNotes { get; } = new();
     public ObservableCollection<DebitNoteDisplayRow> DebitNotes { get; } = new();
+
+    public bool IsSupplierReturn => ReturnType == "Supplier Return";
+    public bool IsCustomerReturn => ReturnType == "Customer Return";
+    public string RefundAmountLabel => IsSupplierReturn ? "Credit Amount" : "Refund Amount";
+
+    partial void OnReturnTypeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsSupplierReturn));
+        OnPropertyChanged(nameof(IsCustomerReturn));
+        OnPropertyChanged(nameof(RefundAmountLabel));
+        UpdateSuggestedRefund();
+    }
+
+    partial void OnSelectedProductChanged(Product? value)
+    {
+        UpdateSuggestedRefund();
+    }
+
+    partial void OnQuantityChanged(int value)
+    {
+        UpdateSuggestedRefund();
+    }
+
+    private void UpdateSuggestedRefund()
+    {
+        if (SelectedProduct == null || Quantity <= 0) return;
+        RefundAmount = IsSupplierReturn
+            ? Quantity * SelectedProduct.Cost
+            : Quantity * SelectedProduct.Price;
+    }
 
     public ReturnsViewModel(
         ReturnsService returnsService,
@@ -49,55 +83,103 @@ public partial class ReturnsViewModel : ViewModelBase
         _ = LoadInitialData();
     }
 
+    private readonly System.Threading.SemaphoreSlim _initLock = new(1, 1);
+
     public async Task LoadInitialData()
     {
-        IsLoading = true;
-        Products.Clear();
-        var products = await _inventoryService.GetAllProductsAsync();
-        foreach (var p in products) Products.Add(p);
+        await _initLock.WaitAsync();
+        try
+        {
+            IsLoading = true;
+            Suppliers.Clear();
+            var suppliers = await _returnsService.GetSuppliersAsync();
+            foreach (var s in suppliers) Suppliers.Add(s);
 
-        RecentReturns.Clear();
-        var returns = await _returnsService.GetCustomerReturnsAsync(DateTime.Now.AddDays(-30), DateTime.Now);
-        foreach (var r in returns) RecentReturns.Add(r);
+            Products.Clear();
+            var products = await _inventoryService.GetAllProductsAsync();
+            foreach (var p in products) Products.Add(p);
 
-        RecentSupplierReturns.Clear();
-        var supplierReturns = await _returnsService.GetSupplierReturnsAsync(DateTime.Now.AddDays(-30), DateTime.Now);
-        foreach (var r in supplierReturns) RecentSupplierReturns.Add(r);
+            RecentReturns.Clear();
+            var returns = await _returnsService.GetCustomerReturnsAsync(DateTime.Now.AddDays(-30), DateTime.Now);
+            foreach (var r in returns) RecentReturns.Add(r);
 
-        CreditNotes.Clear();
-        var creditRows = await _returnsService.GetCreditNoteDisplayRowsAsync();
-        foreach (var row in creditRows) CreditNotes.Add(row);
+            RecentSupplierReturns.Clear();
+            var supplierReturns = await _returnsService.GetSupplierReturnsAsync(DateTime.Now.AddDays(-30), DateTime.Now);
+            foreach (var r in supplierReturns) RecentSupplierReturns.Add(r);
 
-        DebitNotes.Clear();
-        var debitRows = await _returnsService.GetDebitNoteDisplayRowsAsync();
-        foreach (var row in debitRows) DebitNotes.Add(row);
+            CreditNotes.Clear();
+            var creditRows = await _returnsService.GetCreditNoteDisplayRowsAsync();
+            foreach (var row in creditRows) CreditNotes.Add(row);
 
-        IsLoading = false;
+            DebitNotes.Clear();
+            var debitRows = await _returnsService.GetDebitNoteDisplayRowsAsync();
+            foreach (var row in debitRows) DebitNotes.Add(row);
+        }
+        finally
+        {
+            IsLoading = false;
+            _initLock.Release();
+        }
     }
 
     [RelayCommand]
     public async Task ProcessReturn()
     {
-        if (SelectedProduct == null || Quantity <= 0) return;
-
-        var ret = new CustomerReturn
+        if (SelectedProduct == null || Quantity <= 0)
         {
-            ProductId = SelectedProduct.Id,
-            Quantity = Quantity,
-            Reason = Reason,
-            Condition = Condition,
-            RefundAmount = RefundAmount,
-            ProcessedByUsername = UserSession.CurrentUser?.Username ?? "System",
-            ReturnDate = DateTime.Now,
-            ReturnNumber = $"RET-{DateTime.Now:yyyyMMddHHmmss}"
-        };
+            StatusMessage = "Please select a product and specify a positive quantity.";
+            return;
+        }
 
-        await _returnsService.ProcessCustomerReturnAsync(ret);
-        Quantity = 0;
-        Reason = "";
-        RefundAmount = 0;
-        StatusMessage = $"Return {ret.ReturnNumber} processed.";
-        await LoadInitialData();
+        try
+        {
+            if (IsSupplierReturn)
+            {
+                var supplierId = SelectedSupplier?.Id ?? 1;
+                var supRet = new SupplierReturn
+                {
+                    SupplierId = supplierId,
+                    ProductId = SelectedProduct.Id,
+                    Quantity = Quantity,
+                    Reason = string.IsNullOrWhiteSpace(Reason) ? "Supplier Return" : Reason,
+                    CreditAmount = RefundAmount > 0 ? RefundAmount : Quantity * SelectedProduct.Cost,
+                    ProcessedByUsername = UserSession.CurrentUser?.Username ?? "System",
+                    ReturnDate = DateTime.Now,
+                    ReturnNumber = $"RET-SUP-{DateTime.Now:yyyyMMddHHmmss}"
+                };
+
+                await _returnsService.ProcessSupplierReturnAsync(supRet);
+                Quantity = 0;
+                Reason = "";
+                RefundAmount = 0;
+                StatusMessage = $"Supplier Return {supRet.ReturnNumber} processed successfully.";
+                await LoadInitialData();
+                return;
+            }
+
+            var ret = new CustomerReturn
+            {
+                ProductId = SelectedProduct.Id,
+                Quantity = Quantity,
+                Reason = Reason,
+                Condition = Condition,
+                RefundAmount = RefundAmount > 0 ? RefundAmount : Quantity * SelectedProduct.Price,
+                ProcessedByUsername = UserSession.CurrentUser?.Username ?? "System",
+                ReturnDate = DateTime.Now,
+                ReturnNumber = $"RET-{DateTime.Now:yyyyMMddHHmmss}"
+            };
+
+            await _returnsService.ProcessCustomerReturnAsync(ret);
+            Quantity = 0;
+            Reason = "";
+            RefundAmount = 0;
+            StatusMessage = $"Return {ret.ReturnNumber} processed successfully.";
+            await LoadInitialData();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error processing return: {ex.Message}";
+        }
     }
 
     [RelayCommand]

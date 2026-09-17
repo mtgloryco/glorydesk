@@ -236,13 +236,15 @@ namespace InventoryManagementSystem.Services
                     .ThenBy(b => b.Id)
                     .ToList();
 
-                if (batches.Count == 0 && product.StockQuantity > 0)
+                var currentBatchStock = batches.Sum(b => b.QuantityRemaining);
+                if (currentBatchStock < remainingToDeduct)
                 {
+                    int shortfall = remainingToDeduct - currentBatchStock;
                     var recoveryBatch = new PurchaseBatch
                     {
                         ProductId = product.Id,
-                        QuantityPurchased = product.StockQuantity,
-                        QuantityRemaining = product.StockQuantity,
+                        QuantityPurchased = shortfall,
+                        QuantityRemaining = shortfall,
                         CostPerUnit = product.Cost,
                         PurchaseDate = DateTime.Now.AddDays(-1),
                         BatchNumber = $"RECOVERY-{DateTime.Now:yyyyMMddHHmmss}",
