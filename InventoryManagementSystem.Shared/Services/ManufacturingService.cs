@@ -18,20 +18,37 @@ namespace InventoryManagementSystem.Services
             _auditService = auditService;
         }
 
+        public async Task<List<Location>> GetAllLocationsAsync()
+        {
+            return await _databaseService.Connection.Table<Location>()
+                .Where(l => l.IsActive)
+                .OrderBy(l => l.Name)
+                .ToListAsync();
+        }
+
         public async Task<List<BillOfMaterialListItem>> GetAllBomsAsync()
         {
             var boms = await _databaseService.Connection.Table<BillOfMaterial>().ToListAsync();
             var products = await _databaseService.Connection.Table<Product>().ToListAsync();
             var productDict = products.ToDictionary(p => p.Id, p => p.Name);
+            var locations = await _databaseService.Connection.Table<Location>().ToListAsync();
+            var locationDict = locations.ToDictionary(l => l.Id, l => l.Name);
 
             var items = new List<BillOfMaterialListItem>();
             foreach (var bom in boms)
             {
                 productDict.TryGetValue(bom.ProductId, out var prodName);
+                string destLocName = string.Empty;
+                if (bom.DestinationLocationId.HasValue && locationDict.TryGetValue(bom.DestinationLocationId.Value, out var dlName))
+                {
+                    destLocName = dlName;
+                }
+
                 items.Add(new BillOfMaterialListItem
                 {
                     BillOfMaterial = bom,
-                    ProductName = prodName ?? "Unknown Product"
+                    ProductName = prodName ?? "Unknown Product",
+                    DestinationLocationName = destLocName
                 });
             }
             return items;
@@ -94,16 +111,30 @@ namespace InventoryManagementSystem.Services
             var orders = await _databaseService.Connection.Table<ManufacturingOrder>().ToListAsync();
             var products = await _databaseService.Connection.Table<Product>().ToListAsync();
             var productDict = products.ToDictionary(p => p.Id, p => p.Name);
+            var locations = await _databaseService.Connection.Table<Location>().ToListAsync();
+            var locationDict = locations.ToDictionary(l => l.Id, l => l.Name);
 
             var items = new List<ManufacturingOrderListItem>();
             foreach (var order in orders)
             {
                 productDict.TryGetValue(order.ProductId, out var prodName);
+                string destLocName = string.Empty;
+                if (order.DestinationLocationId.HasValue && locationDict.TryGetValue(order.DestinationLocationId.Value, out var dlName))
+                {
+                    destLocName = dlName;
+                }
+                string srcLocName = string.Empty;
+                if (order.SourceLocationId.HasValue && locationDict.TryGetValue(order.SourceLocationId.Value, out var slName))
+                {
+                    srcLocName = slName;
+                }
 
                 items.Add(new ManufacturingOrderListItem
                 {
                     ManufacturingOrder = order,
-                    ProductName = prodName ?? "Unknown Product"
+                    ProductName = prodName ?? "Unknown Product",
+                    DestinationLocationName = destLocName,
+                    SourceLocationName = srcLocName
                 });
             }
             return items.OrderByDescending(o => o.ManufacturingOrder.OrderDate).ToList();
@@ -214,6 +245,23 @@ namespace InventoryManagementSystem.Services
                 var yieldFactor = bom == null || bom.YieldPercent <= 0 ? 1.0 : bom.YieldPercent / 100.0;
                 var effectiveOutputQty = actualQty * yieldFactor;
 
+                int? destinationLocationId = order.DestinationLocationId 
+                    ?? bom?.DestinationLocationId 
+                    ?? finishedProduct.DefaultLocationId;
+                int? sourceLocationId = order.SourceLocationId;
+
+                Location? destLocation = null;
+                if (destinationLocationId.HasValue && destinationLocationId.Value > 0)
+                {
+                    destLocation = conn.Find<Location>(destinationLocationId.Value);
+                }
+
+                Location? sourceLocation = null;
+                if (sourceLocationId.HasValue && sourceLocationId.Value > 0)
+                {
+                    sourceLocation = conn.Find<Location>(sourceLocationId.Value);
+                }
+
                 // 1. Deduct component quantities from stock and insert OUT stock movements
                 foreach (var line in actualLines)
                 {
@@ -230,7 +278,7 @@ namespace InventoryManagementSystem.Services
                     var componentPreviousStock = componentProduct.StockQuantity;
                     componentProduct.StockQuantity -= (int)Math.Round(convertedQty);
                     conn.Update(componentProduct);
-                    LocationStockSync.ApplyDelta(conn, componentProduct.Id, componentProduct.StockQuantity - componentPreviousStock);
+                    LocationStockSync.ApplyDelta(conn, componentProduct.Id, componentProduct.StockQuantity - componentPreviousStock, sourceLocationId);
 
                     conn.Insert(new StockMovement
                     {
@@ -240,7 +288,8 @@ namespace InventoryManagementSystem.Services
                         Reason = $"Manufacturing Order Consumption - {order.MONumber}",
                         Date = DateTime.Now,
                         Username = username,
-                        UnitPrice = componentProduct.Cost
+                        UnitPrice = componentProduct.Cost,
+                        FromLocation = sourceLocation?.Name ?? string.Empty
                     });
 
                     // Add to total manufacturing cost sum
@@ -260,7 +309,7 @@ namespace InventoryManagementSystem.Services
                 var finishedPreviousStock = finishedProduct.StockQuantity;
                 finishedProduct.StockQuantity += (int)Math.Round(effectiveOutputQty);
                 conn.Update(finishedProduct);
-                LocationStockSync.ApplyDelta(conn, finishedProduct.Id, finishedProduct.StockQuantity - finishedPreviousStock);
+                LocationStockSync.ApplyDelta(conn, finishedProduct.Id, finishedProduct.StockQuantity - finishedPreviousStock, destinationLocationId);
 
                 decimal unitCostOfFinishedProduct = effectiveOutputQty > 0 ? totalCostSum / (decimal)effectiveOutputQty : 0m;
                 
@@ -276,7 +325,8 @@ namespace InventoryManagementSystem.Services
                     Reason = $"Manufacturing Production - {order.MONumber}",
                     Date = DateTime.Now,
                     Username = username,
-                    UnitPrice = unitCostOfFinishedProduct
+                    UnitPrice = unitCostOfFinishedProduct,
+                    ToLocation = destLocation?.Name ?? string.Empty
                 });
 
                 // Update order state
@@ -284,6 +334,14 @@ namespace InventoryManagementSystem.Services
                 order.Status = "Done";
                 order.ProduceDate = DateTime.Now;
                 order.TotalCost = totalCostSum;
+                if (order.DestinationLocationId == null && destinationLocationId.HasValue)
+                {
+                    order.DestinationLocationId = destinationLocationId;
+                }
+                if (order.SourceLocationId == null && sourceLocationId.HasValue)
+                {
+                    order.SourceLocationId = sourceLocationId;
+                }
                 conn.Update(order);
             });
 

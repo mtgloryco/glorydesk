@@ -12,11 +12,18 @@ namespace InventoryManagementSystem.Services
     /// </summary>
     internal static class LocationStockSync
     {
-        public static void ApplyDelta(SQLiteConnection conn, int productId, int quantityDelta)
+        public static void ApplyDelta(SQLiteConnection conn, int productId, int quantityDelta, int? specificLocationId = null)
         {
             if (quantityDelta == 0) return;
 
-            var location = conn.Table<Location>()
+            Location? location = null;
+            if (specificLocationId.HasValue && specificLocationId.Value > 0)
+            {
+                location = conn.Table<Location>()
+                    .FirstOrDefault(l => l.Id == specificLocationId.Value && l.IsActive);
+            }
+
+            location ??= conn.Table<Location>()
                 .Where(l => l.IsActive)
                 .OrderBy(l => l.Id)
                 .FirstOrDefault();
@@ -28,27 +35,38 @@ namespace InventoryManagementSystem.Services
 
             if (locStock == null)
             {
-                // Bootstrap the default location row from the already-updated product stock.
-                var product = conn.Find<Product>(productId);
-                var currentQty = product?.StockQuantity ?? 0;
-                if (currentQty < 0)
+                var existingLocCount = conn.Table<LocationStock>().Count(ls => ls.ProductId == productId);
+                int initialQty = 0;
+                if (existingLocCount == 0)
                 {
-                    throw new InvalidOperationException("Insufficient stock at default location.");
+                    var product = conn.Find<Product>(productId);
+                    initialQty = product?.StockQuantity ?? 0;
+                }
+                else
+                {
+                    initialQty = Math.Max(0, quantityDelta);
+                }
+
+                if (initialQty < 0)
+                {
+                    throw new InvalidOperationException($"Insufficient stock at location '{location.Name}'.");
                 }
 
                 conn.Insert(new LocationStock
                 {
                     LocationId = location.Id,
                     ProductId = productId,
-                    Quantity = currentQty
+                    Quantity = initialQty
                 });
+
+                ReconcileProductStockFromLocations(conn, productId);
                 return;
             }
 
             locStock.Quantity += quantityDelta;
             if (locStock.Quantity < 0)
             {
-                throw new InvalidOperationException("Insufficient stock at default location.");
+                throw new InvalidOperationException($"Insufficient stock at location '{location.Name}'.");
             }
 
             conn.Update(locStock);

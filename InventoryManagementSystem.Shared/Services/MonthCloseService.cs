@@ -61,7 +61,7 @@ namespace InventoryManagementSystem.Services
             }
 
             var billedPos = await _databaseService.Connection.Table<PurchaseOrder>()
-                .Where(po => po.BillingStatus == "Billed")
+                .Where(po => po.BillingStatus != "Waiting Bill")
                 .ToListAsync();
             var openAp = 0;
             foreach (var po in billedPos)

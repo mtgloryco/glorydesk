@@ -833,10 +833,10 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, GoToCycleCount, GoToReorderDashboard, GoToForecasting, GoToLocations, CustomFieldService, _barcodeService, GoToDamageWriteOff, GoToPurchaseOrderDetails, GoToSalesOrderDetails, () => GoToReport("stock-status"), () => GoToReport("stock-history")));
+    public void GoToInventory() => NavigateTo(new InventoryViewModel(_inventoryService, _licenseService, _settingsService, Language, _taxService, _accountService, GoToRfq, GoToPurchaseOrders, GoToSuppliers, GoToSalesQuotations, GoToSalesOrders, GoToCustomers, GoToCycleCount, GoToReorderDashboard, GoToForecasting, GoToLocations, CustomFieldService, _barcodeService, GoToDamageWriteOff, GoToPurchaseOrderDetails, GoToSalesOrderDetails, () => GoToReport("stock-status"), () => GoToReport("stock-history"), _locationService, GoToStockTransfer));
 
     [RelayCommand]
-    public void GoToManufacturing() => NavigateTo(new ManufacturingViewModel(_manufacturingService, _inventoryService, Language));
+    public void GoToManufacturing() => NavigateTo(new ManufacturingViewModel(_manufacturingService, _inventoryService, Language, _locationService));
 
     [RelayCommand]
     public void GoToRfq()
@@ -1116,7 +1116,7 @@ public partial class MainViewModel : ViewModelBase
             GoToLicense();
             return;
         }
-        NavigateTo(new StockTransferViewModel(_locationService, _inventoryService));
+        NavigateTo(new StockTransferViewModel(_locationService, _inventoryService, GoToInventory));
     }
 
     [RelayCommand]

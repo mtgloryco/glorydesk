@@ -184,7 +184,7 @@ namespace InventoryManagementSystem.Services
             {
                 var po = await _databaseService.Connection.FindAsync<PurchaseOrder>(documentId)
                     ?? throw new InvalidOperationException("Purchase order not found.");
-                if (po.BillingStatus != "Billed")
+                if (po.BillingStatus == "Waiting Bill")
                 {
                     throw new InvalidOperationException("Vendor bill must be posted before recording payment.");
                 }
@@ -216,6 +216,17 @@ namespace InventoryManagementSystem.Services
                 conn.Insert(payment);
                 PostPaymentJournalEntry(conn, payment, docNumber);
             });
+
+            if (documentType == "PurchaseOrder")
+            {
+                var remainingBalance = await GetOpenBalanceAsync("PurchaseOrder", documentId);
+                var poToUpdate = await _databaseService.Connection.FindAsync<PurchaseOrder>(documentId);
+                if (poToUpdate != null && poToUpdate.BillingStatus != "Waiting Bill")
+                {
+                    poToUpdate.BillingStatus = remainingBalance <= 0.01m ? "Paid" : "Partially Paid";
+                    await _databaseService.Connection.UpdateAsync(poToUpdate);
+                }
+            }
 
             await TryPostFxDifferenceAsync(payment, docNumber, username);
 

@@ -77,8 +77,17 @@
                                 <Border HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="4" Padding="8,4" Margin="5,0,0,0"
                                         Tag="{Binding BillingStatusText}">
                                     <Border.Styles>
+                                        <Style Selector="Border[Tag=Paid]">
+                                            <Setter Property="Background" Value="#10B981"/>
+                                        </Style>
+                                        <Style Selector="Border[Tag=Partially Paid]">
+                                            <Setter Property="Background" Value="#F59E0B"/>
+                                        </Style>
+                                        <Style Selector="Border[Tag=In Payment]">
+                                            <Setter Property="Background" Value="#3B82F6"/>
+                                        </Style>
                                         <Style Selector="Border[Tag=Billed]">
-                                            <Setter Property="Background" Value="#2E7D32"/>
+                                            <Setter Property="Background" Value="#3B82F6"/>
                                         </Style>
                                         <Style Selector="Border[Tag=Waiting Bill]">
                                             <Setter Property="Background" Value="#EF6C00"/>
@@ -158,8 +167,17 @@
                             <!-- Billing badge -->
                             <Border CornerRadius="4" Padding="6,2" Tag="{Binding DetailedPo.BillingStatus}">
                                 <Border.Styles>
+                                    <Style Selector="Border[Tag=Paid]">
+                                        <Setter Property="Background" Value="#10B981"/>
+                                    </Style>
+                                    <Style Selector="Border[Tag=Partially Paid]">
+                                        <Setter Property="Background" Value="#F59E0B"/>
+                                    </Style>
+                                    <Style Selector="Border[Tag=In Payment]">
+                                        <Setter Property="Background" Value="#3B82F6"/>
+                                    </Style>
                                     <Style Selector="Border[Tag=Billed]">
-                                        <Setter Property="Background" Value="#2E7D32"/>
+                                        <Setter Property="Background" Value="#3B82F6"/>
                                     </Style>
                                     <Style Selector="Border[Tag=Waiting Bill]">
                                         <Setter Property="Background" Value="#EF6C00"/>

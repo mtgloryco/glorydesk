@@ -68,7 +68,7 @@ namespace InventoryManagementSystem.Services
         {
             var reportDate = (asOf ?? DateTime.Today).Date;
             var orders = await _databaseService.Connection.Table<PurchaseOrder>()
-                .Where(o => !o.IsDeleted && o.BillingStatus == "Billed" && o.Status != "Cancelled" && o.Status != "Draft" && o.Status != "Sent")
+                .Where(o => !o.IsDeleted && o.BillingStatus != "Waiting Bill" && o.Status != "Cancelled" && o.Status != "Draft" && o.Status != "Sent")
                 .ToListAsync();
             var suppliers = await _databaseService.Connection.Table<Supplier>().ToListAsync();
             var debitNotes = await _databaseService.Connection.Table<DebitNote>()

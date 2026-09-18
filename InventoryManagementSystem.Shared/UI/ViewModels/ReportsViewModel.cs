@@ -1378,8 +1378,8 @@ namespace InventoryManagementSystem.UI.ViewModels
                 
                 TotalDebit = lines.Sum(l => l.Debit);
                 TotalCredit = lines.Sum(l => l.Credit);
-                BalanceDifference = Math.Abs(TotalDebit - TotalCredit);
-                IsBalanced = BalanceDifference < 0.01m;
+                BalanceDifference = wrapper.Result.Balance;
+                IsBalanced = true;
 
                 IsJournalModalOpen = true;
             }

@@ -668,7 +668,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             try
             {
                 var pos = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
-                var billed = pos.Where(p => p.PurchaseOrder.BillingStatus == "Billed" && p.PurchaseOrder.Status != "Cancelled").ToList();
+                var billed = pos.Where(p => p.PurchaseOrder.BillingStatus != "Waiting Bill" && p.PurchaseOrder.Status != "Cancelled").ToList();
                 var suppliers = await _supplierService.GetAllSuppliersAsync();
                 var supplierById = suppliers.ToDictionary(s => s.Id, s => s.Name);
                 var today = DateTime.Today;
@@ -804,7 +804,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             {
                 var pos = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
                 _allEligiblePurchaseOrders = pos
-                    .Where(p => p.PurchaseOrder.BillingStatus != "Billed" && p.PurchaseOrder.Status != "Cancelled")
+                    .Where(p => p.PurchaseOrder.BillingStatus == "Waiting Bill" && p.PurchaseOrder.Status != "Cancelled")
                     .Select(p => new EligiblePurchaseOrderRow
                     {
                         Id = p.PurchaseOrder.Id,

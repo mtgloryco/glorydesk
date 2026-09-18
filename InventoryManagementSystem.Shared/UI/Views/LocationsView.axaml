@@ -8,12 +8,16 @@
              x:DataType="vm:LocationsViewModel">
 
     <Grid RowDefinitions="Auto, *">
-        <!-- Header -->
-        <Border Grid.Row="0" Background="{DynamicResource SystemAccentColor}" Padding="20">
-            <StackPanel Orientation="Horizontal" Spacing="20">
-                <TextBlock Text="Warehouse &amp; Locations" FontSize="24" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
-                <Button Command="{Binding LoadLocationsCommand}" Content="Refresh" Background="Transparent" Foreground="White" BorderBrush="White"/>
-            </StackPanel>
+        <Border Grid.Row="0" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="20,16">
+            <Grid ColumnDefinitions="*, Auto">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <TextBlock Text="Warehouse &amp; Locations" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}" VerticalAlignment="Center"/>
+                    <TextBlock Text="Manage physical warehouses, stores, and stock locations." FontSize="12" Foreground="{DynamicResource TextSecondaryColor}"/>
+                </StackPanel>
+                <Button Grid.Column="1" Command="{Binding LoadLocationsCommand}" Content="↻ Refresh" 
+                        Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" 
+                        Foreground="{DynamicResource TextPrimaryColor}" CornerRadius="6" Padding="12,6" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </Grid>
         </Border>
 
         <Grid Grid.Row="1" ColumnDefinitions="*, 350">

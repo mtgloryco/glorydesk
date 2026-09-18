@@ -13,7 +13,7 @@ namespace InventoryManagementSystem.Infrastructure
         private readonly string _databasePath;
         private readonly string _legacyDatabasePath;
         private SQLiteAsyncConnection _connection;
-        private const int CurrentDatabaseVersion = 13;
+        private const int CurrentDatabaseVersion = 15;
 
         public DatabaseService()
         {
@@ -279,6 +279,16 @@ namespace InventoryManagementSystem.Infrastructure
                     await MigrateToV13Async();
                 }
 
+                if (metaVersion < 14)
+                {
+                    await MigrateToV14Async();
+                }
+
+                if (metaVersion < 15)
+                {
+                    await MigrateToV15Async();
+                }
+
                 await _connection.ExecuteAsync($"PRAGMA user_version = {CurrentDatabaseVersion}");
             }
         }
@@ -503,6 +513,21 @@ namespace InventoryManagementSystem.Infrastructure
             await AddColumnIfNotExistsAsync("StockMovement", "LotSerialNumber", "TEXT NOT NULL DEFAULT ''");
             await AddColumnIfNotExistsAsync("StockMovement", "FromLocation", "TEXT NOT NULL DEFAULT ''");
             await AddColumnIfNotExistsAsync("StockMovement", "ToLocation", "TEXT NOT NULL DEFAULT ''");
+        }
+
+        private async Task MigrateToV14Async()
+        {
+            // Storage/destination and source locations for Products, BOMs, and Manufacturing Orders
+            await AddColumnIfNotExistsAsync("Product", "DefaultLocationId", "INTEGER NULL");
+            await AddColumnIfNotExistsAsync("BillOfMaterial", "DestinationLocationId", "INTEGER NULL");
+            await AddColumnIfNotExistsAsync("ManufacturingOrder", "DestinationLocationId", "INTEGER NULL");
+            await AddColumnIfNotExistsAsync("ManufacturingOrder", "SourceLocationId", "INTEGER NULL");
+        }
+
+        private async Task MigrateToV15Async()
+        {
+            // Batch transfer reference number for StockTransfer
+            await AddColumnIfNotExistsAsync("StockTransfer", "TransferNumber", "TEXT NOT NULL DEFAULT ''");
         }
 
         private async Task MigrateToV9Async()

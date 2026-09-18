@@ -76,7 +76,7 @@ namespace InventoryManagementSystem.UI.ViewModels
              DetailedPo.Status == "Received" ||
              (DetailedItems != null && DetailedItems.Any(i => i.QuantityReceived > 0)));
 
-        public bool IsBilled => DetailedPo?.BillingStatus == "Billed";
+        public bool IsBilled => DetailedPo?.BillingStatus != "Waiting Bill" && !string.IsNullOrEmpty(DetailedPo?.BillingStatus);
         public bool CanValidate => DetailedPo?.ReceiptStatus != "Received" && DetailedPo?.Status != "Draft";
         public bool CanCreateBill => DetailedPo?.ReceiptStatus != "Pending" && DetailedPo?.BillingStatus == "Waiting Bill";
 
@@ -86,6 +86,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             OnPropertyChanged(nameof(CanValidate));
             OnPropertyChanged(nameof(CanCreateBill));
             OnPropertyChanged(nameof(IsBilled));
+            OnPropertyChanged(nameof(CanRecordPayment));
             OnPropertyChanged(nameof(CanCancelDetailedPo));
             OnPropertyChanged(nameof(DetailedPoIsArchived));
         }
@@ -577,7 +578,7 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         private async Task LoadPaymentDetailsAsync()
         {
-            if (DetailedPo == null || DetailedPo.BillingStatus != "Billed")
+            if (DetailedPo == null || DetailedPo.BillingStatus == "Waiting Bill")
             {
                 DetailedOpenBalance = 0;
                 DetailedAmountPaid = 0;
@@ -626,7 +627,18 @@ namespace InventoryManagementSystem.UI.ViewModels
                     reference: PaymentReference);
 
                 IsPaymentModalOpen = false;
+
+                await LoadPurchaseOrders();
+                var refreshedItem = PurchaseOrders.FirstOrDefault(x => x.PurchaseOrder.Id == DetailedPo.Id);
+                if (refreshedItem != null)
+                {
+                    DetailedPo = refreshedItem.PurchaseOrder;
+                }
+
                 await LoadPaymentDetailsAsync();
+                OnPropertyChanged(nameof(IsBilled));
+                OnPropertyChanged(nameof(CanRecordPayment));
+
                 StatusMessage = $"Recorded payment of {PaymentAmount:N2} {DetailedPo.Currency} for {DetailedPo.PONumber}";
             }
             catch (Exception ex)

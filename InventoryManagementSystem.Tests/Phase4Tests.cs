@@ -102,11 +102,18 @@ public class Phase4Tests : IAsyncLifetime
 
         await _purchaseOrderService.CreateBillAsync(po.Id);
         po = await _db.Connection.FindAsync<PurchaseOrder>(po.Id);
-        Assert.Equal("Billed", po!.BillingStatus);
+        Assert.Equal("In Payment", po!.BillingStatus);
 
         await _paymentService.RecordInvoicePaymentAsync("PurchaseOrder", po.Id, 250, "Bank", "tester");
+        po = await _db.Connection.FindAsync<PurchaseOrder>(po.Id);
+        Assert.Equal("Partially Paid", po!.BillingStatus);
+
         var open = await _paymentService.GetOpenBalanceAsync("PurchaseOrder", po.Id);
         Assert.True(open > 0);
+
+        await _paymentService.RecordInvoicePaymentAsync("PurchaseOrder", po.Id, open, "Bank", "tester");
+        po = await _db.Connection.FindAsync<PurchaseOrder>(po.Id);
+        Assert.Equal("Paid", po!.BillingStatus);
     }
 
     [Fact]

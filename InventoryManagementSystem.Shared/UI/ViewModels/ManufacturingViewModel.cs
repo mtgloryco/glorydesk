@@ -14,6 +14,7 @@ namespace InventoryManagementSystem.UI.ViewModels
     {
         private readonly ManufacturingService _manufacturingService;
         private readonly InventoryService _inventoryService;
+        private readonly LocationService? _locationService;
         
         public LanguageService Language { get; }
 
@@ -27,6 +28,9 @@ namespace InventoryManagementSystem.UI.ViewModels
         // ==================== TABS SHARED ====================
         [ObservableProperty]
         private ObservableCollection<Product> _products = new();
+
+        [ObservableProperty]
+        private ObservableCollection<Location> _locations = new();
 
         [ObservableProperty]
         private string _errorMessage = string.Empty;
@@ -55,6 +59,39 @@ namespace InventoryManagementSystem.UI.ViewModels
         private Product? _selectedFinalProduct;
 
         [ObservableProperty]
+        private string _finalProductSearchText = string.Empty;
+
+        [ObservableProperty]
+        private ObservableCollection<Product> _matchedFinalProducts = new();
+
+        public bool IsFinalProductDropdownVisible => SelectedFinalProduct == null && !string.IsNullOrWhiteSpace(FinalProductSearchText) && MatchedFinalProducts.Count > 0;
+
+        // On-the-fly product creation fields
+        [ObservableProperty]
+        private bool _isCreateProductModalOpen;
+
+        [ObservableProperty]
+        private string _newProductName = string.Empty;
+
+        [ObservableProperty]
+        private decimal _newProductCost;
+
+        [ObservableProperty]
+        private decimal _newProductPrice;
+
+        [ObservableProperty]
+        private string _newProductUnit = "Pcs";
+
+        [ObservableProperty]
+        private string _newProductCategory = "Manufactured";
+
+        [ObservableProperty]
+        private string _newProductErrorMessage = string.Empty;
+
+        private bool _isCreatingFinalProduct;
+        private BomLineViewModel? _targetComponentLine;
+
+        [ObservableProperty]
         private double _quantity = 1.0;
 
         [ObservableProperty]
@@ -71,6 +108,12 @@ namespace InventoryManagementSystem.UI.ViewModels
 
         [ObservableProperty]
         private double _scrapPercent = 0.0;
+
+        [ObservableProperty]
+        private Location? _selectedBomDestinationLocation;
+
+        [RelayCommand]
+        public void ClearBomDestinationLocation() => SelectedBomDestinationLocation = null;
 
         [ObservableProperty]
         private ObservableCollection<BomLineViewModel> _componentLines = new();
@@ -162,6 +205,18 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty]
         private ObservableCollection<BillOfMaterialListItem> _activeBoms = new();
 
+        [ObservableProperty]
+        private Location? _selectedMODestinationLocation;
+
+        [ObservableProperty]
+        private Location? _selectedMOSourceLocation;
+
+        [RelayCommand]
+        public void ClearMODestinationLocation() => SelectedMODestinationLocation = null;
+
+        [RelayCommand]
+        public void ClearMOSourceLocation() => SelectedMOSourceLocation = null;
+
         // ==================== TAB 3: REPORTING PROPERTIES ====================
         [ObservableProperty]
         private int _totalMOsCount;
@@ -179,11 +234,13 @@ namespace InventoryManagementSystem.UI.ViewModels
         public ManufacturingViewModel(
             ManufacturingService manufacturingService,
             InventoryService inventoryService,
-            LanguageService languageService)
+            LanguageService languageService,
+            LocationService? locationService = null)
         {
             _manufacturingService = manufacturingService;
             _inventoryService = inventoryService;
             Language = languageService;
+            _locationService = locationService;
 
             LoadBomsCommand.Execute(null);
         }
@@ -217,6 +274,12 @@ namespace InventoryManagementSystem.UI.ViewModels
 
                 var productList = await _inventoryService.GetAllProductsAsync();
                 Products = new ObservableCollection<Product>(productList.OrderBy(p => p.Name));
+                FilterFinalProducts();
+
+                var locList = _locationService != null 
+                    ? await _locationService.GetAllLocationsAsync() 
+                    : await _manufacturingService.GetAllLocationsAsync();
+                Locations = new ObservableCollection<Location>(locList.OrderBy(l => l.Name));
                 
                 ErrorMessage = string.Empty;
             }
@@ -250,11 +313,169 @@ namespace InventoryManagementSystem.UI.ViewModels
             }
         }
 
+        partial void OnSelectedFinalProductChanged(Product? value)
+        {
+            if (value != null && FinalProductSearchText != value.Name)
+            {
+                FinalProductSearchText = value.Name;
+            }
+            if (value != null && SelectedBomDestinationLocation == null && value.DefaultLocationId.HasValue)
+            {
+                SelectedBomDestinationLocation = Locations.FirstOrDefault(l => l.Id == value.DefaultLocationId.Value);
+            }
+            OnPropertyChanged(nameof(IsFinalProductDropdownVisible));
+        }
+
+        partial void OnFinalProductSearchTextChanged(string value)
+        {
+            if (SelectedFinalProduct != null && value != SelectedFinalProduct.Name)
+            {
+                SelectedFinalProduct = null;
+            }
+            FilterFinalProducts();
+            OnPropertyChanged(nameof(IsFinalProductDropdownVisible));
+        }
+
+        private void FilterFinalProducts()
+        {
+            if (Products == null || Products.Count == 0)
+            {
+                MatchedFinalProducts = new ObservableCollection<Product>();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(FinalProductSearchText) || (SelectedFinalProduct != null && FinalProductSearchText == SelectedFinalProduct.Name))
+            {
+                MatchedFinalProducts = new ObservableCollection<Product>(Products.Take(8));
+                return;
+            }
+
+            var query = FinalProductSearchText.Trim().ToLower();
+            var matches = Products.Where(p => 
+                (p.Name != null && p.Name.ToLower().Contains(query)) || 
+                (p.SKU != null && p.SKU.ToLower().Contains(query))
+            ).Take(8).ToList();
+            MatchedFinalProducts = new ObservableCollection<Product>(matches);
+        }
+
+        [RelayCommand]
+        public void SelectFinalProduct(Product? product)
+        {
+            SelectedFinalProduct = product;
+            if (product != null)
+            {
+                FinalProductSearchText = product.Name;
+            }
+            FilterFinalProducts();
+            OnPropertyChanged(nameof(IsFinalProductDropdownVisible));
+        }
+
+        [RelayCommand]
+        public void ClearFinalProduct()
+        {
+            SelectedFinalProduct = null;
+            FinalProductSearchText = string.Empty;
+            FilterFinalProducts();
+            OnPropertyChanged(nameof(IsFinalProductDropdownVisible));
+        }
+
+        [RelayCommand]
+        public void OpenCreateFinalProduct()
+        {
+            _isCreatingFinalProduct = true;
+            _targetComponentLine = null;
+            NewProductName = FinalProductSearchText?.Trim() ?? string.Empty;
+            NewProductCost = 0;
+            NewProductPrice = 0;
+            NewProductUnit = "Pcs";
+            NewProductCategory = "Manufactured";
+            NewProductErrorMessage = string.Empty;
+            IsCreateProductModalOpen = true;
+        }
+
+        [RelayCommand]
+        public void OpenCreateComponentProduct(BomLineViewModel line)
+        {
+            _isCreatingFinalProduct = false;
+            _targetComponentLine = line;
+            NewProductName = line.ProductSearchText?.Trim() ?? string.Empty;
+            NewProductCost = 0;
+            NewProductPrice = 0;
+            NewProductUnit = "Pcs";
+            NewProductCategory = "Raw Material";
+            NewProductErrorMessage = string.Empty;
+            IsCreateProductModalOpen = true;
+        }
+
+        [RelayCommand]
+        public async Task SaveNewProduct()
+        {
+            NewProductErrorMessage = string.Empty;
+            if (string.IsNullOrWhiteSpace(NewProductName))
+            {
+                NewProductErrorMessage = "Product name is required.";
+                return;
+            }
+
+            try
+            {
+                var p = new Product
+                {
+                    Name = NewProductName.Trim(),
+                    Cost = NewProductCost,
+                    Price = NewProductPrice,
+                    SKU = $"AUTO-{DateTime.Now.Ticks % 100000}",
+                    Unit = string.IsNullOrWhiteSpace(NewProductUnit) ? "Pcs" : NewProductUnit.Trim(),
+                    Category = string.IsNullOrWhiteSpace(NewProductCategory) ? "General" : NewProductCategory.Trim(),
+                    CanBeSold = true,
+                    CanBePurchased = true
+                };
+                await _inventoryService.AddProductAsync(p);
+
+                var productList = await _inventoryService.GetAllProductsAsync();
+                Products = new ObservableCollection<Product>(productList.OrderBy(prod => prod.Name));
+
+                foreach (var line in ComponentLines)
+                {
+                    line.UpdateProducts(Products);
+                }
+
+                FilterFinalProducts();
+
+                var created = Products.FirstOrDefault(prod => prod.Id == p.Id) ?? p;
+
+                if (_isCreatingFinalProduct)
+                {
+                    SelectFinalProduct(created);
+                }
+                else if (_targetComponentLine != null)
+                {
+                    _targetComponentLine.SelectProduct(created);
+                }
+
+                IsCreateProductModalOpen = false;
+            }
+            catch (Exception ex)
+            {
+                NewProductErrorMessage = ex.Message;
+            }
+        }
+
+        [RelayCommand]
+        public void CancelCreateProduct()
+        {
+            IsCreateProductModalOpen = false;
+            NewProductErrorMessage = string.Empty;
+        }
+
         [RelayCommand]
         public void ShowCreateBomForm()
         {
             _editingBom = null;
             SelectedFinalProduct = null;
+            FinalProductSearchText = string.Empty;
+            SelectedBomDestinationLocation = null;
+            FilterFinalProducts();
             Quantity = 1.0;
             Reference = $"BOM-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
             SelectedBomType = "Manufacture this product";
@@ -278,6 +499,9 @@ namespace InventoryManagementSystem.UI.ViewModels
             {
                 _editingBom = item.BillOfMaterial;
                 SelectedFinalProduct = Products.FirstOrDefault(p => p.Id == _editingBom.ProductId);
+                FinalProductSearchText = SelectedFinalProduct?.Name ?? string.Empty;
+                SelectedBomDestinationLocation = Locations.FirstOrDefault(l => l.Id == _editingBom.DestinationLocationId);
+                FilterFinalProducts();
                 Quantity = _editingBom.Quantity;
                 Reference = _editingBom.Reference;
                 SelectedBomType = _editingBom.BomType;
@@ -292,13 +516,16 @@ namespace InventoryManagementSystem.UI.ViewModels
                 foreach (var line in lines)
                 {
                     var product = Products.FirstOrDefault(p => p.Id == line.ProductId);
-                    ComponentLines.Add(new BomLineViewModel(Products, Units)
+                    var lineVm = new BomLineViewModel(Products, Units)
                     {
                         SelectedProduct = product,
+                        ProductSearchText = product?.Name ?? string.Empty,
                         Quantity = line.Quantity,
                         Unit = line.Unit,
                         ScrapPercent = line.ScrapPercent
-                    });
+                    };
+                    lineVm.RequestCreateProduct = OpenCreateComponentProduct;
+                    ComponentLines.Add(lineVm);
                 }
 
                 IsFormVisible = true;
@@ -314,6 +541,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         public void AddComponentLine()
         {
             var line = new BomLineViewModel(Products, Units);
+            line.RequestCreateProduct = OpenCreateComponentProduct;
             ComponentLines.Add(line);
         }
 
@@ -331,12 +559,24 @@ namespace InventoryManagementSystem.UI.ViewModels
         {
             IsFormVisible = false;
             _editingBom = null;
+            SelectedFinalProduct = null;
+            FinalProductSearchText = string.Empty;
+            ComponentLines.Clear();
             ErrorMessage = string.Empty;
         }
 
         [RelayCommand]
         public async Task SaveBom()
         {
+            if (SelectedFinalProduct == null && !string.IsNullOrWhiteSpace(FinalProductSearchText))
+            {
+                var exact = Products.FirstOrDefault(p => string.Equals(p.Name, FinalProductSearchText.Trim(), StringComparison.OrdinalIgnoreCase));
+                if (exact != null)
+                {
+                    SelectFinalProduct(exact);
+                }
+            }
+
             if (SelectedFinalProduct == null)
             {
                 ErrorMessage = "Please select a final manufactured product.";
@@ -357,6 +597,15 @@ namespace InventoryManagementSystem.UI.ViewModels
 
             foreach (var line in ComponentLines)
             {
+                if (line.SelectedProduct == null && !string.IsNullOrWhiteSpace(line.ProductSearchText))
+                {
+                    var exact = Products.FirstOrDefault(p => string.Equals(p.Name, line.ProductSearchText.Trim(), StringComparison.OrdinalIgnoreCase));
+                    if (exact != null)
+                    {
+                        line.SelectProduct(exact);
+                    }
+                }
+
                 if (line.SelectedProduct == null)
                 {
                     ErrorMessage = "Please ensure all component rows have a selected product.";
@@ -379,6 +628,7 @@ namespace InventoryManagementSystem.UI.ViewModels
                 bom.Company = Company;
                 bom.YieldPercent = YieldPercent;
                 bom.ScrapPercent = ScrapPercent;
+                bom.DestinationLocationId = SelectedBomDestinationLocation?.Id;
 
                 var lines = ComponentLines.Select(cl => new BillOfMaterialLine
                 {
@@ -417,6 +667,11 @@ namespace InventoryManagementSystem.UI.ViewModels
                 var productList = await _inventoryService.GetAllProductsAsync();
                 Products = new ObservableCollection<Product>(productList.OrderBy(p => p.Name));
 
+                var locList = _locationService != null 
+                    ? await _locationService.GetAllLocationsAsync() 
+                    : await _manufacturingService.GetAllLocationsAsync();
+                Locations = new ObservableCollection<Location>(locList.OrderBy(l => l.Name));
+
                 ErrorMessage = string.Empty;
             }
             catch (Exception ex)
@@ -449,6 +704,9 @@ namespace InventoryManagementSystem.UI.ViewModels
             }
         }
 
+        private Task? _populatingComponentsTask;
+        private int _populateCounter;
+
         partial void OnSelectedBoMForMOChanged(BillOfMaterialListItem? value)
         {
             if (_isLoadingDetail) return;
@@ -456,18 +714,39 @@ namespace InventoryManagementSystem.UI.ViewModels
             if (value != null)
             {
                 MOProduct = Products.FirstOrDefault(p => p.Id == value.BillOfMaterial.ProductId);
+                if (SelectedMODestinationLocation == null)
+                {
+                    SelectedMODestinationLocation = Locations.FirstOrDefault(l => l.Id == value.BillOfMaterial.DestinationLocationId)
+                        ?? Locations.FirstOrDefault(l => l.Id == MOProduct?.DefaultLocationId);
+                }
                 MOTargetQuantity = value.BillOfMaterial.Quantity;
                 MOActualQuantity = value.BillOfMaterial.Quantity;
-                _ = PopulateMOComponentsFromBoMAsync(value.BillOfMaterial.Id);
+            }
+        }
+
+        partial void OnMOTargetQuantityChanged(double value)
+        {
+            if (_isLoadingDetail) return;
+
+            if (SelectedBoMForMO != null && value > 0 && IsDraftState)
+            {
+                MOActualQuantity = value;
+                _populatingComponentsTask = PopulateMOComponentsFromBoMAsync(SelectedBoMForMO.BillOfMaterial.Id);
             }
         }
 
         private async Task PopulateMOComponentsFromBoMAsync(int bomId)
         {
+            var myCounter = ++_populateCounter;
             try
             {
-                MOComponentLines.Clear();
                 var lines = await _manufacturingService.BuildExpectedLinesFromBomAsync(bomId, MOTargetQuantity);
+                if (myCounter != _populateCounter)
+                {
+                    return;
+                }
+
+                MOComponentLines.Clear();
                 foreach (var line in lines)
                 {
                     var product = Products.FirstOrDefault(p => p.Id == line.ProductId);
@@ -507,6 +786,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             _editingMO = null;
             SelectedBoMForMO = null;
             MOProduct = null;
+            SelectedMODestinationLocation = null;
+            SelectedMOSourceLocation = null;
             MOTargetQuantity = 1.0;
             MOActualQuantity = 1.0;
             MONumber = $"MO-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 4).ToUpper()}";
@@ -532,6 +813,10 @@ namespace InventoryManagementSystem.UI.ViewModels
                 
                 // Set BoM selection
                 SelectedBoMForMO = ActiveBoms.FirstOrDefault(b => b.BillOfMaterial.Id == _editingMO.BomId);
+                SelectedMODestinationLocation = Locations.FirstOrDefault(l => l.Id == _editingMO.DestinationLocationId)
+                    ?? Locations.FirstOrDefault(l => l.Id == SelectedBoMForMO?.BillOfMaterial.DestinationLocationId)
+                    ?? Locations.FirstOrDefault(l => l.Id == MOProduct?.DefaultLocationId);
+                SelectedMOSourceLocation = Locations.FirstOrDefault(l => l.Id == _editingMO.SourceLocationId);
                 
                 MOTargetQuantity = _editingMO.TargetQuantity;
                 MOActualQuantity = _editingMO.Status == "Done" ? _editingMO.ActualQuantity : _editingMO.TargetQuantity;
@@ -593,11 +878,22 @@ namespace InventoryManagementSystem.UI.ViewModels
 
             try
             {
+                if (_populatingComponentsTask != null)
+                {
+                    await _populatingComponentsTask;
+                }
+                if (MOComponentLines.Count == 0 && SelectedBoMForMO != null)
+                {
+                    await PopulateMOComponentsFromBoMAsync(SelectedBoMForMO.BillOfMaterial.Id);
+                }
+
                 var mo = _editingMO ?? new ManufacturingOrder();
                 mo.MONumber = MONumber;
-                mo.BomId = SelectedBoMForMO.BillOfMaterial.Id;
+                mo.BomId = SelectedBoMForMO!.BillOfMaterial.Id;
                 mo.ProductId = MOProduct?.Id ?? 0;
                 mo.TargetQuantity = MOTargetQuantity;
+                mo.DestinationLocationId = SelectedMODestinationLocation?.Id;
+                mo.SourceLocationId = SelectedMOSourceLocation?.Id;
                 mo.Status = "Draft";
                 mo.Company = MOCompany;
                 mo.OrderDate = DateTime.Now;
@@ -650,12 +946,23 @@ namespace InventoryManagementSystem.UI.ViewModels
 
             try
             {
+                if (_populatingComponentsTask != null)
+                {
+                    await _populatingComponentsTask;
+                }
+                if (MOComponentLines.Count == 0 && SelectedBoMForMO != null)
+                {
+                    await PopulateMOComponentsFromBoMAsync(SelectedBoMForMO.BillOfMaterial.Id);
+                }
+
                 // Auto-save first as a draft to ensure it exists in the database
                 var mo = _editingMO ?? new ManufacturingOrder();
                 mo.MONumber = MONumber;
-                mo.BomId = SelectedBoMForMO.BillOfMaterial.Id;
+                mo.BomId = SelectedBoMForMO!.BillOfMaterial.Id;
                 mo.ProductId = MOProduct?.Id ?? 0;
                 mo.TargetQuantity = MOTargetQuantity;
+                mo.DestinationLocationId = SelectedMODestinationLocation?.Id;
+                mo.SourceLocationId = SelectedMOSourceLocation?.Id;
                 mo.Status = "Draft";
                 mo.Company = MOCompany;
                 if (mo.Id == 0) mo.OrderDate = DateTime.Now;
@@ -823,7 +1130,29 @@ namespace InventoryManagementSystem.UI.ViewModels
     public partial class BomLineViewModel : ViewModelBase
     {
         [ObservableProperty]
+        private string _productSearchText = string.Empty;
+
+        [ObservableProperty]
+        private ObservableCollection<Product> _matchedProducts = new();
+
         private Product? _selectedProduct;
+        public Product? SelectedProduct
+        {
+            get => _selectedProduct;
+            set
+            {
+                SetProperty(ref _selectedProduct, value);
+                if (value != null)
+                {
+                    Unit = value.Unit;
+                    if (ProductSearchText != value.Name)
+                    {
+                        ProductSearchText = value.Name;
+                    }
+                }
+                OnPropertyChanged(nameof(IsDropdownVisible));
+            }
+        }
 
         [ObservableProperty]
         private double _quantity = 1.0;
@@ -834,21 +1163,85 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty]
         private double _scrapPercent;
 
-        public ObservableCollection<Product> Products { get; }
+        public bool IsDropdownVisible => SelectedProduct == null && !string.IsNullOrWhiteSpace(ProductSearchText) && MatchedProducts.Count > 0;
+
+        public ObservableCollection<Product> Products { get; private set; }
         public List<string> Units { get; }
+
+        public Action<BomLineViewModel>? RequestCreateProduct { get; set; }
 
         public BomLineViewModel(IEnumerable<Product> products, List<string> units)
         {
             Products = new ObservableCollection<Product>(products);
             Units = units;
+            MatchedProducts = new ObservableCollection<Product>(Products.Take(5));
         }
 
-        partial void OnSelectedProductChanged(Product? value)
+        partial void OnProductSearchTextChanged(string value)
         {
-            if (value != null)
+            if (SelectedProduct != null && value != SelectedProduct.Name)
             {
-                Unit = value.Unit;
+                SelectedProduct = null;
             }
+            FilterProducts();
+            OnPropertyChanged(nameof(IsDropdownVisible));
+        }
+
+        public void FilterProducts()
+        {
+            if (Products == null || Products.Count == 0)
+            {
+                MatchedProducts = new ObservableCollection<Product>();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(ProductSearchText) || (SelectedProduct != null && ProductSearchText == SelectedProduct.Name))
+            {
+                MatchedProducts = new ObservableCollection<Product>(Products.Take(5));
+                return;
+            }
+
+            var query = ProductSearchText.Trim().ToLower();
+            var matches = Products.Where(p =>
+                (p.Name != null && p.Name.ToLower().Contains(query)) ||
+                (p.SKU != null && p.SKU.ToLower().Contains(query))
+            ).Take(8).ToList();
+            MatchedProducts = new ObservableCollection<Product>(matches);
+        }
+
+        [RelayCommand]
+        public void SelectProduct(Product? product)
+        {
+            SelectedProduct = product;
+            if (product != null)
+            {
+                ProductSearchText = product.Name;
+                Unit = product.Unit;
+            }
+            FilterProducts();
+            OnPropertyChanged(nameof(IsDropdownVisible));
+        }
+
+        [RelayCommand]
+        public void ClearProduct()
+        {
+            SelectedProduct = null;
+            ProductSearchText = string.Empty;
+            FilterProducts();
+            OnPropertyChanged(nameof(IsDropdownVisible));
+        }
+
+        [RelayCommand]
+        public void CreateProduct()
+        {
+            RequestCreateProduct?.Invoke(this);
+        }
+
+        public void UpdateProducts(IEnumerable<Product> products)
+        {
+            Products = new ObservableCollection<Product>(products);
+            OnPropertyChanged(nameof(Products));
+            FilterProducts();
         }
     }
 }

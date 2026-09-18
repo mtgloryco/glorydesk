@@ -391,6 +391,47 @@ namespace InventoryManagementSystem.Services
                 .ToListAsync();
 
             var suppliers = await _databaseService.Connection.Table<Supplier>().ToListAsync();
+            var payments = await _databaseService.Connection.Table<InvoicePayment>()
+                .Where(p => !p.IsDeleted && p.DocumentType == "PurchaseOrder")
+                .ToListAsync();
+            var debitNotes = await _databaseService.Connection.Table<DebitNote>()
+                .Where(d => !d.IsDeleted && d.Status == "Posted")
+                .ToListAsync();
+
+            var paymentsByPo = payments.GroupBy(p => p.DocumentId).ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
+            var debitsByPo = debitNotes.GroupBy(d => d.AppliedToPurchaseOrderId ?? d.PurchaseOrderId ?? 0).ToDictionary(g => g.Key, g => g.Sum(d => d.AppliedAmount));
+
+            foreach (var po in purchaseOrders)
+            {
+                if (po.BillingStatus != "Waiting Bill")
+                {
+                    paymentsByPo.TryGetValue(po.Id, out decimal paid);
+                    debitsByPo.TryGetValue(po.Id, out decimal credited);
+                    decimal totalSettled = paid + credited;
+                    decimal openBalance = Math.Max(0, po.TotalAmount - totalSettled);
+
+                    string targetStatus;
+                    if (openBalance <= 0.01m && (totalSettled > 0 || po.TotalAmount == 0))
+                    {
+                        targetStatus = "Paid";
+                    }
+                    else if (totalSettled > 0)
+                    {
+                        targetStatus = "Partially Paid";
+                    }
+                    else
+                    {
+                        targetStatus = "In Payment";
+                    }
+
+                    if (po.BillingStatus != targetStatus)
+                    {
+                        po.BillingStatus = targetStatus;
+                        await _databaseService.Connection.UpdateAsync(po);
+                    }
+                }
+            }
+
             return purchaseOrders.Select(po => new PurchaseOrderListItem
             {
                 PurchaseOrder = po,
@@ -434,7 +475,30 @@ namespace InventoryManagementSystem.Services
         {
             var po = await _databaseService.Connection.FindAsync<PurchaseOrder>(poId);
             if (po == null) return;
-            po.BillingStatus = "Billed";
+
+            var payments = await _databaseService.Connection.Table<InvoicePayment>()
+                .Where(p => !p.IsDeleted && p.DocumentType == "PurchaseOrder" && p.DocumentId == poId)
+                .ToListAsync();
+            var debitNotes = await _databaseService.Connection.Table<DebitNote>()
+                .Where(d => !d.IsDeleted && d.Status == "Posted" && (d.AppliedToPurchaseOrderId == poId || d.PurchaseOrderId == poId))
+                .ToListAsync();
+
+            decimal totalSettled = payments.Sum(p => p.Amount) + debitNotes.Sum(d => d.AppliedAmount);
+            decimal openBalance = Math.Max(0, po.TotalAmount - totalSettled);
+
+            if (openBalance <= 0.01m && (totalSettled > 0 || po.TotalAmount == 0))
+            {
+                po.BillingStatus = "Paid";
+            }
+            else if (totalSettled > 0)
+            {
+                po.BillingStatus = "Partially Paid";
+            }
+            else
+            {
+                po.BillingStatus = "In Payment";
+            }
+
             await _databaseService.Connection.UpdateAsync(po);
 
             var items = await _databaseService.Connection.Table<PurchaseOrderItem>()

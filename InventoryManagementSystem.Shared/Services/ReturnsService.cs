@@ -586,7 +586,7 @@ namespace InventoryManagementSystem.Services
 
             var po = await _databaseService.Connection.FindAsync<PurchaseOrder>(purchaseOrderId)
                 ?? throw new InvalidOperationException("Purchase order not found.");
-            if (po.BillingStatus != "Billed")
+            if (po.BillingStatus == "Waiting Bill")
             {
                 throw new InvalidOperationException("Debit can only be applied to billed purchase orders.");
             }
@@ -601,6 +601,17 @@ namespace InventoryManagementSystem.Services
             if (note.PurchaseOrderId == null) note.PurchaseOrderId = purchaseOrderId;
             note.UpdatedAt = DateTime.UtcNow;
             await _databaseService.Connection.UpdateAsync(note);
+
+            var payments = await _databaseService.Connection.Table<InvoicePayment>()
+                .Where(p => !p.IsDeleted && p.DocumentType == "PurchaseOrder" && p.DocumentId == purchaseOrderId)
+                .ToListAsync();
+            var debitNotes = await _databaseService.Connection.Table<DebitNote>()
+                .Where(d => !d.IsDeleted && d.Status == "Posted" && (d.AppliedToPurchaseOrderId == purchaseOrderId || d.PurchaseOrderId == purchaseOrderId))
+                .ToListAsync();
+            decimal totalSettled = payments.Sum(p => p.Amount) + debitNotes.Sum(d => d.AppliedAmount);
+            decimal openBal = Math.Max(0, po.TotalAmount - totalSettled);
+            po.BillingStatus = (openBal <= 0.01m && (totalSettled > 0 || po.TotalAmount == 0)) ? "Paid" : (totalSettled > 0 ? "Partially Paid" : "In Payment");
+            await _databaseService.Connection.UpdateAsync(po);
 
             await _auditService.LogActionAsync(username, "ApplyDebitNote", "DebitNote", note.Id,
                 new { debitNoteId, purchaseOrderId, amount });

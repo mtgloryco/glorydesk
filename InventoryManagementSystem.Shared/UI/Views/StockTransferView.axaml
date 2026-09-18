@@ -3,58 +3,318 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:InventoryManagementSystem.UI.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="600"
+             xmlns:domain="clr-namespace:InventoryManagementSystem.Domain"
+             mc:Ignorable="d" d:DesignWidth="1050" d:DesignHeight="750"
              x:Class="InventoryManagementSystem.UI.Views.StockTransferView"
-             x:DataType="vm:StockTransferViewModel">
+             x:DataType="vm:StockTransferViewModel"
+             Background="{DynamicResource PageBackgroundColor}">
 
-    <Grid RowDefinitions="Auto, *">
-        <Border Grid.Row="0" Background="{DynamicResource SystemAccentColor}" Padding="20">
-            <TextBlock Text="Inventory Stock Transfer" FontSize="24" FontWeight="Bold" Foreground="White"/>
+    <Grid RowDefinitions="Auto, Auto, Auto, *">
+        <!-- TOP HEADER BAR: Replaced legacy brown accent bar with modern clean header matching theme -->
+        <Border Grid.Row="0" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="20,16">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+                <!-- Title & Subtitle -->
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <TextBlock Text="Stock Transfers" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                        <Border Background="{DynamicResource NavActiveBgColor}" CornerRadius="12" Padding="10,2" VerticalAlignment="Center">
+                            <TextBlock Text="Multi-Location" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource NavActiveTextColor}"/>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="Move inventory between warehouses and stores with live stock validation." FontSize="12" Foreground="{DynamicResource TextSecondaryColor}"/>
+                </StackPanel>
+
+                <!-- Actions -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Button Content="← Back to Inventory" Command="{Binding GoBackCommand}"
+                            Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                            Foreground="{DynamicResource TextPrimaryColor}" CornerRadius="6" Padding="12,6" FontWeight="SemiBold"/>
+                    <Button Content="↻ Refresh" Command="{Binding LoadInitialDataCommand}"
+                            Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                            Foreground="{DynamicResource TextPrimaryColor}" CornerRadius="6" Padding="12,6" FontWeight="SemiBold"/>
+                    <Button Content="+ New Transfer" Command="{Binding ShowNewTransferFormCommand}"
+                            IsVisible="{Binding !IsNewTransferVisible}"
+                            Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}"
+                            CornerRadius="6" Padding="14,6" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <Border Grid.Row="1" Margin="30" Padding="30" Background="{DynamicResource ContentBackgroundColor}" CornerRadius="12" BoxShadow="0 10 30 0 #10000000" VerticalAlignment="Top" MaxWidth="500">
-            <StackPanel Spacing="20">
-                <TextBlock Text="Transfer Internal Items" FontSize="18" FontWeight="SemiBold"/>
-                
-                <StackPanel Spacing="5">
-                    <TextBlock Text="From Location" FontSize="12" Foreground="Gray"/>
-                    <ComboBox ItemsSource="{Binding Locations}" SelectedItem="{Binding SourceLocation}" HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
-
-                <StackPanel Spacing="5">
-                    <TextBlock Text="To Location" FontSize="12" Foreground="Gray"/>
-                    <ComboBox ItemsSource="{Binding Locations}" SelectedItem="{Binding DestLocation}" HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
-
-                <StackPanel Spacing="5">
-                    <TextBlock Text="Product" FontSize="12" Foreground="Gray"/>
-                    <ComboBox ItemsSource="{Binding Products}" SelectedItem="{Binding SelectedProduct}" HorizontalAlignment="Stretch">
-                         <ComboBox.ItemTemplate>
-                            <DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
-
-                <StackPanel Spacing="5">
-                    <TextBlock Text="Quantity" FontSize="12" Foreground="Gray"/>
-                    <NumericUpDown Value="{Binding Quantity}" Minimum="1" HorizontalAlignment="Stretch"/>
-                </StackPanel>
-
-                <StackPanel Spacing="5">
-                    <TextBlock Text="Notes" FontSize="12" Foreground="Gray"/>
-                    <TextBox Text="{Binding Notes}" Watermark="Reason for transfer..." Height="80" AcceptsReturn="True"/>
-                </StackPanel>
-
-                <Button Content="Execute Transfer" Command="{Binding PerformTransferCommand}" HorizontalAlignment="Stretch" Padding="15" Classes="accent"/>
-            </StackPanel>
+        <!-- ERROR BANNER -->
+        <Border Grid.Row="1" Margin="20,12,20,0" Padding="14,10" Background="#FEE2E2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="6" IsVisible="{Binding HasErrorMessage}">
+            <Grid ColumnDefinitions="Auto, *">
+                <TextBlock Grid.Column="0" Text="⚠️" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="{Binding ErrorMessage}" Foreground="#DC2626" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </Grid>
         </Border>
+
+        <!-- SUCCESS BANNER -->
+        <Border Grid.Row="2" Margin="20,12,20,0" Padding="14,10" Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="6" IsVisible="{Binding HasSuccessMessage}">
+            <Grid ColumnDefinitions="Auto, *">
+                <TextBlock Grid.Column="0" Text="✓" Margin="0,0,8,0" Foreground="#059669" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="{Binding SuccessMessage}" Foreground="#059669" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </Grid>
+        </Border>
+
+        <!-- MAIN CONTENT AREA -->
+        <Grid Grid.Row="3" Margin="20,16,20,20">
+
+            <!-- ==================== STATE 1: TRANSFERS HISTORY LIST ==================== -->
+            <Grid RowDefinitions="Auto, *" IsVisible="{Binding !IsNewTransferVisible}">
+                <!-- Search and Stats Bar -->
+                <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,12">
+                    <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}" Watermark="Search transfers by transfer #, product, SKU, locations, or notes..." 
+                             Width="450" HorizontalAlignment="Left" CornerRadius="6" Padding="10,6"
+                             Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="10,6">
+                            <TextBlock Text="{Binding AllTransfers.Count, StringFormat='Total Records: {0}'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryColor}"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <!-- History DataGrid -->
+                <Border Grid.Row="1" Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <DataGrid ItemsSource="{Binding FilteredTransfers}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="True" GridLinesVisibility="Horizontal">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Transfer #" Binding="{Binding TransferNumber}" Width="140" FontWeight="SemiBold"/>
+                            <DataGridTextColumn Header="Date" Binding="{Binding DateDisplay}" Width="130"/>
+                            <DataGridTextColumn Header="From Location" Binding="{Binding FromLocationName}" Width="1.5*"/>
+                            <DataGridTextColumn Header="To Location" Binding="{Binding ToLocationName}" Width="1.5*"/>
+                            <DataGridTextColumn Header="Product" Binding="{Binding ProductName}" Width="2*"/>
+                            <DataGridTextColumn Header="SKU" Binding="{Binding ProductSku}" Width="100"/>
+                            <DataGridTemplateColumn Header="Quantity" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="domain:StockTransferListItem">
+                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Quantity}" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                            <TextBlock Text="{Binding ProductUnit}" FontSize="11" Foreground="Gray"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Status" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="domain:StockTransferListItem">
+                                        <Border Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Status}" Foreground="#059669" FontSize="11" FontWeight="SemiBold"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Requested By" Binding="{Binding RequestedByUsername}" Width="110"/>
+                            <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="2*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </Grid>
+
+            <!-- ==================== STATE 2: MULTI-PRODUCT TRANSFER FORM ==================== -->
+            <ScrollViewer IsVisible="{Binding IsNewTransferVisible}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <Border Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="24" Margin="0,0,0,20">
+                    <StackPanel Spacing="20">
+                        <!-- Form Header -->
+                        <Grid ColumnDefinitions="*, Auto">
+                            <StackPanel Grid.Column="0" Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <TextBlock Text="New Stock Transfer" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                    <Border Background="{DynamicResource NavActiveBgColor}" CornerRadius="6" Padding="8,3">
+                                        <TextBlock Text="{Binding TransferNumber}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource NavActiveTextColor}"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="Select source and destination locations, then add products and transfer quantities to move." FontSize="12" Foreground="{DynamicResource TextSecondaryColor}"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="✕ Cancel" Command="{Binding CancelNewTransferCommand}"
+                                    Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                    Foreground="{DynamicResource TextSecondaryColor}" CornerRadius="6" Padding="12,6" FontWeight="SemiBold"/>
+                        </Grid>
+
+                        <!-- Locations and Transfer Info Card -->
+                        <Border Background="{DynamicResource PageBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="16">
+                            <Grid ColumnDefinitions="*, Auto, *, Auto">
+                                <!-- Source Location (From) -->
+                                <StackPanel Grid.Column="0" Spacing="6">
+                                    <TextBlock Text="From Location (Source Warehouse/Store)" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                    <ComboBox ItemsSource="{Binding Locations}" SelectedItem="{Binding SourceLocation, Mode=TwoWay}" HorizontalAlignment="Stretch" CornerRadius="6">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate DataType="domain:Location">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding Type, StringFormat='({0})'}" Foreground="Gray" FontSize="11"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <TextBlock Text="Stock will be deducted from this location" FontSize="11" Foreground="Gray"/>
+                                </StackPanel>
+
+                                <!-- Arrow Divider -->
+                                <TextBlock Grid.Column="1" Text="➜" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource NavActiveTextColor}" Margin="20,25,20,0" VerticalAlignment="Top"/>
+
+                                <!-- Destination Location (To) -->
+                                <StackPanel Grid.Column="2" Spacing="6">
+                                    <TextBlock Text="To Location (Destination Warehouse/Store)" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                    <ComboBox ItemsSource="{Binding Locations}" SelectedItem="{Binding DestLocation, Mode=TwoWay}" HorizontalAlignment="Stretch" CornerRadius="6">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate DataType="domain:Location">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding Type, StringFormat='({0})'}" Foreground="Gray" FontSize="11"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <TextBlock Text="Stock will be deposited into this location" FontSize="11" Foreground="Gray"/>
+                                </StackPanel>
+
+                                <!-- Transfer Notes -->
+                                <StackPanel Grid.Column="3" Spacing="6" Width="260" Margin="20,0,0,0">
+                                    <TextBlock Text="Reason / Reference Notes" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                    <TextBox Text="{Binding Notes, Mode=TwoWay}" Watermark="Reason, requisition #, driver..." Height="36" CornerRadius="6"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- ==================== TRANSFER ITEMS TABLE ==================== -->
+                        <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="16">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*, Auto">
+                                    <StackPanel Grid.Column="0" Spacing="2">
+                                        <TextBlock Text="Transfer Items" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
+                                        <TextBlock Text="Add all items you want to transfer. Available source stock is checked in real-time." FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                        <Button Content="+ Add Line / Product" Command="{Binding AddLineCommand}"
+                                                Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}"
+                                                CornerRadius="6" Padding="12,5" FontSize="12" FontWeight="SemiBold"/>
+                                        <Button Content="Clear Table" Command="{Binding ClearLinesCommand}"
+                                                Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                                Foreground="{DynamicResource TextSecondaryColor}" CornerRadius="6" Padding="10,5" FontSize="12"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Table Header Row -->
+                                <Border Background="{DynamicResource PageBackgroundColor}" Padding="10,8" CornerRadius="4">
+                                    <Grid ColumnDefinitions="3*, 1.4*, 1.4*, 0.8*, 1.8*, Auto">
+                                        <TextBlock Grid.Column="0" Text="Product / Item" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                        <TextBlock Grid.Column="1" Text="In Stock at Source" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextSecondaryColor}" HorizontalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="Transfer Qty" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextSecondaryColor}" HorizontalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3" Text="Unit" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                        <TextBlock Grid.Column="4" Text="Stock Validation" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextSecondaryColor}"/>
+                                        <TextBlock Grid.Column="5" Text="Action" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextSecondaryColor}" Width="40" HorizontalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Table Items (Supports 20+ products with clean scrolling) -->
+                                <ItemsControl ItemsSource="{Binding TransferLines}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:StockTransferLineItemViewModel">
+                                            <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="6,10">
+                                                <Grid ColumnDefinitions="3*, 1.4*, 1.4*, 0.8*, 1.8*, Auto">
+                                                    
+                                                    <!-- 1. Product Search and Dropdown -->
+                                                    <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,12,0" VerticalAlignment="Top">
+                                                        <TextBox Text="{Binding ProductSearchText, Mode=TwoWay}" Watermark="Type product name or SKU..." FontSize="12" CornerRadius="4"/>
+                                                        
+                                                        <!-- Autocomplete listbox -->
+                                                        <ListBox ItemsSource="{Binding MatchedProducts}"
+                                                                 IsVisible="{Binding IsDropdownVisible}"
+                                                                 MaxHeight="120"
+                                                                 Background="{DynamicResource ContentBackgroundColor}"
+                                                                 BorderBrush="{DynamicResource BorderColor}"
+                                                                 BorderThickness="1"
+                                                                 CornerRadius="4">
+                                                            <ListBox.ItemTemplate>
+                                                                <DataTemplate DataType="domain:Product">
+                                                                    <Grid ColumnDefinitions="*, Auto" Margin="2">
+                                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                                            <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"/>
+                                                                            <TextBlock Text="{Binding SKU, StringFormat='({0})'}" FontSize="11" Foreground="Gray"/>
+                                                                        </StackPanel>
+                                                                        <Button Grid.Column="1" Content="Select" Command="{Binding $parent[ListBox].((vm:StockTransferLineItemViewModel)DataContext).SelectProductCommand}" CommandParameter="{Binding .}"
+                                                                                FontSize="10" Padding="8,2" CornerRadius="3" Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}"/>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ListBox.ItemTemplate>
+                                                        </ListBox>
+
+                                                        <!-- Selected Product Confirmation Pill -->
+                                                        <Border Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="4" Padding="6,3" IsVisible="{Binding SelectedProduct, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                            <Grid ColumnDefinitions="*, Auto">
+                                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                                    <TextBlock Text="✓" Foreground="#059669" FontWeight="Bold" FontSize="11"/>
+                                                                    <TextBlock Text="{Binding SelectedProduct.Name, FallbackValue=''}" FontSize="12" FontWeight="SemiBold" Foreground="#065F46"/>
+                                                                    <TextBlock Text="{Binding SelectedProduct.SKU, FallbackValue='', StringFormat='[{0}]'}" FontSize="11" Foreground="Gray"/>
+                                                                </StackPanel>
+                                                                <Button Grid.Column="1" Content="✕" Command="{Binding ClearProductCommand}"
+                                                                        Background="Transparent" BorderThickness="0" Foreground="#059669" FontSize="11" Padding="4,0" Cursor="Hand" ToolTip.Tip="Clear selection"/>
+                                                                    </Grid>
+                                                        </Border>
+                                                    </StackPanel>
+
+                                                    <!-- 2. In Stock at Source Pill -->
+                                                    <Border Grid.Column="1" Margin="6,0" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                            Background="{Binding StockBadgeBackground}" BorderBrush="{Binding StockBadgeBorder}" BorderThickness="1" CornerRadius="4" Padding="8,4">
+                                                        <TextBlock Text="{Binding StockBadgeText}" Foreground="{Binding StockBadgeForeground}" FontWeight="SemiBold" FontSize="11"/>
+                                                    </Border>
+
+                                                    <!-- 3. Transfer Quantity Input -->
+                                                    <NumericUpDown Grid.Column="2" Value="{Binding Quantity, Mode=TwoWay}" Minimum="1"
+                                                                   Margin="6,0" VerticalAlignment="Center" HorizontalAlignment="Stretch" CornerRadius="4"/>
+
+                                                    <!-- 4. Unit -->
+                                                    <TextBlock Grid.Column="3" Text="{Binding Unit}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryColor}" Margin="4,0"/>
+
+                                                    <!-- 5. Stock Validation Status -->
+                                                    <Border Grid.Column="4" Margin="6,0" VerticalAlignment="Center" HorizontalAlignment="Left"
+                                                            Background="{Binding StockBadgeBackground}" BorderBrush="{Binding StockBadgeBorder}" BorderThickness="1" CornerRadius="4" Padding="8,4">
+                                                        <TextBlock Text="{Binding StockStatusText}" Foreground="{Binding StockBadgeForeground}" FontWeight="SemiBold" FontSize="11"/>
+                                                    </Border>
+
+                                                    <!-- 6. Remove Action -->
+                                                    <Button Grid.Column="5" Content="✕" Command="{Binding $parent[UserControl].((vm:StockTransferViewModel)DataContext).RemoveLineCommand}" CommandParameter="{Binding .}"
+                                                            Background="#14EF4444" Foreground="#EF4444" BorderBrush="#33EF4444" BorderThickness="1" CornerRadius="4" Padding="8,4" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" ToolTip.Tip="Remove item line"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- Bottom Summary & Multi-Add bar -->
+                                <Border Background="{DynamicResource PageBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="0,8,0,0">
+                                    <Grid ColumnDefinitions="Auto, *, Auto">
+                                        <Button Grid.Column="0" Content="+ Add Line" Command="{Binding AddLineCommand}"
+                                                Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                                Foreground="{DynamicResource TextPrimaryColor}" CornerRadius="4" Padding="10,4" FontSize="11" FontWeight="SemiBold"/>
+
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBlock Text="Total Products:" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12"/>
+                                                <TextBlock Text="{Binding TotalLinesCount}" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}" FontSize="12"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBlock Text="Total Units to Move:" Foreground="{DynamicResource TextSecondaryColor}" FontSize="12"/>
+                                                <TextBlock Text="{Binding TotalUnitsCount}" FontWeight="Bold" Foreground="{DynamicResource NavActiveTextColor}" FontSize="13"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Bottom Execution Actions -->
+                        <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,10,0,0">
+                            <Button Grid.Column="1" Content="Cancel" Command="{Binding CancelNewTransferCommand}"
+                                    Background="{DynamicResource ContentBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                    Foreground="{DynamicResource TextPrimaryColor}" CornerRadius="6" Padding="16,8" FontWeight="SemiBold" Margin="0,0,10,0"/>
+
+                            <Button Grid.Column="2" Content="Execute Transfer ➜" Command="{Binding PerformTransferCommand}"
+                                    Background="{DynamicResource NavActiveBgColor}" Foreground="{DynamicResource NavActiveTextColor}"
+                                    CornerRadius="6" Padding="20,8" FontWeight="Bold" FontSize="13"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </UserControl>

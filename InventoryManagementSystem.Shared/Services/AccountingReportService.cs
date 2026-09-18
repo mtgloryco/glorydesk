@@ -600,6 +600,7 @@ namespace InventoryManagementSystem.Services
                 .Where(l => accountIds.Contains(l.AccountId))
                 .ToListAsync();
 
+            matchingLines = matchingLines.Where(l => !l.IsDeleted).ToList();
             if (matchingLines.Count == 0) return result;
 
             var entryIds = matchingLines.Select(l => l.JournalEntryId).Distinct().ToList();
@@ -607,18 +608,20 @@ namespace InventoryManagementSystem.Services
                 .Where(e => entryIds.Contains(e.Id))
                 .ToListAsync();
 
-            var journalLines = await db.Table<JournalLine>()
-                .Where(l => entryIds.Contains(l.JournalEntryId))
-                .ToListAsync();
+            var postedEntries = entries
+                .Where(e => !e.IsDeleted && e.State == "Posted")
+                .ToDictionary(e => e.Id);
 
             var customers = await db.Table<Customer>().ToListAsync();
             var suppliers = await db.Table<Supplier>().ToListAsync();
             var salesOrders = await db.Table<SalesOrder>().ToListAsync();
             var purchaseOrders = await db.Table<PurchaseOrder>().ToListAsync();
 
-            foreach (var line in journalLines)
+            foreach (var line in matchingLines)
             {
-                var entry = entries.FirstOrDefault(e => e.Id == line.JournalEntryId);
+                if (!postedEntries.TryGetValue(line.JournalEntryId, out var entry))
+                    continue;
+
                 var account = allAccounts.FirstOrDefault(a => a.Id == line.AccountId);
                 
                 string partnerName = "N/A";

@@ -743,17 +743,13 @@
                                   <TextBlock Text="{Binding TotalCredit, StringFormat='{}{0:N2}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryColor}"/>
                               </StackPanel>
                               
-                              <!-- Balanced Badge -->
-                              <Border CornerRadius="4" Padding="8,4" VerticalAlignment="Center" IsVisible="{Binding IsBalanced}" Background="#2E7D32">
-                                  <TextBlock Text="Balanced" Foreground="White" FontSize="11" FontWeight="Bold"/>
-                              </Border>
-                              <Border CornerRadius="4" Padding="8,4" VerticalAlignment="Center" IsVisible="{Binding !IsBalanced}" Background="#D32F2F">
+                              <!-- Net Balance Badge -->
+                              <Border CornerRadius="4" Padding="8,4" VerticalAlignment="Center" Background="#007ACC">
                                   <StackPanel Orientation="Horizontal" Spacing="4">
-                                      <TextBlock Text="Unbalanced (Diff:" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                      <TextBlock Text="Net Balance:" Foreground="White" FontSize="11" FontWeight="Bold"/>
                                       <TextBlock Text="{Binding BalanceDifference, StringFormat='{}{0:N2}'}" Foreground="White" FontSize="11" FontWeight="Bold"/>
                                       <TextBlock Text=" " Foreground="White" FontSize="11" FontWeight="Bold"/>
                                       <TextBlock Text="{Binding CurrencySymbol}" Foreground="White" FontSize="11" FontWeight="Bold"/>
-                                      <TextBlock Text=")" Foreground="White" FontSize="11" FontWeight="Bold"/>
                                   </StackPanel>
                               </Border>
                           </StackPanel>

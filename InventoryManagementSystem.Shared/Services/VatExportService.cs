@@ -53,7 +53,7 @@ namespace InventoryManagementSystem.Services
                 .Where(o => !o.IsDeleted && o.BillingStatus == "Invoiced" && o.OrderDate >= start && o.OrderDate <= end)
                 .ToListAsync();
             var purchaseOrders = await _databaseService.Connection.Table<PurchaseOrder>()
-                .Where(o => !o.IsDeleted && o.BillingStatus == "Billed" && o.OrderDate >= start && o.OrderDate <= end)
+                .Where(o => !o.IsDeleted && o.BillingStatus != "Waiting Bill" && o.OrderDate >= start && o.OrderDate <= end)
                 .ToListAsync();
 
             return new VatReturnSummary

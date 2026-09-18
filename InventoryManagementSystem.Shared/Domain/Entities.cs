@@ -31,6 +31,8 @@ namespace InventoryManagementSystem.Domain
         public int? SalesTaxId { get; set; }
         public int? IncomeAccountId { get; set; }
         public int? ExpenseAccountId { get; set; }
+        /// <summary>Default or finished goods storage location.</summary>
+        public int? DefaultLocationId { get; set; }
     }
 
     public class Category : ISyncableEntity
@@ -403,15 +405,34 @@ namespace InventoryManagementSystem.Domain
         public Guid SyncId { get; set; } = Guid.NewGuid();
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public bool IsDeleted { get; set; }
+        public string TransferNumber { get; set; } = string.Empty;
         public int FromLocationId { get; set; }
         public int ToLocationId { get; set; }
         public int ProductId { get; set; }
         public int Quantity { get; set; }
-        public string Status { get; set; } = "Pending"; // Pending, InTransit, Completed, Cancelled
+        public string Status { get; set; } = "Completed"; // Pending, InTransit, Completed, Cancelled
         public DateTime RequestedDate { get; set; } = DateTime.Now;
         public DateTime? CompletedDate { get; set; }
         public string RequestedByUsername { get; set; } = string.Empty;
         public string Notes { get; set; } = string.Empty;
+    }
+
+    public class StockTransferListItem
+    {
+        public StockTransfer Transfer { get; set; } = new();
+        public int Id => Transfer.Id;
+        public string TransferNumber => string.IsNullOrWhiteSpace(Transfer.TransferNumber) ? $"TRF-{Transfer.Id:D4}" : Transfer.TransferNumber;
+        public string FromLocationName { get; set; } = string.Empty;
+        public string ToLocationName { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string ProductSku { get; set; } = string.Empty;
+        public string ProductUnit { get; set; } = string.Empty;
+        public int Quantity => Transfer.Quantity;
+        public string Status => Transfer.Status;
+        public DateTime RequestedDate => Transfer.RequestedDate;
+        public string DateDisplay => Transfer.RequestedDate.ToString("yyyy-MM-dd HH:mm");
+        public string RequestedByUsername => Transfer.RequestedByUsername;
+        public string Notes => Transfer.Notes;
     }
 
     public class Expense : ISyncableEntity
@@ -962,6 +983,8 @@ namespace InventoryManagementSystem.Domain
         public double YieldPercent { get; set; } = 100.0;
         /// <summary>Overall scrap allowance on the finished product run.</summary>
         public double ScrapPercent { get; set; } = 0.0;
+        /// <summary>Location where finished goods will be posted upon production completion.</summary>
+        public int? DestinationLocationId { get; set; }
     }
 
     public class BillOfMaterialLine : ISyncableEntity
@@ -986,6 +1009,7 @@ namespace InventoryManagementSystem.Domain
         public string Reference => BillOfMaterial.Reference;
         public string BomType => BillOfMaterial.BomType;
         public string Company => BillOfMaterial.Company;
+        public string DestinationLocationName { get; set; } = string.Empty;
     }
 
     public class ManufacturingOrder : ISyncableEntity
@@ -1005,6 +1029,10 @@ namespace InventoryManagementSystem.Domain
         public DateTime? ProduceDate { get; set; }
         public decimal TotalCost { get; set; } = 0m;
         public string Company { get; set; } = "My Company";
+        /// <summary>Location where finished goods will be deposited upon production.</summary>
+        public int? DestinationLocationId { get; set; }
+        /// <summary>Location where ingredients/raw materials are drawn from.</summary>
+        public int? SourceLocationId { get; set; }
     }
 
     public class ManufacturingOrderLine : ISyncableEntity
@@ -1034,6 +1062,8 @@ namespace InventoryManagementSystem.Domain
         public string OrderDateDisplay => ManufacturingOrder.OrderDate.ToString("yyyy-MM-dd HH:mm");
         public string TotalCostDisplay => ManufacturingOrder.Status == "Done" ? $"{ManufacturingOrder.TotalCost:N2}" : "-";
         public string Company => ManufacturingOrder.Company;
+        public string DestinationLocationName { get; set; } = string.Empty;
+        public string SourceLocationName { get; set; } = string.Empty;
     }
 
     public class Bank

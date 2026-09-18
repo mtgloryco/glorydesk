@@ -372,7 +372,7 @@ namespace InventoryManagementSystem.Infrastructure
                     Currency = "RWF",
                     // Draft/RFQ orders have not been received or billed yet - only Approved orders can progress.
                     ReceiptStatus = isDraft ? "Pending" : (i % 3 == 0 ? "Pending" : "Received"),
-                    BillingStatus = isDraft ? "Waiting Bill" : (i % 2 == 0 ? "Billed" : "Waiting Bill")
+                    BillingStatus = isDraft ? "Waiting Bill" : (i % 2 == 0 ? "In Payment" : "Waiting Bill")
                 };
                 SyncMetadataHelper.Touch(po);
                 conn.Insert(po);
@@ -389,7 +389,7 @@ namespace InventoryManagementSystem.Infrastructure
                         ProductId = product.Id,
                         QuantityOrdered = qty,
                         QuantityReceived = po.ReceiptStatus == "Received" ? qty : rng.Next(0, qty),
-                        QuantityBilled = po.BillingStatus == "Billed" ? qty : 0,
+                        QuantityBilled = po.BillingStatus != "Waiting Bill" ? qty : 0,
                         UnitCost = unitCost
                     };
                     SyncMetadataHelper.Touch(item);

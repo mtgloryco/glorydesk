@@ -244,6 +244,23 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly Action<int?>? _goToPurchaseOrderDetails;
         private readonly Action<int?>? _goToSalesOrderDetails;
         private readonly BarcodeService? _barcodeService;
+        private readonly LocationService? _locationService;
+        private readonly Action? _goToStockTransfer;
+
+        [ObservableProperty] private ObservableCollection<Location> _availableLocations = new();
+        [ObservableProperty] private Location? _selectedDefaultLocation;
+        [ObservableProperty] private ObservableCollection<ProductLocationStockRow> _productLocationStocks = new();
+
+        partial void OnSelectedDefaultLocationChanged(Location? value)
+        {
+            CurrentProduct.DefaultLocationId = value?.Id;
+        }
+
+        [RelayCommand]
+        public void ClearDefaultLocation()
+        {
+            SelectedDefaultLocation = null;
+        }
 
         [ObservableProperty] private string _barcodeStatusMessage = string.Empty;
 
@@ -294,7 +311,9 @@ namespace InventoryManagementSystem.UI.ViewModels
             Action<int?>? goToPurchaseOrderDetails = null,
             Action<int?>? goToSalesOrderDetails = null,
             Action? goToStockReport = null,
-            Action? goToMovesHistory = null)
+            Action? goToMovesHistory = null,
+            LocationService? locationService = null,
+            Action? goToStockTransfer = null)
         {
             _inventoryService = inventoryService;
             _licenseService = licenseService;
@@ -319,6 +338,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             _goToSalesOrderDetails = goToSalesOrderDetails;
             _customFieldService = customFieldService;
             _barcodeService = barcodeService;
+            _locationService = locationService;
+            _goToStockTransfer = goToStockTransfer;
             _customFieldsPanel.Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasCustomFields));
             LoadProductsCommand.Execute(null);
         }
@@ -417,6 +438,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         [RelayCommand] private void GoToForecastingScreen() => _goToForecasting?.Invoke();
         [RelayCommand] private void GoToLocationsScreen() => _goToLocations?.Invoke();
         [RelayCommand] private void GoToDamageWriteOffScreen() => _goToDamageWriteOff?.Invoke();
+        [RelayCommand] private void GoToStockTransferScreen() => _goToStockTransfer?.Invoke();
 
         partial void OnCurrentProductChanged(Product value)
         {
@@ -576,6 +598,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             PaneTitle = Language["Inv_NewProduct"];
             IsStockMode = false;
             await LoadFormDataAsync();
+            await LoadLocationsForFormAsync(null);
             await LoadProductCustomFieldsAsync(null);
 
             IncomeAccountSearchText = string.Empty;
@@ -610,11 +633,13 @@ namespace InventoryManagementSystem.UI.ViewModels
                 Tracking = product.Tracking ?? "by quantity",
                 SalesTaxId = product.SalesTaxId,
                 IncomeAccountId = product.IncomeAccountId,
-                ExpenseAccountId = product.ExpenseAccountId
+                ExpenseAccountId = product.ExpenseAccountId,
+                DefaultLocationId = product.DefaultLocationId
             };
             PaneTitle = Language["Inv_PaneTitle"];
             IsStockMode = false;
             await LoadFormDataAsync();
+            await LoadLocationsForFormAsync(product);
             await LoadProductCustomFieldsAsync(product.Id);
 
             if (product.IncomeAccountId.HasValue)
@@ -658,6 +683,53 @@ namespace InventoryManagementSystem.UI.ViewModels
             }
 
             IsPaneOpen = true;
+        }
+
+        private async Task LoadLocationsForFormAsync(Product? product)
+        {
+            if (_locationService != null)
+            {
+                try
+                {
+                    var locs = await _locationService.GetAllLocationsAsync();
+                    AvailableLocations = new ObservableCollection<Location>(locs.OrderBy(l => l.Name));
+                    if (product?.DefaultLocationId != null)
+                    {
+                        SelectedDefaultLocation = AvailableLocations.FirstOrDefault(l => l.Id == product.DefaultLocationId.Value);
+                    }
+                    else
+                    {
+                        SelectedDefaultLocation = null;
+                    }
+
+                    ProductLocationStocks.Clear();
+                    if (product != null && product.Id > 0)
+                    {
+                        var locStocks = await _locationService.GetProductLocationsAsync(product.Id);
+                        foreach (var ls in locStocks)
+                        {
+                            var loc = AvailableLocations.FirstOrDefault(l => l.Id == ls.LocationId);
+                            ProductLocationStocks.Add(new ProductLocationStockRow
+                            {
+                                LocationName = loc?.Name ?? $"Location #{ls.LocationId}",
+                                LocationType = loc?.Type ?? "Storage",
+                                Quantity = ls.Quantity,
+                                ReorderPoint = ls.ReorderPoint
+                            });
+                        }
+                    }
+                }
+                catch
+                {
+                    // Non-fatal if location load encounters issue
+                }
+            }
+            else
+            {
+                AvailableLocations.Clear();
+                ProductLocationStocks.Clear();
+                SelectedDefaultLocation = null;
+            }
         }
 
         [RelayCommand]
@@ -1060,5 +1132,13 @@ namespace InventoryManagementSystem.UI.ViewModels
         {
             IsHistoryModalOpen = false;
         }
+    }
+
+    public class ProductLocationStockRow
+    {
+        public string LocationName { get; set; } = string.Empty;
+        public string LocationType { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public int ReorderPoint { get; set; }
     }
 }
