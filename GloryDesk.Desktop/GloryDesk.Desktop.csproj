@@ -12,14 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="InventoryManagementSystem.Shared/**" />
-    <EmbeddedResource Remove="InventoryManagementSystem.Shared/**" />
-    <None Remove="InventoryManagementSystem.Shared/**" />
-    <AvaloniaResource Remove="InventoryManagementSystem.Shared/**" />
-    <Page Remove="InventoryManagementSystem.Shared/**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" Version="11.3.10" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.10">
@@ -31,6 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\InventoryManagementSystem.Shared\InventoryManagementSystem.Shared.csproj" />
+    <ProjectReference Include="..\GloryDesk.Shared\GloryDesk.Shared.csproj" />
   </ItemGroup>
 </Project>

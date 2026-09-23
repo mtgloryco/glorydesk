@@ -23,6 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\InventoryManagementSystem.Shared\InventoryManagementSystem.Shared.csproj" />
+    <ProjectReference Include="..\GloryDesk.Shared\GloryDesk.Shared.csproj" />
   </ItemGroup>
 </Project>

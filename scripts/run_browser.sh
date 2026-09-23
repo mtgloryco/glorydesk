@@ -6,12 +6,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
-PROJECT_DIR="$REPO_ROOT/InventoryManagementSystem.Browser"
+PROJECT_DIR="$REPO_ROOT/GloryDesk.Browser"
 APP_BUNDLE="$PROJECT_DIR/bin/Debug/net10.0-browser/browser-wasm/AppBundle"
 PORT="${1:-8080}"
 
-echo "Building InventoryManagementSystem.Browser..."
-dotnet build "$PROJECT_DIR/InventoryManagementSystem.Browser.csproj"
+echo "Building GloryDesk.Browser..."
+dotnet build "$PROJECT_DIR/GloryDesk.Browser.csproj"
 
 echo ""
 echo "Serving $APP_BUNDLE on http://localhost:$PORT"

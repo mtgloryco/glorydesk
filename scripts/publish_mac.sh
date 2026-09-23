@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Configuration
-PROJECT_NAME="InventoryManagementSystem"
+PROJECT_NAME="GloryDesk"
 RUNTIME_X64="osx-x64"
 RUNTIME_ARM64="osx-arm64"
 OUTPUT_DIR_X64="Releases/macOS_Intel"
 OUTPUT_DIR_ARM64="Releases/macOS_AppleSilicon"
-ARCHIVE_NAME_X64="InventoryManagementSystem_macOS_Intel.zip"
-ARCHIVE_NAME_ARM64="InventoryManagementSystem_macOS_AppleSilicon.zip"
+ARCHIVE_NAME_X64="GloryDesk_macOS_Intel.zip"
+ARCHIVE_NAME_ARM64="GloryDesk_macOS_AppleSilicon.zip"
 
 echo "🚀 Starting macOS builds for $PROJECT_NAME..."
 
@@ -16,12 +16,12 @@ echo "🚀 Starting macOS builds for $PROJECT_NAME..."
 # single-file-publish the Shared/Tests library projects too, which fails (NETSDK1099/1098).
 echo "Building for Intel (x64)..."
 mkdir -p "$OUTPUT_DIR_X64"
-dotnet publish "InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj" -c Release -r "$RUNTIME_X64" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR_X64"
+dotnet publish "GloryDesk.Desktop/GloryDesk.Desktop.csproj" -c Release -r "$RUNTIME_X64" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR_X64"
 
 # Build for Apple Silicon
 echo "Building for Apple Silicon (arm64)..."
 mkdir -p "$OUTPUT_DIR_ARM64"
-dotnet publish "InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj" -c Release -r "$RUNTIME_ARM64" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR_ARM64"
+dotnet publish "GloryDesk.Desktop/GloryDesk.Desktop.csproj" -c Release -r "$RUNTIME_ARM64" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR_ARM64"
 
 if [ $? -eq 0 ]; then
     echo "✅ Builds successful!"

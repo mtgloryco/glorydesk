@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Configuration
-PROJECT_NAME="InventoryManagementSystem"
+PROJECT_NAME="GloryDesk"
 RUNTIME="win-x64"
 OUTPUT_DIR="Releases/Windows"
-ARCHIVE_NAME="InventoryManagementSystem_Windows.zip"
-ISS_SCRIPT="InventoryManagementSystem.Shared/IMS_Setup_Script.iss"
-REDIST_DIR="InventoryManagementSystem.Shared/redist"
+ARCHIVE_NAME="GloryDesk_Windows.zip"
+ISS_SCRIPT="GloryDesk.Shared/GloryDesk_Setup_Script.iss"
+REDIST_DIR="GloryDesk.Shared/redist"
 VC_REDIST_URL="https://aka.ms/vs/17/release/vc_redist.x64.exe"
 
 echo "🚀 Starting Windows cross-compilation (x64) for $PROJECT_NAME..."
@@ -22,7 +22,7 @@ mkdir -p "$OUTPUT_DIR"
 # Publish (Cross-compiling from Linux to Windows works with dotnet!)
 # NOTE: We target the Desktop project explicitly - publishing the whole .sln would try to
 # single-file-publish the Shared/Tests library projects too, which fails (NETSDK1099/1098).
-dotnet publish "InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj" -c Release -r "$RUNTIME" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR"
+dotnet publish "GloryDesk.Desktop/GloryDesk.Desktop.csproj" -c Release -r "$RUNTIME" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR"
 
 if [ $? -eq 0 ]; then
     echo "✅ Build successful!"
@@ -67,7 +67,7 @@ if command -v wine >/dev/null 2>&1; then
     # Path to ISCC inside Wine prefix (Standard install path)
     ISCC_PATH="C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe"
     
-    # The .iss script lives in InventoryManagementSystem.Shared/, and its Source/OutputDir
+    # The .iss script lives in GloryDesk.Shared/, and its Source/OutputDir
     # paths are relative to that file's location, not the current working directory.
     if [ -f "$ISS_SCRIPT" ]; then
         wine "$ISCC_PATH" "$ISS_SCRIPT"

@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Configuration
-PROJECT_NAME="InventoryManagementSystem"
+PROJECT_NAME="GloryDesk"
 RUNTIME="linux-x64"
 OUTPUT_DIR="Releases/Linux"
-ARCHIVE_NAME="InventoryManagementSystem_Linux.tar.gz"
+ARCHIVE_NAME="GloryDesk_Linux.tar.gz"
 
 echo "🚀 Starting Linux build for $PROJECT_NAME..."
 
@@ -17,7 +17,7 @@ chmod +x "$OUTPUT_DIR/install.sh"
 
 # Publish (target the Desktop project explicitly - publishing the whole .sln would try to
 # single-file-publish the Shared/Tests library projects too, which fails (NETSDK1099/1098)).
-dotnet publish "InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj" -c Release -r "$RUNTIME" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR"
+dotnet publish "GloryDesk.Desktop/GloryDesk.Desktop.csproj" -c Release -r "$RUNTIME" --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$OUTPUT_DIR"
 
 if [ $? -eq 0 ]; then
     echo "✅ Build successful!"
