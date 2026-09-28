@@ -148,7 +148,7 @@ public partial class App : Application
         var bundleService = new BundleService(dbService);
         var reportingService = new ReportingService(dbService, settingsService);
         var cloudApiClient = new CloudSyncApiClient();
-        var cloudSyncService = new CloudSyncService(dbService, cloudApiClient, auditService);
+        var cloudSyncService = new CloudSyncService(dbService, cloudApiClient, auditService, licenseService);
         var dailyBriefingService = new DailyBriefingService(dbService);
         var taxService = new TaxService(dbService);
         var accountService = new AccountService(dbService);

@@ -167,11 +167,14 @@ namespace InventoryManagementSystem.Services
                 var payload = LicensePayload.FromJson(payloadJson);
                 if (payload == null) return LicenseValidationResult.InvalidFormat;
 
-                // 3. Hardware binding check
-                var currentHid = _hardwareIdService.GetCompositeHardwareId();
-                if (payload.HardwareId != currentHid)
+                // 3. Hardware binding check (desktop only; browser SaaS operates in sandboxed browser)
+                if (!OperatingSystem.IsBrowser() && payload.HardwareId != "Cloud / Web SaaS" && payload.HardwareId != "WEB-CLOUD-CLIENT")
                 {
-                    return LicenseValidationResult.HardwareMismatch;
+                    var currentHid = _hardwareIdService.GetCompositeHardwareId();
+                    if (payload.HardwareId != currentHid)
+                    {
+                        return LicenseValidationResult.HardwareMismatch;
+                    }
                 }
 
                 // 4. Expiry check

@@ -16,17 +16,19 @@ namespace InventoryManagementSystem.Services
         private readonly DatabaseService _databaseService;
         private readonly CloudSyncApiClient _apiClient;
         private readonly AuditService? _auditService;
+        private readonly LicenseService? _licenseService;
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
             WriteIndented = false
         };
 
-        public CloudSyncService(DatabaseService databaseService, CloudSyncApiClient? apiClient = null, AuditService? auditService = null)
+        public CloudSyncService(DatabaseService databaseService, CloudSyncApiClient? apiClient = null, AuditService? auditService = null, LicenseService? licenseService = null)
         {
             _databaseService = databaseService;
             _apiClient = apiClient ?? new CloudSyncApiClient();
             _auditService = auditService;
+            _licenseService = licenseService;
         }
 
         public string DeviceId => GetOrCreateDeviceIdAsync().GetAwaiter().GetResult();
@@ -87,6 +89,15 @@ namespace InventoryManagementSystem.Services
                 state.CloudUserEmail = auth.Email;
                 state.LastSyncStatus = register ? "Registered with cloud" : "Connected to cloud";
                 await _databaseService.Connection.InsertOrReplaceAsync(state);
+
+                if (_licenseService != null && !string.IsNullOrWhiteSpace(auth.LicenseKey))
+                {
+                    try
+                    {
+                        await _licenseService.ActivateLicenseAsync(auth.LicenseKey);
+                    }
+                    catch { }
+                }
 
                 return CloudSyncResult.Ok(state.LastSyncStatus);
             }
