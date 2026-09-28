@@ -13,6 +13,8 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly UserService _userService;
         private readonly AuditService _auditService;
         private readonly CloudSyncService? _cloudSyncService;
+        private readonly ISessionStore? _sessionStore;
+        private readonly LicenseService? _licenseService;
         private readonly System.Action _onLoginSuccess;
 
         [ObservableProperty] private string _username = string.Empty;
@@ -31,12 +33,16 @@ namespace InventoryManagementSystem.UI.ViewModels
             UserService userService,
             AuditService auditService,
             System.Action onLoginSuccess,
-            CloudSyncService? cloudSyncService = null)
+            CloudSyncService? cloudSyncService = null,
+            ISessionStore? sessionStore = null,
+            LicenseService? licenseService = null)
         {
             _userService = userService;
             _auditService = auditService;
             _onLoginSuccess = onLoginSuccess;
             _cloudSyncService = cloudSyncService;
+            _sessionStore = sessionStore;
+            _licenseService = licenseService;
         }
 
         [RelayCommand]
@@ -98,6 +104,26 @@ namespace InventoryManagementSystem.UI.ViewModels
                 await _auditService.LogActionAsync(user.Username, "Login", "User", user.Id, new { user.Username, user.Role });
 
                 UserSession.Login(user);
+
+                if (_sessionStore != null)
+                {
+                    try
+                    {
+                        var syncStatus = _cloudSyncService != null ? await _cloudSyncService.GetStatusAsync() : null;
+                        var sessionData = new UserSessionData
+                        {
+                            Username = user.Username,
+                            Email = cleanUsername,
+                            Role = user.Role,
+                            AuthToken = _cloudSyncService?.AuthToken,
+                            OrganizationName = syncStatus?.OrganizationName,
+                            LicenseKey = _licenseService?.CurrentLicense?.LicenseToken
+                        };
+                        _sessionStore.SaveSession(sessionData);
+                    }
+                    catch { }
+                }
+
                 _onLoginSuccess?.Invoke();
             }
             finally

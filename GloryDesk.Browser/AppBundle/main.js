@@ -55,6 +55,33 @@ const { setModuleImports, getAssemblyExports, getConfig, Module, runMain } = awa
     })
     .create();
 
+setModuleImports("main.js", {
+    session: {
+        get: () => {
+            try {
+                return localStorage.getItem("glorydesk_session");
+            } catch (e) {
+                console.warn("[glorydesk] Failed to read session from localStorage:", e);
+                return null;
+            }
+        },
+        set: (data) => {
+            try {
+                localStorage.setItem("glorydesk_session", data);
+            } catch (e) {
+                console.warn("[glorydesk] Failed to save session to localStorage:", e);
+            }
+        },
+        clear: () => {
+            try {
+                localStorage.removeItem("glorydesk_session");
+            } catch (e) {
+                console.warn("[glorydesk] Failed to clear session from localStorage:", e);
+            }
+        }
+    }
+});
+
 setProgress(88, "Securing offline store vault...");
 
 // Mount IndexedDB to persist /GloryDesk database directory

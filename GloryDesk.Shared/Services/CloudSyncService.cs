@@ -32,6 +32,35 @@ namespace InventoryManagementSystem.Services
         }
 
         public string DeviceId => GetOrCreateDeviceIdAsync().GetAwaiter().GetResult();
+        public string? AuthToken => _apiClient.AuthToken;
+
+        public async Task RestoreCloudSessionAsync(string email, string authToken, string? organizationId = null, string? organizationName = null, string? licenseKey = null)
+        {
+            try
+            {
+                _apiClient.AuthToken = authToken;
+                var state = await GetOrCreateSyncStateAsync();
+                state.AuthToken = authToken;
+                state.CloudUserEmail = email;
+                if (!string.IsNullOrWhiteSpace(organizationId)) state.OrganizationId = organizationId;
+                if (!string.IsNullOrWhiteSpace(organizationName)) state.OrganizationName = organizationName;
+                state.LastSyncStatus = "Session restored";
+                await _databaseService.Connection.InsertOrReplaceAsync(state);
+
+                if (_licenseService != null && !string.IsNullOrWhiteSpace(licenseKey))
+                {
+                    try
+                    {
+                        await _licenseService.ActivateLicenseAsync(licenseKey);
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[CloudSyncService] Error restoring session: {ex.Message}");
+            }
+        }
 
         public async Task<CloudSyncStatus> GetStatusAsync()
         {

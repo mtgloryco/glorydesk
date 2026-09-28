@@ -1,4 +1,7 @@
 <linker>
+  <assembly fullname="GloryDesk.Browser" preserve="all">
+    <type fullname="*" preserve="all" />
+  </assembly>
   <assembly fullname="GloryDesk.Shared" preserve="all">
     <type fullname="*" preserve="all" />
   </assembly>

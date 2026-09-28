@@ -64,6 +64,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly EmployeeService _employeeService;
     private readonly AttendanceService _attendanceService;
     private readonly LeaveService _leaveService;
+    private readonly ISessionStore? _sessionStore;
 
     public IndustryTemplateService IndustryTemplateService => _industryTemplateService;
     public CustomFieldService CustomFieldService => _customFieldService;
@@ -267,8 +268,10 @@ public partial class MainViewModel : ViewModelBase
         PosSessionService posSessionService,
         EmployeeService employeeService,
         AttendanceService attendanceService,
-        LeaveService leaveService)
+        LeaveService leaveService,
+        ISessionStore? sessionStore = null)
     {
+        _sessionStore = sessionStore;
         _inventoryService = inventoryService;
         _userService = userService;
         _licenseService = licenseService;
@@ -339,7 +342,13 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        // 2. Show login screen — each user signs in with username/password
+        // 2. Try restoring an active session (e.g. from browser localStorage or desktop session file)
+        if (TryRestoreSavedSession())
+        {
+            return;
+        }
+
+        // 3. Fallback to login screen
         ShowLoginScreen();
     }
 
@@ -350,7 +359,60 @@ public partial class MainViewModel : ViewModelBase
         CanGoBack = false;
         IsLoggedIn = false;
         SidebarGridLength = new Avalonia.Controls.GridLength(0);
-        CurrentPage = new LoginViewModel(_userService, _auditService, OnLoginSuccess, _cloudSyncService);
+        CurrentPage = new LoginViewModel(_userService, _auditService, OnLoginSuccess, _cloudSyncService, _sessionStore, _licenseService);
+    }
+
+    private bool TryRestoreSavedSession()
+    {
+        if (_sessionStore == null) return false;
+
+        var session = _sessionStore.GetSession();
+        if (session == null || string.IsNullOrWhiteSpace(session.Username))
+        {
+            return false;
+        }
+
+        try
+        {
+            // 1. Ensure user exists in local database (especially for in-memory WASM)
+            var user = _userService.EnsureUserExistsAsync(session.Username, session.Role ?? "Admin").GetAwaiter().GetResult();
+            if (user == null || !user.IsActive)
+            {
+                _sessionStore.ClearSession();
+                return false;
+            }
+
+            // 2. Restore CloudSync credentials and token
+            if (_cloudSyncService != null && !string.IsNullOrWhiteSpace(session.AuthToken))
+            {
+                _ = _cloudSyncService.RestoreCloudSessionAsync(
+                    session.Username,
+                    session.AuthToken,
+                    session.OrganizationId,
+                    session.OrganizationName,
+                    session.LicenseKey);
+            }
+
+            // 3. Restore License if applicable
+            if (_licenseService != null && !string.IsNullOrWhiteSpace(session.LicenseKey))
+            {
+                try
+                {
+                    _ = _licenseService.ActivateLicenseAsync(session.LicenseKey);
+                }
+                catch { }
+            }
+
+            // 4. Log in the session and enter dashboard
+            UserSession.Login(user);
+            OnLoginSuccess();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Failed to restore session: {ex.Message}");
+            return false;
+        }
     }
 
     private void OnLoginSuccess()
@@ -803,12 +865,14 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void SwitchUser()
     {
+        _sessionStore?.ClearSession();
         ShowLoginScreen();
     }
 
     [RelayCommand]
     public void Logout()
     {
+        _sessionStore?.ClearSession();
         _navigationStack.Clear(); // Clear history on logout
         CanGoBack = false;
 
@@ -816,6 +880,10 @@ public partial class MainViewModel : ViewModelBase
         if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.Shutdown();
+        }
+        else
+        {
+            ShowLoginScreen();
         }
     }
 

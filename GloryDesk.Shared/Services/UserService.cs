@@ -98,6 +98,31 @@ namespace InventoryManagementSystem.Services
             return await _databaseService.Connection.Table<User>().ToListAsync();
         }
 
+        public async Task<User?> GetUserByUsernameAsync(string username)
+        {
+            var normalized = username.Trim();
+            return await _databaseService.Connection.Table<User>()
+                .Where(u => u.Username == normalized)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<User> EnsureUserExistsAsync(string username, string role = "Admin")
+        {
+            var user = await GetUserByUsernameAsync(username);
+            if (user == null)
+            {
+                user = new User
+                {
+                    Username = username.Trim(),
+                    PasswordHash = "",
+                    Role = role,
+                    IsActive = true
+                };
+                await _databaseService.Connection.InsertAsync(user);
+            }
+            return user;
+        }
+
         public async Task AddUserAsync(User user, string plainPassword)
         {
             user.PasswordHash = HashPassword(plainPassword);

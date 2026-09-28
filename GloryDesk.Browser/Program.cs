@@ -41,7 +41,7 @@ internal partial class Program
         var bundleService = new BundleService(dbService);
         var reportingService = new ReportingService(dbService, settingsService);
         var cloudApiClient = new CloudSyncApiClient();
-        var cloudSyncService = new CloudSyncService(dbService, cloudApiClient, auditService);
+        var cloudSyncService = new CloudSyncService(dbService, cloudApiClient, auditService, licenseService);
         var dailyBriefingService = new DailyBriefingService(dbService);
         var taxService = new TaxService(dbService);
         var accountService = new AccountService(dbService);
@@ -75,6 +75,7 @@ internal partial class Program
         var employeeService = new EmployeeService(dbService, auditService);
         var attendanceService = new AttendanceService(dbService, auditService);
         var leaveService = new LeaveService(dbService, attendanceService, auditService);
+        var sessionStore = new BrowserSessionStore();
 
         // Apply plain-English defaults when no custom word labels are saved yet
         var terminology = settingsService.CurrentSettings.TerminologyOverrides;
@@ -108,7 +109,7 @@ internal partial class Program
             crmPipelineService, mobileFieldService, securityComplianceService,
             documentAttachmentService, recurringInvoiceService,
             expenseService, damageWriteOffService, posSessionService, employeeService,
-            attendanceService, leaveService);
+            attendanceService, leaveService, sessionStore);
 
         await BuildAvaloniaApp()
             .WithInterFont()
