@@ -8,7 +8,7 @@ $ArchiveName = "GloryDesk_Windows.zip"
 $RedistDir = "GloryDesk.Shared\redist"
 $VcRedistUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 $IssScript = "GloryDesk.Shared\GloryDesk_Setup_Script.iss"
-$Version = "1.2.0"
+$Version = "1.3.0"
 
 Write-Host "Building Glory Desk for Windows x64..." -ForegroundColor Cyan
 
