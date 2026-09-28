@@ -30,7 +30,7 @@
                 
                 <TextBlock Text="Sign in with your local account or Cloud email" FontSize="11" Foreground="#888" HorizontalAlignment="Center"/>
                 
-                <Button Content="{Binding IsBusy, Converter={x:Null}, FallbackValue='Login'}" Command="{Binding LoginCommand}" 
+                <Button Content="{Binding LoginButtonText}" Command="{Binding LoginCommand}" 
                         IsEnabled="{Binding !IsBusy}"
                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" 
                         Background="#007ACC" Foreground="White" Margin="0,10,0,0"/>

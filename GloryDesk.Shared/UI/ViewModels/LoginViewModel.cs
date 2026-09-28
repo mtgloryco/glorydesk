@@ -20,6 +20,13 @@ namespace InventoryManagementSystem.UI.ViewModels
         [ObservableProperty] private string _errorMessage = string.Empty;
         [ObservableProperty] private bool _isBusy;
 
+        public string LoginButtonText => IsBusy ? "Signing in..." : "Sign In";
+
+        partial void OnIsBusyChanged(bool value)
+        {
+            OnPropertyChanged(nameof(LoginButtonText));
+        }
+
         public LoginViewModel(
             UserService userService,
             AuditService auditService,
