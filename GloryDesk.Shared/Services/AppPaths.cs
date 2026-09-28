@@ -17,10 +17,19 @@ namespace InventoryManagementSystem.Services
                 AppBranding.AppDataFolder,
                 AppBranding.LegacyAppDataFolder);
 
-        public static string GetDocumentsRoot() =>
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                AppBranding.DocumentsFolder);
+        public static string GetDocumentsRoot()
+        {
+            var root = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                root = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            }
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                root = AppContext.BaseDirectory;
+            }
+            return Path.Combine(root, AppBranding.DocumentsFolder);
+        }
 
         public static string EnsureDocumentsSubfolder(params string[] segments)
         {
@@ -36,6 +45,15 @@ namespace InventoryManagementSystem.Services
 
         private static string ResolveFolder(string root, string preferred, string legacy)
         {
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                root = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            }
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                root = AppContext.BaseDirectory;
+            }
+
             var preferredPath = Path.Combine(root, preferred);
             var legacyPath = Path.Combine(root, legacy);
 
