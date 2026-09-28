@@ -20,17 +20,18 @@
                        Margin="0,0,0,4"/>
                 <TextBlock Text="Sign in to your business desk" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,10" Foreground="{DynamicResource TextSecondaryColor}"/>
                 
-                <TextBlock Text="Username" Foreground="{DynamicResource TextSecondaryColor}"/>
-                <TextBox Text="{Binding Username}" Watermark="Enter username" Background="{DynamicResource PageBackgroundColor}" Foreground="{DynamicResource TextPrimaryColor}"/>
+                <TextBlock Text="Username or Cloud Email" Foreground="{DynamicResource TextSecondaryColor}"/>
+                <TextBox Text="{Binding Username}" Watermark="username or email@company.com" Background="{DynamicResource PageBackgroundColor}" Foreground="{DynamicResource TextPrimaryColor}"/>
                 
                 <TextBlock Text="Password" Foreground="{DynamicResource TextSecondaryColor}"/>
                 <TextBox Text="{Binding Password}" Watermark="Enter password" PasswordChar="*" Background="{DynamicResource PageBackgroundColor}" Foreground="{DynamicResource TextPrimaryColor}"/>
                 
                 <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF5252" TextWrapping="Wrap" />
                 
-                <TextBlock Text="Default admin: admin / admin123" FontSize="11" Foreground="#888" HorizontalAlignment="Center"/>
+                <TextBlock Text="Sign in with your local account or Cloud email" FontSize="11" Foreground="#888" HorizontalAlignment="Center"/>
                 
-                <Button Content="Login" Command="{Binding LoginCommand}" 
+                <Button Content="{Binding IsBusy, Converter={x:Null}, FallbackValue='Login'}" Command="{Binding LoginCommand}" 
+                        IsEnabled="{Binding !IsBusy}"
                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" 
                         Background="#007ACC" Foreground="White" Margin="0,10,0,0"/>
             </StackPanel>

@@ -350,7 +350,7 @@ public partial class MainViewModel : ViewModelBase
         CanGoBack = false;
         IsLoggedIn = false;
         SidebarGridLength = new Avalonia.Controls.GridLength(0);
-        CurrentPage = new LoginViewModel(_userService, _auditService, OnLoginSuccess);
+        CurrentPage = new LoginViewModel(_userService, _auditService, OnLoginSuccess, _cloudSyncService);
     }
 
     private void OnLoginSuccess()

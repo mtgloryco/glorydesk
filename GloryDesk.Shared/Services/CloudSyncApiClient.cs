@@ -132,7 +132,7 @@ namespace InventoryManagementSystem.Services
 
     public static class CloudSyncDefaults
     {
-        public const string DefaultApiBaseUrl = "http://localhost:5080";
+        public const string DefaultApiBaseUrl = "http://localhost:8080";
 
         public static string ResolveApiBaseUrl()
         {
