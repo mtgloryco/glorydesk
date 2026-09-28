@@ -5,9 +5,9 @@ $ErrorActionPreference = "Stop"
 
 $OutputDir = "Releases\Windows"
 $ArchiveName = "GloryDesk_Windows.zip"
-$RedistDir = "InventoryManagementSystem.Shared\redist"
+$RedistDir = "GloryDesk.Shared\redist"
 $VcRedistUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
-$IssScript = "InventoryManagementSystem.Shared\GloryDesk_Setup_Script.iss"
+$IssScript = "GloryDesk.Shared\GloryDesk_Setup_Script.iss"
 $Version = "1.2.0"
 
 Write-Host "Building Glory Desk for Windows x64..." -ForegroundColor Cyan
@@ -17,7 +17,7 @@ if (!(Test-Path -Path $OutputDir)) {
 }
 
 # Folder publish (not single-file) avoids side-by-side manifest issues on clean PCs.
-dotnet publish "InventoryManagementSystem.Desktop\InventoryManagementSystem.Desktop.csproj" `
+dotnet publish "GloryDesk.Desktop\GloryDesk.Desktop.csproj" `
     -c Release -r win-x64 --self-contained true `
     -p:PublishSingleFile=false `
     -p:PublishReadyToRun=true `

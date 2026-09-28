@@ -51,10 +51,10 @@ jobs:
                   Write-Host "Building version: $version"
 
             - name: Publish App
-              run: dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj -c Release -r win-x64 --self-contained true -o ./publish
+              run: dotnet publish GloryDesk.Desktop/GloryDesk.Desktop.csproj -c Release -r win-x64 --self-contained true -o ./publish
 
             - name: Pack Release (Velopack)
-              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "GloryDesk.exe" --packTitle "Glory Desk" --packAuthors "MT GLORY CO"
+              run: vpk pack -u "GloryDesk" -v "${{ env.VERSION }}" -p ./publish -e "GloryDesk.exe" --packTitle "Glory Desk" --packAuthors "MT GLORY CO"
 
             - name: Install Inno Setup
               run: choco install innosetup -y
@@ -64,7 +64,7 @@ jobs:
               run: |
                   $payload = "${{ github.workspace }}\win-payload"
                   # Self-contained + ReadyToRun so customers don't need .NET installed.
-                  dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj `
+                  dotnet publish GloryDesk.Desktop/GloryDesk.Desktop.csproj `
                       -c Release -r win-x64 --self-contained true `
                       -p:PublishSingleFile=false -p:PublishReadyToRun=true `
                       -o $payload
@@ -73,7 +73,7 @@ jobs:
                     Write-Error "Expected $payload\GloryDesk.exe was not produced"; exit 1
                   }
 
-                  $redist = "${{ github.workspace }}\InventoryManagementSystem.Shared\redist"
+                  $redist = "${{ github.workspace }}\GloryDesk.Shared\redist"
                   New-Item -ItemType Directory -Force -Path $redist | Out-Null
                   $redistExe = Join-Path $redist "vc_redist.x64.exe"
                   if (-not (Test-Path $redistExe)) {
@@ -83,7 +83,7 @@ jobs:
                   $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
                   & $iscc "/DMyAppVersion=$env:VERSION" "/DPayloadDir=$payload" "/DRedistDir=$redist" `
                       "/O${{ github.workspace }}\Releases" `
-                      "InventoryManagementSystem.Shared\GloryDesk_Setup_Script.iss"
+                      "GloryDesk.Shared\GloryDesk_Setup_Script.iss"
                   if ($LASTEXITCODE -ne 0) { Write-Error "Inno Setup compile failed"; exit 1 }
                   Write-Host "Installer built: Releases\GloryDesk_Setup_v${env:VERSION}_Windows.exe"
 
@@ -183,10 +183,10 @@ jobs:
                   echo "Building version: $VERSION"
 
             - name: Publish App
-              run: dotnet publish InventoryManagementSystem.Desktop/InventoryManagementSystem.Desktop.csproj -c Release -r linux-x64 --self-contained true -o ./publish
+              run: dotnet publish GloryDesk.Desktop/GloryDesk.Desktop.csproj -c Release -r linux-x64 --self-contained true -o ./publish
 
             - name: Pack Release (Velopack)
-              run: vpk pack -u "InventoryManagementSystem" -v "${{ env.VERSION }}" -p ./publish -e "GloryDesk" --packTitle "Glory Desk" --packAuthors "MT GLORY CO"
+              run: vpk pack -u "GloryDesk" -v "${{ env.VERSION }}" -p ./publish -e "GloryDesk" --packTitle "Glory Desk" --packAuthors "MT GLORY CO"
 
             - name: Upload Release Assets
               uses: softprops/action-gh-release@v1
