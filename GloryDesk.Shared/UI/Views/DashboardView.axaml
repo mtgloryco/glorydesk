@@ -19,7 +19,7 @@
                             <TextBlock Text="{Binding WelcomeMessage}" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryColor}"/>
                             <TextBlock Text="{Binding AppVersion}" FontSize="12" Foreground="#EF4444" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="Here's what's happening in your inventory today." Foreground="{DynamicResource TextSecondaryColor}" Margin="0,5,0,0"/>
+                        <TextBlock Text="Here's what's happening across your business today." Foreground="{DynamicResource TextSecondaryColor}" Margin="0,5,0,0"/>
                     </StackPanel>
                     
                     <Button Grid.Column="1" Command="{Binding LoadDashboardDataCommand}" Content="Refresh" Background="Transparent" Foreground="#007ACC" BorderThickness="0"/>

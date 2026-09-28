@@ -6,10 +6,10 @@ const { setModuleImports, getAssemblyExports, getConfig, Module, runMain } = awa
 
 const config = getConfig();
 
-// Mount IndexedDB to persist /InventoryManagementSystem database directory
+// Mount IndexedDB to persist /GloryDesk database directory
 if (Module && Module.FS) {
     const FS = Module.FS;
-    const dbPath = '/InventoryManagementSystem';
+    const dbPath = '/GloryDesk';
     try {
         FS.mkdir(dbPath);
     } catch (e) {

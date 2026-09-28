@@ -9,6 +9,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <EmccExtraLDFlags>-lidbfs.js</EmccExtraLDFlags>
+    <Product>GloryDesk</Product>
+    <AssemblyTitle>GloryDesk</AssemblyTitle>
+    <Description>GloryDesk WebAssembly Client</Description>
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
 
