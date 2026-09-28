@@ -66,14 +66,7 @@ namespace InventoryManagementSystem.Services
                 }
                 else
                 {
-                    try
-                    {
-                        auth = await _apiClient.LoginAsync(email, password);
-                    }
-                    catch
-                    {
-                        auth = await _apiClient.RegisterAsync(email, password, organizationName ?? $"{email.Split('@')[0]} Workspace");
-                    }
+                    auth = await _apiClient.LoginAsync(email, password);
                 }
 
                 // Guard: this local database file already belongs to a different organization.
@@ -99,7 +92,7 @@ namespace InventoryManagementSystem.Services
             }
             catch (Exception ex)
             {
-                return CloudSyncResult.Fail($"Cloud login failed: {ex.Message}");
+                return CloudSyncResult.Fail(ex.Message);
             }
         }
 

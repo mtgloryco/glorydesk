@@ -68,6 +68,11 @@ namespace InventoryManagementSystem.UI.ViewModels
                             await _userService.AddUserAsync(user, Password);
                         }
                     }
+                    else if (!string.IsNullOrWhiteSpace(cloudResult.Message))
+                    {
+                        ErrorMessage = cloudResult.Message;
+                        return;
+                    }
                 }
 
                 if (user == null)

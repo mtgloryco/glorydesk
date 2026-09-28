@@ -17,6 +17,15 @@ namespace InventoryManagementSystem.Services
         public string OrganizationName { get; set; } = string.Empty;
         public string UserId { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string? LicenseKey { get; set; }
+        public string? LicenseTier { get; set; }
+        public DateTime? LicenseExpiry { get; set; }
+    }
+
+    public class CloudErrorResponse
+    {
+        public string? Error { get; set; }
+        public bool RequiresLicense { get; set; }
     }
 
     public class SyncChangeDto
@@ -56,6 +65,7 @@ namespace InventoryManagementSystem.Services
     {
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
+        public string? Error => !Success ? Message : null;
         public int RecordsSynced { get; set; }
 
         public static CloudSyncResult Ok(string message, int records = 0) =>

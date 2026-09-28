@@ -34,7 +34,12 @@ namespace InventoryManagementSystem.Services
                 new CloudAuthRequest { Email = email, Password = password, OrganizationName = organizationName },
                 ct);
 
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMsg = await ExtractErrorMessageAsync(response, ct);
+                throw new InvalidOperationException(errorMsg);
+            }
+
             var result = await response.Content.ReadFromJsonAsync<CloudAuthResponse>(cancellationToken: ct)
                 ?? throw new InvalidOperationException("Empty auth response.");
             ApplyAuth(result);
@@ -48,11 +53,31 @@ namespace InventoryManagementSystem.Services
                 new CloudAuthRequest { Email = email, Password = password },
                 ct);
 
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMsg = await ExtractErrorMessageAsync(response, ct);
+                throw new InvalidOperationException(errorMsg);
+            }
+
             var result = await response.Content.ReadFromJsonAsync<CloudAuthResponse>(cancellationToken: ct)
                 ?? throw new InvalidOperationException("Empty auth response.");
             ApplyAuth(result);
             return result;
+        }
+
+        private static async Task<string> ExtractErrorMessageAsync(HttpResponseMessage response, CancellationToken ct)
+        {
+            try
+            {
+                var errObj = await response.Content.ReadFromJsonAsync<CloudErrorResponse>(cancellationToken: ct);
+                if (!string.IsNullOrWhiteSpace(errObj?.Error))
+                {
+                    return errObj.Error;
+                }
+            }
+            catch { }
+
+            return $"Authentication failed (HTTP {(int)response.StatusCode}).";
         }
 
         public async Task<BackupInfoResponse> GetBackupInfoAsync(CancellationToken ct = default)
