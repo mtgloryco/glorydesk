@@ -1,10 +1,61 @@
 import { dotnet } from './_framework/dotnet.js'
 
+const progressBar = document.getElementById("progress-bar");
+const progressPercent = document.getElementById("progress-percent");
+const loadingPhrase = document.getElementById("loading-phrase");
+
+let currentPercent = 5;
+
+const phrases = [
+    "Starting GloryDesk runtime...",
+    "Loading .NET 10 WebAssembly core...",
+    "Downloading business modules...",
+    "Mounting secure local database...",
+    "Configuring Skia graphics engine...",
+    "Preparing workspace...",
+    "Almost ready..."
+];
+
+let phraseIndex = 0;
+function nextPhrase() {
+    if (!loadingPhrase) return;
+    loadingPhrase.style.opacity = "0";
+    setTimeout(() => {
+        phraseIndex = (phraseIndex + 1) % phrases.length;
+        loadingPhrase.textContent = phrases[phraseIndex];
+        loadingPhrase.style.opacity = "1";
+    }, 200);
+}
+const phraseTimer = setInterval(nextPhrase, 2200);
+
+function setProgress(val, customText) {
+    if (val > currentPercent) {
+        currentPercent = Math.min(100, Math.round(val));
+        if (progressBar) progressBar.style.width = currentPercent + "%";
+        if (progressPercent) progressPercent.textContent = currentPercent + "%";
+    }
+    if (customText && loadingPhrase) {
+        loadingPhrase.textContent = customText;
+    }
+}
+
+// Initial progress bump
+setProgress(10, phrases[0]);
+
 const { setModuleImports, getAssemblyExports, getConfig, Module, runMain } = await dotnet
     .withDiagnosticTracing(false)
+    .withModuleConfig({
+        onDownloadResourceProgress: (loaded, total) => {
+            if (total > 0) {
+                // Map downloads to 15% - 85% range
+                const pct = 15 + Math.round((loaded / total) * 70);
+                setProgress(pct);
+            }
+        }
+    })
     .create();
 
-const config = getConfig();
+setProgress(88, "Mounting offline database...");
 
 // Mount IndexedDB to persist /GloryDesk database directory
 if (Module && Module.FS) {
@@ -43,6 +94,8 @@ if (Module && Module.FS) {
     console.warn("Emscripten FS not available. Database files will not persist.");
 }
 
+setProgress(96, "Launching user interface...");
+
 // Start the Avalonia application. Use runMain() rather than dotnet.run() (a shorthand for
 // runMainAndExit()): Avalonia's browser backend installs persistent requestAnimationFrame /
 // input callbacks and keeps running after Main()'s Task completes. runMainAndExit() tears the
@@ -57,9 +110,14 @@ if (Module && Module.FS) {
 // kicked off rather than once Main "finishes" (it never does).
 runMain().catch((err) => console.error("Fatal error starting the application:", err));
 
+setProgress(100, "Ready!");
+clearInterval(phraseTimer);
+
 // Hide loading splash screen
 const splash = document.getElementById("splash");
 if (splash) {
-    splash.style.opacity = "0";
-    setTimeout(() => splash.remove(), 500);
+    setTimeout(() => {
+        splash.style.opacity = "0";
+        setTimeout(() => splash.remove(), 500);
+    }, 300);
 }
