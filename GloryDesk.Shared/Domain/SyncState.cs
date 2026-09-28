@@ -15,7 +15,7 @@ namespace InventoryManagementSystem.Domain
         public string? OrganizationName { get; set; }
         public string? CloudUserEmail { get; set; }
         public string? AuthToken { get; set; }
-        public string ApiBaseUrl { get; set; } = "http://localhost:5080";
+        public string ApiBaseUrl { get; set; } = InventoryManagementSystem.Services.CloudSyncDefaults.DefaultApiBaseUrl;
 
         public DateTime? LastPullAt { get; set; }
         public DateTime? LastPushAt { get; set; }
