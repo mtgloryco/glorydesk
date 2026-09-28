@@ -49,6 +49,19 @@ namespace InventoryManagementSystem.Services
                 };
                 await _databaseService.Connection.InsertAsync(guest);
             }
+
+            // Create itbienvenu admin user if not exists
+            var itb = await _databaseService.Connection.Table<User>().Where(u => u.Username == "itbienvenu").FirstOrDefaultAsync();
+            if (itb == null)
+            {
+                itb = new User
+                {
+                    Username = "itbienvenu",
+                    PasswordHash = HashPassword("admin123"),
+                    Role = "Admin"
+                };
+                await _databaseService.Connection.InsertAsync(itb);
+            }
         }
 
         /// <summary>

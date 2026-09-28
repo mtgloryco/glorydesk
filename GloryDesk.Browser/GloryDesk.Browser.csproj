@@ -13,6 +13,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <TrimmerRootDescriptor Include="Roots.xml" />
+    <TrimmerRootAssembly Include="GloryDesk.Shared" />
+    <TrimmerRootAssembly Include="SQLite-net" />
+  </ItemGroup>
+
+  <ItemGroup>
     <WasmExtraFilesToDeploy Include="AppBundle/**" />
   </ItemGroup>
 

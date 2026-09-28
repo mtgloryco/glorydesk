@@ -28,6 +28,42 @@ namespace InventoryManagementSystem.Services
 
         public async Task InitializeAsync()
         {
+            // Web / Browser mode: Node-locked hardware ID licensing does not apply in a web browser sandbox.
+            // In SaaS / Web mode, the client is granted active Enterprise access to the UI,
+            // while data security and tenant isolation are enforced by user authentication and the Cloud backend.
+            if (OperatingSystem.IsBrowser())
+            {
+                var webLicense = await _databaseService.Connection.Table<LocalLicense>()
+                    .OrderByDescending(l => l.Id)
+                    .FirstOrDefaultAsync();
+
+                if (webLicense == null)
+                {
+                    webLicense = new LocalLicense
+                    {
+                        DeviceFingerprint = "BROWSER-WASM",
+                        Status = "Active",
+                        Type = "Enterprise",
+                        LicenseToken = "WEB-SAAS-ENTERPRISE",
+                        ExpirationDate = DateTime.UtcNow.AddYears(10),
+                        LastKnownValidDate = DateTime.UtcNow
+                    };
+                    await _databaseService.Connection.InsertAsync(webLicense);
+                }
+                else
+                {
+                    webLicense.Status = "Active";
+                    webLicense.Type = "Enterprise";
+                    webLicense.DeviceFingerprint = "BROWSER-WASM";
+                    webLicense.ExpirationDate = DateTime.UtcNow.AddYears(10);
+                    webLicense.LastKnownValidDate = DateTime.UtcNow;
+                    await _databaseService.Connection.UpdateAsync(webLicense);
+                }
+
+                CurrentLicense = webLicense;
+                return;
+            }
+
             var hid = _hardwareIdService.GetCompositeHardwareId();
 
             // Fetch existing license

@@ -47,7 +47,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         {
             _licenseService = licenseService;
             _onActivationSuccess = onActivationSuccess;
-            HardwareId = hardwareIdService.GetCompositeHardwareId();
+            HardwareId = OperatingSystem.IsBrowser() ? "Cloud / Web SaaS" : hardwareIdService.GetCompositeHardwareId();
             RefreshLicenseInfo();
         }
 

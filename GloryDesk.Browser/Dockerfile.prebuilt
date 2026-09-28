@@ -1,0 +1,11 @@
+# Ultra-fast lightweight Dockerfile using pre-published WASM AppBundle
+FROM nginx:1.27-alpine AS runtime
+
+ENV NGINX_ENVSUBST_FILTER=PORT
+ENV PORT=8080
+
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY bin/Release/net10.0-browser/browser-wasm/AppBundle /usr/share/nginx/html
+RUN chmod -R a+rX /usr/share/nginx/html
+
+EXPOSE 8080

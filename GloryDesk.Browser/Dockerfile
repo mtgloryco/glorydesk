@@ -34,5 +34,6 @@ ENV PORT=8080
 
 COPY GloryDesk.Browser/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /src/GloryDesk.Browser/bin/Release/net10.0-browser/browser-wasm/AppBundle /usr/share/nginx/html
+RUN chmod -R a+rX /usr/share/nginx/html
 
 EXPOSE 8080
