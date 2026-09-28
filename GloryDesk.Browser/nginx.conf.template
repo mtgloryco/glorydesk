@@ -5,11 +5,11 @@ server {
     index index.html;
 
     include /etc/nginx/mime.types;
-    types {
-        application/wasm wasm;
-    }
 
     gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
     gzip_types application/wasm application/javascript application/octet-stream text/javascript application/json text/css;
     gzip_min_length 1024;
 
@@ -19,6 +19,23 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Ensure HTML entrypoint and boot configuration are always fresh
+    location ~* (index\.html|dotnet\.boot\.js)$ {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        try_files $uri =404;
+    }
+
+    # Aggressively cache immutable WebAssembly binaries and assemblies
+    location /_framework/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    location ~* \.(wasm|dat|ico|png|jpg|jpeg|svg|woff2)$ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
     }
 
     location / {
