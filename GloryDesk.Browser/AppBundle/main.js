@@ -7,13 +7,13 @@ const loadingPhrase = document.getElementById("loading-phrase");
 let currentPercent = 5;
 
 const phrases = [
-    "Starting GloryDesk runtime...",
-    "Loading .NET 10 WebAssembly core...",
-    "Downloading business modules...",
-    "Mounting secure local database...",
-    "Configuring Skia graphics engine...",
-    "Preparing workspace...",
-    "Almost ready..."
+    "Preparing your business workspace...",
+    "Loading your store catalog & items...",
+    "Setting up POS checkout register...",
+    "Preparing inventory & stock records...",
+    "Securing your offline store vault...",
+    "Configuring fast local search...",
+    "Almost ready to sell..."
 ];
 
 let phraseIndex = 0;
@@ -55,7 +55,7 @@ const { setModuleImports, getAssemblyExports, getConfig, Module, runMain } = awa
     })
     .create();
 
-setProgress(88, "Mounting offline database...");
+setProgress(88, "Securing offline store vault...");
 
 // Mount IndexedDB to persist /GloryDesk database directory
 if (Module && Module.FS) {
@@ -94,7 +94,7 @@ if (Module && Module.FS) {
     console.warn("Emscripten FS not available. Database files will not persist.");
 }
 
-setProgress(96, "Launching user interface...");
+setProgress(96, "Opening store dashboard...");
 
 // Start the Avalonia application. Use runMain() rather than dotnet.run() (a shorthand for
 // runMainAndExit()): Avalonia's browser backend installs persistent requestAnimationFrame /
@@ -110,7 +110,7 @@ setProgress(96, "Launching user interface...");
 // kicked off rather than once Main "finishes" (it never does).
 runMain().catch((err) => console.error("Fatal error starting the application:", err));
 
-setProgress(100, "Ready!");
+setProgress(100, "Ready for business!");
 clearInterval(phraseTimer);
 
 // Hide loading splash screen
