@@ -1,0 +1,30 @@
+name: CI Automated Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore Dependencies
+        run: dotnet restore GloryDesk.Tests/GloryDesk.Tests.csproj
+
+      - name: Build and Run Tests
+        run: dotnet test GloryDesk.Tests/GloryDesk.Tests.csproj -c Release --verbosity normal
