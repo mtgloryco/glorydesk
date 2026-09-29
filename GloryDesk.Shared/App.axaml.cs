@@ -201,12 +201,17 @@ public partial class App : Application
         languageService.SetTerminologyOverrides(terminology);
 
         // Initialize services on a background thread to prevent UI thread deadlock
-        Task.Run(async () =>
+        var initCompleted = Task.Run(async () =>
         {
             await dbService.InitializeAsync(settingsService.CurrentSettings.CurrencySymbol);
             await userService.InitializeAsync();
             await licenseService.InitializeAsync();
-        }).Wait();
+        }).Wait(TimeSpan.FromSeconds(10));
+
+        if (!initCompleted)
+        {
+            System.Diagnostics.Debug.WriteLine("[App] Warning: Service initialization timed out after 10 seconds.");
+        }
 
         return (
             inventoryService, userService, licenseService, hardwareService,

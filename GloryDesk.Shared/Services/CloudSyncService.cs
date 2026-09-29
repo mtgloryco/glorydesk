@@ -38,7 +38,8 @@ namespace InventoryManagementSystem.Services
             _settingsService = settingsService;
         }
 
-        public string DeviceId => GetOrCreateDeviceIdAsync().GetAwaiter().GetResult();
+        private string? _cachedDeviceId;
+        public string DeviceId => _cachedDeviceId ?? Environment.MachineName;
         public string? AuthToken => _apiClient.AuthToken;
 
         public async Task RestoreCloudSessionAsync(string email, string authToken, string? organizationId = null, string? organizationName = null, string? licenseKey = null)
@@ -95,10 +96,24 @@ namespace InventoryManagementSystem.Services
             };
         }
 
+        public async Task<DateTime?> GetLastSyncDateAsync()
+        {
+            var state = await _databaseService.Connection.Table<SyncState>().FirstOrDefaultAsync();
+            return state?.LastPullAt ?? state?.LastPushAt;
+        }
+
         public DateTime? GetLastSyncDate()
         {
-            var state = _databaseService.Connection.Table<SyncState>().FirstOrDefaultAsync().GetAwaiter().GetResult();
-            return state?.LastPullAt ?? state?.LastPushAt;
+            try
+            {
+                var task = Task.Run(async () => await _databaseService.Connection.Table<SyncState>().FirstOrDefaultAsync());
+                if (task.Wait(TimeSpan.FromSeconds(2)))
+                {
+                    return task.Result?.LastPullAt ?? task.Result?.LastPushAt;
+                }
+            }
+            catch { }
+            return null;
         }
 
         public async Task<bool> SyncOrganizationSettingsAsync()
@@ -641,13 +656,20 @@ namespace InventoryManagementSystem.Services
 
         private async Task<string> GetOrCreateDeviceIdAsync()
         {
+            if (!string.IsNullOrWhiteSpace(_cachedDeviceId))
+            {
+                return _cachedDeviceId;
+            }
+
             var existing = await _databaseService.Connection.Table<SyncState>().FirstOrDefaultAsync();
             if (existing != null && !string.IsNullOrWhiteSpace(existing.DeviceId))
             {
+                _cachedDeviceId = existing.DeviceId;
                 return existing.DeviceId;
             }
 
-            return Environment.MachineName + "-" + Guid.NewGuid().ToString("N")[..8];
+            _cachedDeviceId = Environment.MachineName + "-" + Guid.NewGuid().ToString("N")[..8];
+            return _cachedDeviceId;
         }
 
         private static async Task<MemoryStream> CompressFileAsync(string sourcePath)

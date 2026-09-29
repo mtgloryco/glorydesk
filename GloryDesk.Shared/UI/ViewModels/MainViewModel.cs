@@ -342,14 +342,11 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        // 2. Try restoring an active session (e.g. from browser localStorage or desktop session file)
-        if (TryRestoreSavedSession())
-        {
-            return;
-        }
-
-        // 3. Fallback to login screen
+        // 2. Fallback to login screen immediately so window renders without blocking
         ShowLoginScreen();
+
+        // 3. Asynchronously attempt to restore saved session if one exists
+        _ = TryRestoreSavedSessionAsync();
     }
 
     private void ShowLoginScreen()
@@ -362,35 +359,45 @@ public partial class MainViewModel : ViewModelBase
         CurrentPage = new LoginViewModel(_userService, _auditService, OnLoginSuccess, _cloudSyncService, _sessionStore, _licenseService, _settingsService);
     }
 
-    private bool TryRestoreSavedSession()
+    private async Task TryRestoreSavedSessionAsync()
     {
-        if (_sessionStore == null) return false;
+        if (_sessionStore == null) return;
 
-        var session = _sessionStore.GetSession();
+        UserSessionData? session = null;
+        try
+        {
+            session = _sessionStore.GetSession();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Failed to read session: {ex.Message}");
+            return;
+        }
+
         if (session == null || string.IsNullOrWhiteSpace(session.Username))
         {
-            return false;
+            return;
         }
 
         try
         {
             // 1. Ensure user exists in local database (especially for in-memory WASM)
-            var user = _userService.EnsureUserExistsAsync(session.Username, session.Role ?? "Admin").GetAwaiter().GetResult();
+            var user = await _userService.EnsureUserExistsAsync(session.Username, session.Role ?? "Admin").ConfigureAwait(false);
             if (user == null || !user.IsActive)
             {
                 _sessionStore.ClearSession();
-                return false;
+                return;
             }
 
             // 2. Restore CloudSync credentials and token
             if (_cloudSyncService != null && !string.IsNullOrWhiteSpace(session.AuthToken))
             {
-                _ = _cloudSyncService.RestoreCloudSessionAsync(
+                await _cloudSyncService.RestoreCloudSessionAsync(
                     session.Username,
                     session.AuthToken,
                     session.OrganizationId,
                     session.OrganizationName,
-                    session.LicenseKey);
+                    session.LicenseKey).ConfigureAwait(false);
             }
 
             if (!string.IsNullOrWhiteSpace(session.OrganizationName))
@@ -405,24 +412,30 @@ public partial class MainViewModel : ViewModelBase
             {
                 try
                 {
-                    _ = _licenseService.ActivateLicenseAsync(session.LicenseKey);
+                    await _licenseService.ActivateLicenseAsync(session.LicenseKey).ConfigureAwait(false);
                 }
                 catch { }
             }
 
-            // 4. Log in the session and enter dashboard
-            UserSession.Login(user);
-            OnLoginSuccess();
-            return true;
+            // 4. Dispatch to UI thread to complete login and enter dashboard
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                UserSession.Login(user);
+                await OnLoginSuccessAsync();
+            });
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MainViewModel] Failed to restore session: {ex.Message}");
-            return false;
         }
     }
 
     private void OnLoginSuccess()
+    {
+        _ = OnLoginSuccessAsync();
+    }
+
+    private async Task OnLoginSuccessAsync()
     {
         // Safety re-check
         if (_licenseService.CurrentLicense.Status != "Valid" && _licenseService.CurrentLicense.Status != "Active")
@@ -438,7 +451,16 @@ public partial class MainViewModel : ViewModelBase
 
         if (!_settingsService.CurrentSettings.SetupCompleted)
         {
-            var syncStatus = _cloudSyncService?.GetStatusAsync().GetAwaiter().GetResult();
+            CloudSyncStatus? syncStatus = null;
+            if (_cloudSyncService != null)
+            {
+                try
+                {
+                    syncStatus = await _cloudSyncService.GetStatusAsync();
+                }
+                catch { }
+            }
+
             if (syncStatus != null && syncStatus.IsAuthenticated)
             {
                 if (!string.IsNullOrWhiteSpace(syncStatus.OrganizationName))

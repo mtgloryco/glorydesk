@@ -46,13 +46,29 @@ namespace InventoryManagementSystem.Services
             if (!OperatingSystem.IsWindows()) return "NOT-WINDOWS";
             try
             {
-                using (var searcher = new System.Management.ManagementObjectSearcher("SELECT SerialNumber FROM Win32_PhysicalMedia WHERE Tag='Disk'"))
+                var guid = GetWindowsMachineGuid();
+                if (!string.IsNullOrEmpty(guid)) return guid;
+
+                var wmiTask = Task.Run(() =>
                 {
-                    foreach (System.Management.ManagementObject disk in searcher.Get())
+                    try
                     {
-                        var serial = disk["SerialNumber"]?.ToString()?.Trim();
-                        if (!string.IsNullOrEmpty(serial)) return serial;
+                        using (var searcher = new System.Management.ManagementObjectSearcher("SELECT SerialNumber FROM Win32_DiskDrive"))
+                        {
+                            foreach (System.Management.ManagementObject disk in searcher.Get())
+                            {
+                                var serial = disk["SerialNumber"]?.ToString()?.Trim();
+                                if (!string.IsNullOrEmpty(serial)) return serial;
+                            }
+                        }
                     }
+                    catch { }
+                    return null;
+                });
+
+                if (wmiTask.Wait(TimeSpan.FromSeconds(2)) && !string.IsNullOrEmpty(wmiTask.Result))
+                {
+                    return wmiTask.Result;
                 }
             }
             catch { }
@@ -142,6 +158,22 @@ namespace InventoryManagementSystem.Services
         }
 
 
+        private string? GetWindowsMachineGuid()
+        {
+            if (!OperatingSystem.IsWindows()) return null;
+            try
+            {
+                using var key = Microsoft.Win32.RegistryKey.OpenBaseKey(
+                    Microsoft.Win32.RegistryHive.LocalMachine,
+                    Microsoft.Win32.RegistryView.Registry64);
+                using var subKey = key.OpenSubKey(@"SOFTWARE\Microsoft\Cryptography");
+                var guid = subKey?.GetValue("MachineGuid")?.ToString()?.Trim();
+                if (!string.IsNullOrEmpty(guid)) return guid;
+            }
+            catch { }
+            return null;
+        }
+
         private string GetMachineIdentifier()
         {
             // LINUX: /etc/machine-id is the standard unique ID generated at install time.
@@ -151,21 +183,33 @@ namespace InventoryManagementSystem.Services
                 catch { try { return File.ReadAllText("/var/lib/dbus/machine-id").Trim(); } catch { } }
             }
             
-            // WINDOWS: Use Win32_ComputerSystemProduct UUID (BIOS UUID)
+            // WINDOWS: Use MachineGuid or Win32_ComputerSystemProduct UUID (BIOS UUID)
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                try
+                var guid = GetWindowsMachineGuid();
+                if (!string.IsNullOrEmpty(guid)) return guid;
+
+                var wmiTask = Task.Run(() =>
                 {
-                    using (var searcher = new System.Management.ManagementObjectSearcher("SELECT UUID FROM Win32_ComputerSystemProduct"))
+                    try
                     {
-                        foreach (System.Management.ManagementObject product in searcher.Get())
+                        using (var searcher = new System.Management.ManagementObjectSearcher("SELECT UUID FROM Win32_ComputerSystemProduct"))
                         {
-                            var uuid = product["UUID"]?.ToString()?.Trim();
-                            if (!string.IsNullOrEmpty(uuid)) return uuid;
+                            foreach (System.Management.ManagementObject product in searcher.Get())
+                            {
+                                var uuid = product["UUID"]?.ToString()?.Trim();
+                                if (!string.IsNullOrEmpty(uuid)) return uuid;
+                            }
                         }
                     }
+                    catch { }
+                    return null;
+                });
+
+                if (wmiTask.Wait(TimeSpan.FromSeconds(2)) && !string.IsNullOrEmpty(wmiTask.Result))
+                {
+                    return wmiTask.Result;
                 }
-                catch { }
             }
 
             return Environment.MachineName; // Fallback (least stable, changes with hostname)
