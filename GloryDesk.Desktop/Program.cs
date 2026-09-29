@@ -15,6 +15,13 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // Pin current directory to the application base folder so native DLLs and adjacent assets always resolve
+        try
+        {
+            Environment.CurrentDirectory = AppContext.BaseDirectory;
+        }
+        catch { }
+
         AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
         {
             if (eventArgs.ExceptionObject is Exception ex)
@@ -31,7 +38,14 @@ sealed class Program
 
         try
         {
-            Velopack.VelopackApp.Build().Run();
+            try
+            {
+                Velopack.VelopackApp.Build().Run();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Velopack startup hook non-fatal error: {ex.Message}");
+            }
 
             BuildAvaloniaApp()
                 .StartWithClassicDesktopLifetime(args);
@@ -124,6 +138,10 @@ sealed class Program
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace()
+            .With(new Win32PlatformOptions
+            {
+                RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software }
+            })
             .With(new X11PlatformOptions 
             {
                 EnableMultiTouch = true,

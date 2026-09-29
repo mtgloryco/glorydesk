@@ -1,7 +1,7 @@
 ; These can be overridden from the command line, e.g.
 ;   ISCC /DMyAppVersion=1.2.3 /DPayloadDir=C:\path\to\publish /DRedistDir=C:\path\to\redist GloryDesk_Setup_Script.iss
 #ifndef MyAppVersion
-  #define MyAppVersion "1.3.0"
+  #define MyAppVersion "1.3.1"
 #endif
 #ifndef PayloadDir
   #define PayloadDir "../Releases/Windows"
@@ -33,7 +33,7 @@ MinVersion=10.0.17763
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 Source: "{#RedistDir}/vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion
