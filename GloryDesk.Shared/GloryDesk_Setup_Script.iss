@@ -40,13 +40,13 @@ Source: "{#RedistDir}/vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadDir}/*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Glory Desk"; Filename: "{app}\GloryDesk.exe"
-Name: "{group}\{cm:UninstallProgram,Glory Desk}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Glory Desk"; Filename: "{app}\GloryDesk.exe"; Tasks: desktopicon
+Name: "{group}\Glory Desk"; Filename: "{app}\GloryDesk.exe"; WorkingDir: "{app}"
+Name: "{group}\{cm:UninstallProgram,Glory Desk}"; Filename: "{uninstallexe}"; WorkingDir: "{app}"
+Name: "{autodesktop}\Glory Desk"; Filename: "{app}\GloryDesk.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\vc_redist.x64.exe"; Parameters: "/install /passive /norestart"; StatusMsg: "Installing Microsoft Visual C++ Runtime (required)..."; Flags: waituntilterminated
-Filename: "{app}\GloryDesk.exe"; Description: "{cm:LaunchProgram,Glory Desk}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\GloryDesk.exe"; Description: "{cm:LaunchProgram,Glory Desk}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 function VCRedistSucceeded: Boolean;
