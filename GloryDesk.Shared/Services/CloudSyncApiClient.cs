@@ -130,6 +130,36 @@ namespace InventoryManagementSystem.Services
                 ?? new SyncPullResponse { ServerTime = DateTime.UtcNow };
         }
 
+        public async Task<OrganizationSettingsDto?> GetOrganizationSettingsAsync(CancellationToken ct = default)
+        {
+            try
+            {
+                using var request = CreateAuthorizedRequest(HttpMethod.Get, $"{BaseUrl}/api/organization/settings");
+                var response = await _httpClient.SendAsync(request, ct);
+                if (!response.IsSuccessStatusCode) return null;
+                return await response.Content.ReadFromJsonAsync<OrganizationSettingsDto>(cancellationToken: ct);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<bool> UpdateOrganizationSettingsAsync(OrganizationSettingsDto settings, CancellationToken ct = default)
+        {
+            try
+            {
+                using var request = CreateAuthorizedRequest(HttpMethod.Put, $"{BaseUrl}/api/organization/settings");
+                request.Content = JsonContent.Create(settings);
+                var response = await _httpClient.SendAsync(request, ct);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private HttpRequestMessage CreateAuthorizedRequest(HttpMethod method, string url)
         {
             var request = new HttpRequestMessage(method, url);

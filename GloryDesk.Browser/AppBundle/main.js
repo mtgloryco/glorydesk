@@ -79,6 +79,23 @@ setModuleImports("main.js", {
                 console.warn("[glorydesk] Failed to clear session from localStorage:", e);
             }
         }
+    },
+    settings: {
+        get: () => {
+            try {
+                return localStorage.getItem("glorydesk_settings");
+            } catch (e) {
+                console.warn("[glorydesk] Failed to read settings from localStorage:", e);
+                return null;
+            }
+        },
+        set: (data) => {
+            try {
+                localStorage.setItem("glorydesk_settings", data);
+            } catch (e) {
+                console.warn("[glorydesk] Failed to save settings to localStorage:", e);
+            }
+        }
     }
 });
 

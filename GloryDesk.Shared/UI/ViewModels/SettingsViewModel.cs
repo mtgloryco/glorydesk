@@ -23,6 +23,7 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly Action? _onRequestShowWizard;
     private readonly Action? _onModulesChanged;
     private readonly NotificationService? _notificationService;
+    private readonly CloudSyncService? _cloudSyncService;
 
     public ObservableCollection<string> CostingMethodOptions { get; } = new() { "Oldest first (FIFO)", "Average cost" };
 
@@ -699,7 +700,8 @@ public partial class SettingsViewModel : ViewModelBase
         Action? onModulesChanged = null,
         NotificationService? notificationService = null,
         string? initialTab = null,
-        string? initialAccountingSubTab = null)
+        string? initialAccountingSubTab = null,
+        CloudSyncService? cloudSyncService = null)
     {
         _settingsService = settingsService;
         Language = languageService;
@@ -714,6 +716,7 @@ public partial class SettingsViewModel : ViewModelBase
         _onRequestShowWizard = onRequestShowWizard;
         _onModulesChanged = onModulesChanged;
         _notificationService = notificationService;
+        _cloudSyncService = cloudSyncService;
 
         var s = _settingsService.CurrentSettings;
         _storeName = s.StoreName;
@@ -780,6 +783,7 @@ public partial class SettingsViewModel : ViewModelBase
             s.SmtpEnableSsl = SmtpEnableSsl;
 
             _settingsService.SaveSettings();
+            _ = _cloudSyncService?.PushOrganizationSettingsAsync();
             StatusMessage = "Settings saved successfully!";
         }
         catch

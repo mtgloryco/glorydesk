@@ -15,6 +15,7 @@ namespace InventoryManagementSystem.UI.ViewModels
         private readonly CloudSyncService? _cloudSyncService;
         private readonly ISessionStore? _sessionStore;
         private readonly LicenseService? _licenseService;
+        private readonly SettingsService? _settingsService;
         private readonly System.Action _onLoginSuccess;
 
         [ObservableProperty] private string _username = string.Empty;
@@ -35,7 +36,8 @@ namespace InventoryManagementSystem.UI.ViewModels
             System.Action onLoginSuccess,
             CloudSyncService? cloudSyncService = null,
             ISessionStore? sessionStore = null,
-            LicenseService? licenseService = null)
+            LicenseService? licenseService = null,
+            SettingsService? settingsService = null)
         {
             _userService = userService;
             _auditService = auditService;
@@ -43,6 +45,7 @@ namespace InventoryManagementSystem.UI.ViewModels
             _cloudSyncService = cloudSyncService;
             _sessionStore = sessionStore;
             _licenseService = licenseService;
+            _settingsService = settingsService;
         }
 
         [RelayCommand]
@@ -110,16 +113,24 @@ namespace InventoryManagementSystem.UI.ViewModels
                     try
                     {
                         var syncStatus = _cloudSyncService != null ? await _cloudSyncService.GetStatusAsync() : null;
+                        var orgName = syncStatus?.OrganizationName;
                         var sessionData = new UserSessionData
                         {
                             Username = user.Username,
                             Email = cleanUsername,
                             Role = user.Role,
                             AuthToken = _cloudSyncService?.AuthToken,
-                            OrganizationName = syncStatus?.OrganizationName,
+                            OrganizationName = orgName,
                             LicenseKey = _licenseService?.CurrentLicense?.LicenseToken
                         };
                         _sessionStore.SaveSession(sessionData);
+
+                        if (_settingsService != null && !string.IsNullOrWhiteSpace(orgName))
+                        {
+                            _settingsService.CurrentSettings.StoreName = orgName;
+                            _settingsService.CurrentSettings.SetupCompleted = true;
+                            _settingsService.SaveSettings();
+                        }
                     }
                     catch { }
                 }

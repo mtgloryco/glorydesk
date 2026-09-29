@@ -17,18 +17,25 @@ namespace InventoryManagementSystem.Services
         private readonly CloudSyncApiClient _apiClient;
         private readonly AuditService? _auditService;
         private readonly LicenseService? _licenseService;
+        private readonly SettingsService? _settingsService;
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
             WriteIndented = false
         };
 
-        public CloudSyncService(DatabaseService databaseService, CloudSyncApiClient? apiClient = null, AuditService? auditService = null, LicenseService? licenseService = null)
+        public CloudSyncService(
+            DatabaseService databaseService,
+            CloudSyncApiClient? apiClient = null,
+            AuditService? auditService = null,
+            LicenseService? licenseService = null,
+            SettingsService? settingsService = null)
         {
             _databaseService = databaseService;
             _apiClient = apiClient ?? new CloudSyncApiClient();
             _auditService = auditService;
             _licenseService = licenseService;
+            _settingsService = settingsService;
         }
 
         public string DeviceId => GetOrCreateDeviceIdAsync().GetAwaiter().GetResult();
@@ -39,6 +46,7 @@ namespace InventoryManagementSystem.Services
             try
             {
                 _apiClient.AuthToken = authToken;
+                if (!string.IsNullOrWhiteSpace(organizationId)) _apiClient.OrganizationId = organizationId;
                 var state = await GetOrCreateSyncStateAsync();
                 state.AuthToken = authToken;
                 state.CloudUserEmail = email;
@@ -46,6 +54,16 @@ namespace InventoryManagementSystem.Services
                 if (!string.IsNullOrWhiteSpace(organizationName)) state.OrganizationName = organizationName;
                 state.LastSyncStatus = "Session restored";
                 await _databaseService.Connection.InsertOrReplaceAsync(state);
+
+                if (_settingsService != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(organizationName))
+                    {
+                        _settingsService.CurrentSettings.StoreName = organizationName;
+                        _settingsService.CurrentSettings.SetupCompleted = true;
+                    }
+                    _ = SyncOrganizationSettingsAsync();
+                }
 
                 if (_licenseService != null && !string.IsNullOrWhiteSpace(licenseKey))
                 {
@@ -83,6 +101,63 @@ namespace InventoryManagementSystem.Services
             return state?.LastPullAt ?? state?.LastPushAt;
         }
 
+        public async Task<bool> SyncOrganizationSettingsAsync()
+        {
+            if (_settingsService == null || string.IsNullOrWhiteSpace(_apiClient.AuthToken))
+            {
+                return false;
+            }
+
+            try
+            {
+                var cloudSettings = await _apiClient.GetOrganizationSettingsAsync();
+                if (cloudSettings != null)
+                {
+                    // If local already had custom business info and cloud was untouched default, push local to cloud
+                    if (_settingsService.CurrentSettings.SetupCompleted &&
+                        !string.IsNullOrWhiteSpace(_settingsService.CurrentSettings.StoreName) &&
+                        _settingsService.CurrentSettings.StoreName != "My Store" &&
+                        (string.IsNullOrWhiteSpace(cloudSettings.StoreName) || cloudSettings.StoreName == "My Store"))
+                    {
+                        var toPush = _settingsService.ExportToCloudSettings();
+                        await _apiClient.UpdateOrganizationSettingsAsync(toPush);
+                    }
+                    else
+                    {
+                        // Apply cloud settings to local
+                        _settingsService.ApplyCloudOrganizationSettings(cloudSettings);
+                    }
+                    return true;
+                }
+                else if (_settingsService.CurrentSettings.SetupCompleted)
+                {
+                    // No cloud settings yet, push local settings to initialize cloud
+                    var toPush = _settingsService.ExportToCloudSettings();
+                    return await _apiClient.UpdateOrganizationSettingsAsync(toPush);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[CloudSyncService] Error syncing organization settings: {ex.Message}");
+            }
+
+            return false;
+        }
+
+        public async Task<bool> PushOrganizationSettingsAsync()
+        {
+            if (_settingsService == null || string.IsNullOrWhiteSpace(_apiClient.AuthToken)) return false;
+            try
+            {
+                var toPush = _settingsService.ExportToCloudSettings();
+                return await _apiClient.UpdateOrganizationSettingsAsync(toPush);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public async Task<CloudSyncResult> ConfigureCloudLoginAsync(string email, string password, string? organizationName = null, bool register = false)
         {
             try
@@ -118,6 +193,16 @@ namespace InventoryManagementSystem.Services
                 state.CloudUserEmail = auth.Email;
                 state.LastSyncStatus = register ? "Registered with cloud" : "Connected to cloud";
                 await _databaseService.Connection.InsertOrReplaceAsync(state);
+
+                if (_settingsService != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(auth.OrganizationName))
+                    {
+                        _settingsService.CurrentSettings.StoreName = auth.OrganizationName;
+                        _settingsService.CurrentSettings.SetupCompleted = true;
+                    }
+                    await SyncOrganizationSettingsAsync();
+                }
 
                 if (_licenseService != null && !string.IsNullOrWhiteSpace(auth.LicenseKey))
                 {
@@ -214,6 +299,8 @@ namespace InventoryManagementSystem.Services
             _apiClient.BaseUrl = state.ApiBaseUrl;
             _apiClient.AuthToken = state.AuthToken;
             _apiClient.OrganizationId = state.OrganizationId;
+
+            _ = SyncOrganizationSettingsAsync();
 
             var since = state.LastPullAt ?? DateTime.MinValue;
             var pushed = await PushLocalChangesAsync(state);

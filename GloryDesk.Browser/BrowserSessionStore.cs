@@ -67,4 +67,10 @@ internal static partial class BrowserInterop
 
     [JSImport("session.clear", "main.js")]
     internal static partial void ClearSession();
+
+    [JSImport("settings.get", "main.js")]
+    internal static partial string? GetSettings();
+
+    [JSImport("settings.set", "main.js")]
+    internal static partial void SetSettings(string data);
 }

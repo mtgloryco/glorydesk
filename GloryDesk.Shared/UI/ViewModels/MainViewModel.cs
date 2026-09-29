@@ -359,7 +359,7 @@ public partial class MainViewModel : ViewModelBase
         CanGoBack = false;
         IsLoggedIn = false;
         SidebarGridLength = new Avalonia.Controls.GridLength(0);
-        CurrentPage = new LoginViewModel(_userService, _auditService, OnLoginSuccess, _cloudSyncService, _sessionStore, _licenseService);
+        CurrentPage = new LoginViewModel(_userService, _auditService, OnLoginSuccess, _cloudSyncService, _sessionStore, _licenseService, _settingsService);
     }
 
     private bool TryRestoreSavedSession()
@@ -391,6 +391,13 @@ public partial class MainViewModel : ViewModelBase
                     session.OrganizationId,
                     session.OrganizationName,
                     session.LicenseKey);
+            }
+
+            if (!string.IsNullOrWhiteSpace(session.OrganizationName))
+            {
+                _settingsService.CurrentSettings.StoreName = session.OrganizationName;
+                _settingsService.CurrentSettings.SetupCompleted = true;
+                _settingsService.SaveSettings();
             }
 
             // 3. Restore License if applicable
@@ -431,8 +438,21 @@ public partial class MainViewModel : ViewModelBase
 
         if (!_settingsService.CurrentSettings.SetupCompleted)
         {
-            ShowSetupWizard(EnterDashboardAfterLogin);
-            return;
+            var syncStatus = _cloudSyncService?.GetStatusAsync().GetAwaiter().GetResult();
+            if (syncStatus != null && syncStatus.IsAuthenticated)
+            {
+                if (!string.IsNullOrWhiteSpace(syncStatus.OrganizationName))
+                {
+                    _settingsService.CurrentSettings.StoreName = syncStatus.OrganizationName;
+                }
+                _settingsService.CurrentSettings.SetupCompleted = true;
+                _settingsService.SaveSettings();
+            }
+            else
+            {
+                ShowSetupWizard(EnterDashboardAfterLogin);
+                return;
+            }
         }
 
         EnterDashboardAfterLogin();
@@ -440,7 +460,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void ShowSetupWizard(Action onCompleted)
     {
-        CurrentPage = new SetupWizardViewModel(_industryTemplateService, _settingsService, _customFieldService, Language, onCompleted);
+        CurrentPage = new SetupWizardViewModel(_industryTemplateService, _settingsService, _customFieldService, Language, onCompleted, _cloudSyncService);
         _navigationStack.Clear();
         CanGoBack = false;
     }
@@ -495,6 +515,23 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanAccessEnterprise));
 
         OnPropertyChanged(nameof(SidebarGridLength));
+
+        if (_cloudSyncService != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var status = await _cloudSyncService.GetStatusAsync();
+                    if (status.IsAuthenticated)
+                    {
+                        await _cloudSyncService.SyncDeltaAsync();
+                        await RefreshCloudSyncStatusAsync();
+                    }
+                }
+                catch { }
+            });
+        }
     }
 
     private async Task RunPhase1BackgroundJobsAsync()
@@ -1017,7 +1054,7 @@ public partial class MainViewModel : ViewModelBase
     public void GoToSettingsTab(string? tab, string? accountingSubTab)
     {
         if (!CanAccessSettings) return;
-        NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService, _paymentService, _customFieldService, _currencyService, _budgetReportService, RunSetupWizardFromSettings, RefreshModuleGatedAccessProperties, _notificationService, tab, accountingSubTab));
+        NavigateTo(new SettingsViewModel(_settingsService, Language, _taxService, _accountService, _journalService, _accountingReportService, _paymentService, _customFieldService, _currencyService, _budgetReportService, RunSetupWizardFromSettings, RefreshModuleGatedAccessProperties, _notificationService, tab, accountingSubTab, _cloudSyncService));
     }
 
     [RelayCommand]

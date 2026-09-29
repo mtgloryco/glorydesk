@@ -85,4 +85,18 @@ namespace InventoryManagementSystem.Services
         public string StatusText { get; set; } = "Not configured";
         public int PendingOutboundCount { get; set; }
     }
+
+    public class OrganizationSettingsDto
+    {
+        public string StoreName { get; set; } = "My Store";
+        public string StoreAddress { get; set; } = "Kigali, Rwanda";
+        public string CurrencySymbol { get; set; } = "RWF";
+        public decimal DefaultTaxRate { get; set; } = 0.18m;
+        public string BusinessType { get; set; } = "retail";
+        public bool SetupCompleted { get; set; } = true;
+        public string CostingMethod { get; set; } = "FIFO";
+        public Dictionary<string, bool> EnabledModules { get; set; } = new();
+        public Dictionary<string, string> TerminologyOverrides { get; set; } = new();
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    }
 }

@@ -13,6 +13,7 @@ public partial class SetupWizardViewModel : ViewModelBase
     private readonly IndustryTemplateService _industryTemplateService;
     private readonly SettingsService _settingsService;
     private readonly CustomFieldService _customFieldService;
+    private readonly CloudSyncService? _cloudSyncService;
     private readonly Action _onCompleted;
 
     public LanguageService Language { get; }
@@ -93,12 +94,14 @@ public partial class SetupWizardViewModel : ViewModelBase
         SettingsService settingsService,
         CustomFieldService customFieldService,
         LanguageService languageService,
-        Action onCompleted)
+        Action onCompleted,
+        CloudSyncService? cloudSyncService = null)
     {
         _industryTemplateService = industryTemplateService;
         _settingsService = settingsService;
         _customFieldService = customFieldService;
         _onCompleted = onCompleted;
+        _cloudSyncService = cloudSyncService;
         Language = languageService;
 
         var s = _settingsService.CurrentSettings;
@@ -182,6 +185,8 @@ public partial class SetupWizardViewModel : ViewModelBase
             // for the no-template path and to guarantee store info is written.
             _settingsService.SaveSettings();
 
+            _ = _cloudSyncService?.PushOrganizationSettingsAsync();
+
             _onCompleted?.Invoke();
         }
         catch (Exception ex)
@@ -202,6 +207,8 @@ public partial class SetupWizardViewModel : ViewModelBase
         _settingsService.CurrentSettings.BusinessType = "custom";
         _settingsService.CurrentSettings.SetupCompleted = true;
         _settingsService.SaveSettings();
+
+        _ = _cloudSyncService?.PushOrganizationSettingsAsync();
 
         _onCompleted?.Invoke();
     }

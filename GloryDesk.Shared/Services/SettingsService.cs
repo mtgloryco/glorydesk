@@ -34,6 +34,9 @@ namespace InventoryManagementSystem.Services
 
     public class SettingsService
     {
+        public static Func<string?>? CustomLoadSettingsHandler { get; set; }
+        public static Action<string>? CustomSaveSettingsHandler { get; set; }
+
         private readonly string _settingsFilePath;
         public AppSettings CurrentSettings { get; private set; } = new AppSettings();
 
@@ -61,6 +64,23 @@ namespace InventoryManagementSystem.Services
 
         public void LoadSettings()
         {
+            if (CustomLoadSettingsHandler != null)
+            {
+                try
+                {
+                    var customJson = CustomLoadSettingsHandler();
+                    if (!string.IsNullOrWhiteSpace(customJson))
+                    {
+                        CurrentSettings = JsonSerializer.Deserialize<AppSettings>(customJson) ?? new AppSettings();
+                        return;
+                    }
+                }
+                catch
+                {
+                    // Fall back to file
+                }
+            }
+
             if (File.Exists(_settingsFilePath))
             {
                 try
@@ -86,12 +106,60 @@ namespace InventoryManagementSystem.Services
             {
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 var json = JsonSerializer.Serialize(CurrentSettings, options);
+
+                try
+                {
+                    CustomSaveSettingsHandler?.Invoke(json);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error running custom settings save handler: {ex.Message}");
+                }
+
                 File.WriteAllText(_settingsFilePath, json);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error saving settings: {ex.Message}");
             }
+        }
+
+        public void ApplyCloudOrganizationSettings(OrganizationSettingsDto cloudSettings)
+        {
+            if (cloudSettings == null) return;
+            if (!string.IsNullOrWhiteSpace(cloudSettings.StoreName)) CurrentSettings.StoreName = cloudSettings.StoreName;
+            if (!string.IsNullOrWhiteSpace(cloudSettings.StoreAddress)) CurrentSettings.StoreAddress = cloudSettings.StoreAddress;
+            if (!string.IsNullOrWhiteSpace(cloudSettings.CurrencySymbol)) CurrentSettings.CurrencySymbol = cloudSettings.CurrencySymbol;
+            if (cloudSettings.DefaultTaxRate > 0) CurrentSettings.DefaultTaxRate = cloudSettings.DefaultTaxRate;
+            if (!string.IsNullOrWhiteSpace(cloudSettings.BusinessType)) CurrentSettings.BusinessType = cloudSettings.BusinessType;
+            if (!string.IsNullOrWhiteSpace(cloudSettings.CostingMethod)) CurrentSettings.CostingMethod = cloudSettings.CostingMethod;
+            if (cloudSettings.EnabledModules != null && cloudSettings.EnabledModules.Count > 0)
+            {
+                foreach (var kvp in cloudSettings.EnabledModules) CurrentSettings.EnabledModules[kvp.Key] = kvp.Value;
+            }
+            if (cloudSettings.TerminologyOverrides != null && cloudSettings.TerminologyOverrides.Count > 0)
+            {
+                foreach (var kvp in cloudSettings.TerminologyOverrides) CurrentSettings.TerminologyOverrides[kvp.Key] = kvp.Value;
+            }
+            CurrentSettings.SetupCompleted = true;
+            SaveSettings();
+        }
+
+        public OrganizationSettingsDto ExportToCloudSettings()
+        {
+            return new OrganizationSettingsDto
+            {
+                StoreName = CurrentSettings.StoreName,
+                StoreAddress = CurrentSettings.StoreAddress,
+                CurrencySymbol = CurrentSettings.CurrencySymbol,
+                DefaultTaxRate = CurrentSettings.DefaultTaxRate,
+                BusinessType = CurrentSettings.BusinessType,
+                SetupCompleted = CurrentSettings.SetupCompleted,
+                CostingMethod = CurrentSettings.CostingMethod,
+                EnabledModules = new Dictionary<string, bool>(CurrentSettings.EnabledModules),
+                TerminologyOverrides = new Dictionary<string, string>(CurrentSettings.TerminologyOverrides),
+                UpdatedAt = DateTime.UtcNow
+            };
         }
     }
 }

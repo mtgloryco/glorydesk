@@ -23,6 +23,8 @@ internal partial class Program
         var hardwareService = new HardwareIdService();
         var cryptoService = new LicenseCryptoService();
         var licenseService = new LicenseService(dbService, hardwareService, cryptoService);
+        SettingsService.CustomLoadSettingsHandler = () => BrowserInterop.GetSettings();
+        SettingsService.CustomSaveSettingsHandler = (json) => BrowserInterop.SetSettings(json);
         var settingsService = new SettingsService();
         var inventoryService = new InventoryService(dbService, licenseService, auditService, settingsService);
         var analyticsService = new AnalyticsService(dbService);
@@ -41,7 +43,7 @@ internal partial class Program
         var bundleService = new BundleService(dbService);
         var reportingService = new ReportingService(dbService, settingsService);
         var cloudApiClient = new CloudSyncApiClient();
-        var cloudSyncService = new CloudSyncService(dbService, cloudApiClient, auditService, licenseService);
+        var cloudSyncService = new CloudSyncService(dbService, cloudApiClient, auditService, licenseService, settingsService);
         var dailyBriefingService = new DailyBriefingService(dbService);
         var taxService = new TaxService(dbService);
         var accountService = new AccountService(dbService);
