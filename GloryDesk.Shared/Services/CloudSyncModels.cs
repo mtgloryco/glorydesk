@@ -8,6 +8,7 @@ namespace InventoryManagementSystem.Services
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
         public string? OrganizationName { get; set; }
+        public string? HardwareId { get; set; }
     }
 
     public class CloudAuthResponse
@@ -20,6 +21,7 @@ namespace InventoryManagementSystem.Services
         public string? LicenseKey { get; set; }
         public string? LicenseTier { get; set; }
         public DateTime? LicenseExpiry { get; set; }
+        public string? Role { get; set; }
     }
 
     public class CloudErrorResponse
@@ -67,9 +69,10 @@ namespace InventoryManagementSystem.Services
         public string Message { get; set; } = string.Empty;
         public string? Error => !Success ? Message : null;
         public int RecordsSynced { get; set; }
+        public string? Role { get; set; }
 
-        public static CloudSyncResult Ok(string message, int records = 0) =>
-            new() { Success = true, Message = message, RecordsSynced = records };
+        public static CloudSyncResult Ok(string message, int records = 0, string? role = null) =>
+            new() { Success = true, Message = message, RecordsSynced = records, Role = role };
 
         public static CloudSyncResult Fail(string message) =>
             new() { Success = false, Message = message };

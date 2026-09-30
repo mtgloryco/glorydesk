@@ -180,6 +180,16 @@ namespace InventoryManagementSystem.Services
                 var state = await GetOrCreateSyncStateAsync();
                 _apiClient.BaseUrl = state.ApiBaseUrl;
 
+                string? hardwareId = null;
+                if (!OperatingSystem.IsBrowser() && _licenseService != null)
+                {
+                    try
+                    {
+                        hardwareId = _licenseService.GetHardwareId();
+                    }
+                    catch { }
+                }
+
                 CloudAuthResponse auth;
                 if (register)
                 {
@@ -187,7 +197,7 @@ namespace InventoryManagementSystem.Services
                 }
                 else
                 {
-                    auth = await _apiClient.LoginAsync(email, password);
+                    auth = await _apiClient.LoginAsync(email, password, hardwareId);
                 }
 
                 // Guard: this local database file already belongs to a different organization.
@@ -228,7 +238,7 @@ namespace InventoryManagementSystem.Services
                     catch { }
                 }
 
-                return CloudSyncResult.Ok(state.LastSyncStatus);
+                return CloudSyncResult.Ok(state.LastSyncStatus, 0, auth.Role);
             }
             catch (Exception ex)
             {

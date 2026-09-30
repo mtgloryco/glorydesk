@@ -26,6 +26,8 @@ namespace InventoryManagementSystem.Services
             _cryptoService = cryptoService;
         }
 
+        public string GetHardwareId() => _hardwareIdService.GetCompositeHardwareId();
+
         public async Task InitializeAsync()
         {
             // Web / Browser mode: Node-locked hardware ID licensing does not apply in a web browser sandbox.

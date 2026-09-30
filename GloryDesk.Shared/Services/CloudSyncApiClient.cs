@@ -46,11 +46,11 @@ namespace InventoryManagementSystem.Services
             return result;
         }
 
-        public async Task<CloudAuthResponse> LoginAsync(string email, string password, CancellationToken ct = default)
+        public async Task<CloudAuthResponse> LoginAsync(string email, string password, string? hardwareId = null, CancellationToken ct = default)
         {
             var response = await _httpClient.PostAsJsonAsync(
                 $"{BaseUrl}/api/auth/login",
-                new CloudAuthRequest { Email = email, Password = password },
+                new CloudAuthRequest { Email = email, Password = password, HardwareId = hardwareId },
                 ct);
 
             if (!response.IsSuccessStatusCode)

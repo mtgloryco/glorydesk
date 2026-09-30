@@ -74,14 +74,23 @@ namespace InventoryManagementSystem.UI.ViewModels
                     {
                         var allUsers = await _userService.GetAllUsersAsync();
                         user = allUsers.FirstOrDefault(u => string.Equals(u.Username, cleanUsername, StringComparison.OrdinalIgnoreCase));
+                        var resolvedRole = !string.IsNullOrWhiteSpace(cloudResult.Role)
+                            ? (char.ToUpper(cloudResult.Role[0]) + cloudResult.Role[1..].ToLower())
+                            : "Admin";
+
                         if (user == null)
                         {
                             user = new User
                             {
                                 Username = cleanUsername,
-                                Role = "Admin"
+                                Role = resolvedRole
                             };
                             await _userService.AddUserAsync(user, Password);
+                        }
+                        else if (!string.IsNullOrWhiteSpace(cloudResult.Role) && !string.Equals(user.Role, resolvedRole, StringComparison.OrdinalIgnoreCase))
+                        {
+                            user.Role = resolvedRole;
+                            await _userService.UpdateUserAsync(user);
                         }
                     }
                     else if (!string.IsNullOrWhiteSpace(cloudResult.Message))
