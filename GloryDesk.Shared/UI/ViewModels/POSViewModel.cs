@@ -1264,32 +1264,13 @@ namespace InventoryManagementSystem.UI.ViewModels
                     });
                 }
 
-                // 4. Generate A4 Tax Invoice PDF or 80mm POS Receipt PDF
-                if (AutoCreateInvoice)
-                {
-                    var allProducts = await _inventoryService.GetAllProductsAsync();
-                    var allTaxes = await connection.Table<Tax>().ToListAsync();
-                    var pdfService = new SalesOrderPdfService(_settingsService);
-                    
-                    LastReceiptPath = pdfService.GenerateSalesOrderPdf(
-                        order, 
-                        itemsList, 
-                        allProducts, 
-                        allTaxes, 
-                        actualCustomer, 
-                        asInvoice: true
-                    );
-                    LastReceiptText = $"Invoice Generated Successfully!\nSaved to: {LastReceiptPath}";
-                }
-                else
-                {
-                    LastReceiptPath = _receiptService.GenerateReceiptFromCart(user, CartItems, postedTotal, TotalTendered, ChangeDue);
-                    LastReceiptText = $"Receipt Generated Successfully!\nSaved to: {LastReceiptPath}";
-                }
+                // 4. Record cart items for receipt before clearing cart
+                var cartSnapshot = CartItems.ToList();
 
+                // 5. Checkout successfully committed to database
                 IsCheckoutSuccess = true;
 
-                // Clear Cart
+                // Clear Cart and reset payment state
                 CartItems.Clear();
                 RecalculateTotal();
                 Tenders.Clear();
@@ -1299,11 +1280,44 @@ namespace InventoryManagementSystem.UI.ViewModels
                 SelectedCustomer = null;
                 CustomerSearchText = string.Empty;
 
-                // Show Receipt Modal
-                IsReceiptModalOpen = true;
-
                 // Refresh Inventory List
-                await LoadProducts(); 
+                _ = LoadProducts();
+
+                // 6. Generate formatted receipt text & optional PDF (isolated from checkout persistence)
+                try
+                {
+                    if (AutoCreateInvoice)
+                    {
+                        var allProducts = await _inventoryService.GetAllProductsAsync();
+                        var allTaxes = await connection.Table<Tax>().ToListAsync();
+                        var pdfService = new SalesOrderPdfService(_settingsService);
+                        
+                        LastReceiptPath = pdfService.GenerateSalesOrderPdf(
+                            order, 
+                            itemsList, 
+                            allProducts, 
+                            allTaxes, 
+                            actualCustomer, 
+                            asInvoice: true
+                        );
+                        LastReceiptText = $"Invoice #{order.SONumber} Generated Successfully!\nSaved to: {LastReceiptPath}";
+                    }
+                    else
+                    {
+                        var receiptNumber = order.SONumber ?? Guid.NewGuid().ToString("N")[..6].ToUpper();
+                        var receiptText = _receiptService.FormatReceiptText(user, cartSnapshot, postedTotal, TotalTendered, ChangeDue, receiptNumber, DateTime.Now);
+                        LastReceiptPath = _receiptService.GenerateReceiptFromCart(user, cartSnapshot, postedTotal, TotalTendered, ChangeDue);
+                        LastReceiptText = receiptText;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[POSViewModel] Receipt file generation notice: {ex.Message}");
+                    LastReceiptText = $"Sale #{order.SONumber} Completed Successfully!\nTotal: {postedTotal:N0} RWF\nAmount Paid: {TotalTendered:N0} RWF\nChange: {ChangeDue:N0} RWF";
+                }
+
+                // Show Receipt Modal
+                IsReceiptModalOpen = true; 
             }
             catch (Exception ex)
             {

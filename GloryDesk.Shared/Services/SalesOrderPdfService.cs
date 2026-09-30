@@ -18,7 +18,11 @@ namespace InventoryManagementSystem.Services
             _settingsService = settingsService;
             if (!OperatingSystem.IsBrowser())
             {
-                QuestPDF.Settings.License = LicenseType.Community;
+                try
+                {
+                    QuestPDF.Settings.License = LicenseType.Community;
+                }
+                catch { }
             }
         }
 
@@ -46,7 +50,11 @@ namespace InventoryManagementSystem.Services
 
             var taxTotals = new Dictionary<int, (Tax Tax, decimal Amount)>();
 
-            Document.Create(container =>
+            if (!OperatingSystem.IsBrowser())
+            {
+                try
+                {
+                    Document.Create(container =>
             {
                 container.Page(page =>
                 {
@@ -309,6 +317,39 @@ namespace InventoryManagementSystem.Services
             }).GeneratePdf(path);
 
             return path;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SalesOrderPdfService] QuestPDF unavailable: {ex.Message}");
+        }
+    }
+
+            var txtFilename = $"{docTypePrefix}_{cleanRef}_{dateStr}.txt";
+            var textPath = Path.Combine(outputFolder, txtFilename);
+            try
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine("========================================");
+                sb.AppendLine($"{(asInvoice ? "TAX INVOICE" : "SALES ORDER")}: {so.SONumber}");
+                sb.AppendLine($"Company: {companyName}");
+                sb.AppendLine($"Customer: {customer?.Name ?? "Walk-in Customer"}");
+                sb.AppendLine($"Date: {so.OrderDate:yyyy-MM-dd}");
+                sb.AppendLine("----------------------------------------");
+                foreach (var item in items)
+                {
+                    var prod = allProducts.FirstOrDefault(p => p.Id == item.ProductId);
+                    var qty = asInvoice ? (item.QuantityInvoiced > 0 ? item.QuantityInvoiced : item.QuantityOrdered) : item.QuantityOrdered;
+                    var sub = qty * item.UnitPrice;
+                    sb.AppendLine($"{prod?.Name ?? "Item"} x {qty} @ {item.UnitPrice:N0} = {sub:N0} {currency}");
+                }
+                sb.AppendLine("----------------------------------------");
+                sb.AppendLine($"Total: {so.TotalAmount:N0} {currency}");
+                sb.AppendLine("========================================");
+                File.WriteAllText(textPath, sb.ToString());
+            }
+            catch { }
+
+            return textPath;
         }
 
         public string GenerateDeliveryNotePdf(
