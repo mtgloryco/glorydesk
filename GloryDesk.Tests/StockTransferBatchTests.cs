@@ -212,6 +212,7 @@ public class StockTransferBatchTests : IAsyncLifetime
 
         vm.SourceLocation = inserted;
         vm.DestLocation = inserted; // Same location!
+        Assert.Contains(vm.Products, p => p.Id == prod.Id);
         await vm.TransferLines[0].SelectProduct(vm.Products.First(p => p.Id == prod.Id));
         vm.TransferLines[0].Quantity = 5;
 

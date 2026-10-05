@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -15,6 +16,7 @@ public partial class StockTransferViewModel : ViewModelBase
     private readonly LocationService _locationService;
     private readonly InventoryService _inventoryService;
     private readonly Action? _goBack;
+    private readonly SemaphoreSlim _loadLock = new(1, 1);
 
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isNewTransferVisible;
@@ -58,6 +60,9 @@ public partial class StockTransferViewModel : ViewModelBase
     [RelayCommand]
     public async Task LoadInitialData()
     {
+        // Serialize loads: ctor fire-and-forgets this while tests/UI may also await it.
+        // Without a lock, a second call can Clear() Products while the first is mid-await.
+        await _loadLock.WaitAsync();
         IsLoading = true;
         try
         {
@@ -78,6 +83,7 @@ public partial class StockTransferViewModel : ViewModelBase
         finally
         {
             IsLoading = false;
+            _loadLock.Release();
         }
     }
 
