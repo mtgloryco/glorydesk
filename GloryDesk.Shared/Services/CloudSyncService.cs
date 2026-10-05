@@ -357,6 +357,9 @@ namespace InventoryManagementSystem.Services
             }
             catch (Exception ex)
             {
+                // Full SQLite messages (e.g. UNIQUE constraint failed: Account.Code) live here —
+                // the sidebar truncates visually; hover the status text for the complete string.
+                System.Diagnostics.Debug.WriteLine($"[CloudSyncService] Sync failed: {ex}");
                 state.LastSyncStatus = $"Sync failed: {ex.Message}";
                 await _databaseService.Connection.UpdateAsync(state);
                 return CloudSyncResult.Fail(state.LastSyncStatus);
@@ -489,11 +492,26 @@ namespace InventoryManagementSystem.Services
             syncable.UpdatedAt = change.UpdatedAt.ToUniversalTime();
             syncable.IsDeleted = false;
 
-            var existing = FindLocalBySyncId(conn, descriptor, change.SyncId);
+            // Prefer SyncId match; for seeded chart-of-accounts, local and cloud often
+            // share the same Code with different SyncIds — fall back to natural key.
+            var existing = FindLocalBySyncId(conn, descriptor, change.SyncId)
+                           ?? FindLocalByNaturalKey(conn, descriptor, entity);
+
             if (existing == null)
             {
                 ResetAutoIncrementId(entity);
-                conn.Insert(entity);
+                try
+                {
+                    conn.Insert(entity);
+                }
+                catch (SQLiteException ex) when (ex.Result == SQLite3.Result.Constraint)
+                {
+                    // Last-resort: unique conflict on insert (e.g. Account.Code) — rematch and update.
+                    existing = FindLocalByNaturalKey(conn, descriptor, entity);
+                    if (existing == null) throw;
+                    CopyLocalId(existing, syncable);
+                    conn.Update(entity);
+                }
                 return true;
             }
 
@@ -612,6 +630,19 @@ namespace InventoryManagementSystem.Services
                 "StockTransfer" => conn.Table<StockTransfer>().FirstOrDefault(x => x.SyncId == syncId),
                 "Expense" => conn.Table<Expense>().FirstOrDefault(x => x.SyncId == syncId),
                 "DamageWriteOff" => conn.Table<DamageWriteOff>().FirstOrDefault(x => x.SyncId == syncId),
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// Match local rows by business unique key when SyncId differs (common for seeded Accounts).
+        /// </summary>
+        private static ISyncableEntity? FindLocalByNaturalKey(SQLiteConnection conn, SyncEntityDescriptor descriptor, object incoming)
+        {
+            return descriptor.EntityType switch
+            {
+                "Account" when incoming is Account a && !string.IsNullOrWhiteSpace(a.Code)
+                    => conn.Table<Account>().FirstOrDefault(x => x.Code == a.Code),
                 _ => null
             };
         }

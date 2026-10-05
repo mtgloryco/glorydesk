@@ -361,7 +361,8 @@
                                         <TextBlock Text="⚙" FontSize="11" Foreground="{DynamicResource TextSecondaryColor}"/>
                                     </Button>
                                 </Grid>
-                                <TextBlock Text="{Binding SyncStatusText}" FontSize="10" Foreground="{DynamicResource TextSecondaryColor}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding SyncStatusText}" FontSize="10" Foreground="{DynamicResource TextSecondaryColor}"
+                                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SyncStatusText}"/>
 
                                 <!-- Collapsible Cloud Credentials & Operations -->
                                 <StackPanel Spacing="5" Margin="0,4,0,0" IsVisible="{Binding IsCloudSyncExpanded}">
